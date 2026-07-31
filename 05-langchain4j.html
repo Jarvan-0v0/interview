@@ -7,7 +7,6 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<button id="sidebarToggle" class="sidebar-toggle" title="收起/展开菜单">◀</button>
 
 <!-- ===== 侧边栏 ===== -->
 <aside class="sidebar">
@@ -1048,12 +1047,13 @@ CustomerService dynamicService = AiServices.builder(CustomerService.class)
   </div>
 
 </main>
+
 <script>
 (function(){
   var btn = document.getElementById("sidebarToggle");
   var body = document.body;
   try { if(localStorage.getItem("sb")==="0") body.classList.add("sidebar-collapsed"); } catch(e){}
-  function update(){ btn.textContent = body.classList.contains("sidebar-collapsed") ? "▶" : "◀"; }
+  function update(){ btn.innerHTML = body.classList.contains("sidebar-collapsed") ? "&#9654;" : "&#9664;"; }
   btn.addEventListener("click", function(){
     body.classList.toggle("sidebar-collapsed");
     try { localStorage.setItem("sb", body.classList.contains("sidebar-collapsed")?"0":"1"); } catch(e){}

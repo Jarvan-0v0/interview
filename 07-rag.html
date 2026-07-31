@@ -7,12 +7,12 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<button id="sidebarToggle" class="sidebar-toggle" title="收起/展开菜单">◀</button>
   <!-- ===== 侧边栏 ===== -->
   <aside class="sidebar">
     <div class="sidebar-header">
       <h1>AI Agent 面试宝典</h1>
       <p>Java后端 → AI Agent 转行指南</p>
+    <button id="sidebarToggle" class="sidebar-toggle" title="收起/展开菜单">◀</button>
     </div>
     <nav>
       <a href="index.html"><span class="num">00</span>首页</a>
@@ -612,12 +612,13 @@ String answer = assistant.chat(<span class="str">"你们的退货政策是什么
       <a class="next" href="08-vector-db.html">下一章：向量数据库与Embedding →</a>
     </nav>
   </main>
+
 <script>
 (function(){
   var btn = document.getElementById("sidebarToggle");
   var body = document.body;
   try { if(localStorage.getItem("sb")==="0") body.classList.add("sidebar-collapsed"); } catch(e){}
-  function update(){ btn.textContent = body.classList.contains("sidebar-collapsed") ? "▶" : "◀"; }
+  function update(){ btn.innerHTML = body.classList.contains("sidebar-collapsed") ? "&#9654;" : "&#9664;"; }
   btn.addEventListener("click", function(){
     body.classList.toggle("sidebar-collapsed");
     try { localStorage.setItem("sb", body.classList.contains("sidebar-collapsed")?"0":"1"); } catch(e){}

@@ -425,23 +425,27 @@ em { color: var(--primary); font-style: normal; font-weight: 600; }
 .tag-low { background: #e8f5e9; color: #2e7d32; }
 
 /* ===== 侧边栏收起 ===== */
+.sidebar-header {
+  position: relative;
+}
 .sidebar-toggle {
-  position: fixed;
-  left: calc(var(--sidebar-w) - 14px);
-  top: 16px;
-  width: 32px;
-  height: 32px;
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
   background: #fff;
   border: 2px solid var(--primary);
   border-radius: 50%;
   cursor: pointer;
-  z-index: 300;
-  font-size: 14px;
+  z-index: 10;
+  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: left 0.3s, background 0.2s, box-shadow 0.2s;
-  box-shadow: 0 2px 12px rgba(21,101,192,0.25);
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(21,101,192,0.2);
   color: var(--primary);
   padding: 0;
   line-height: 1;
@@ -451,12 +455,12 @@ em { color: var(--primary); font-style: normal; font-weight: 600; }
 .sidebar-toggle:hover {
   background: var(--primary);
   color: #fff;
-  box-shadow: 0 4px 16px rgba(21,101,192,0.4);
+  box-shadow: 0 4px 12px rgba(21,101,192,0.35);
 }
 .sidebar-toggle::after {
-  content: "收起";
+  content: "收起菜单";
   position: absolute;
-  left: 40px;
+  left: 36px;
   top: 50%;
   transform: translateY(-50%);
   font-size: 11px;
@@ -473,10 +477,8 @@ em { color: var(--primary); font-style: normal; font-weight: 600; }
 .sidebar-toggle:hover::after {
   opacity: 1;
 }
-body.sidebar-collapsed .sidebar-toggle::after {
-  content: "展开";
-}
 
+/* 收起状态：侧边栏外的小按钮 */
 body.sidebar-collapsed .sidebar {
   width: 0;
   overflow: hidden;
@@ -487,7 +489,15 @@ body.sidebar-collapsed .main {
   margin-left: 0;
 }
 body.sidebar-collapsed .sidebar-toggle {
+  position: fixed;
   left: 8px;
+  top: 12px;
+  right: auto;
+  transform: none;
+  z-index: 300;
+}
+body.sidebar-collapsed .sidebar-toggle::after {
+  content: "展开菜单";
 }
 
 /* 移动端自动收起 */
