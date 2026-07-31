@@ -429,27 +429,52 @@ em { color: var(--primary); font-style: normal; font-weight: 600; }
   position: fixed;
   left: calc(var(--sidebar-w) - 14px);
   top: 16px;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   background: #fff;
-  border: 1.5px solid var(--primary);
+  border: 2px solid var(--primary);
   border-radius: 50%;
   cursor: pointer;
   z-index: 300;
-  font-size: 13px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: left 0.3s, background 0.2s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: left 0.3s, background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 12px rgba(21,101,192,0.25);
   color: var(--primary);
   padding: 0;
   line-height: 1;
   font-weight: 700;
+  outline: none;
 }
 .sidebar-toggle:hover {
   background: var(--primary);
   color: #fff;
+  box-shadow: 0 4px 16px rgba(21,101,192,0.4);
+}
+.sidebar-toggle::after {
+  content: "收起";
+  position: absolute;
+  left: 40px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: var(--primary);
+  background: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+.sidebar-toggle:hover::after {
+  opacity: 1;
+}
+body.sidebar-collapsed .sidebar-toggle::after {
+  content: "展开";
 }
 
 body.sidebar-collapsed .sidebar {
