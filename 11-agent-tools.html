@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>主流Agent工具生态 · AI Agent面试宝典</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="sidebarToggle" class="sidebar-toggle" title="收起/展开菜单">◀</button>
+  <!-- ===== 侧边栏 ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1>AI Agent 面试宝典</h1>
+      <p>Java后端 → AI Agent 转行指南</p>
+    </div>
+    <nav>
+      <a href="index.html"><span class="num">00</span>首页</a>
+      <a href="01-java-foundation.html"><span class="num">01</span>Java后端核心复习</a>
+      <a href="02-middleware.html"><span class="num">02</span>常用中间件</a>
+      <a href="03-llm-foundation.html"><span class="num">03</span>LLM大模型基础</a>
+      <a href="04-prompt-engineering.html"><span class="num">04</span>Prompt工程</a>
+      <a href="05-langchain4j.html"><span class="num">05</span>LangChain4j框架详解</a>
+      <a href="06-agent-core.html"><span class="num">06</span>Agent核心概念</a>
+      <a href="07-rag.html"><span class="num">07</span>RAG检索增强生成</a>
+      <a href="08-vector-db.html"><span class="num">08</span>向量数据库与Embedding</a>
+      <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
+      <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
+      <a href="11-agent-tools.html" class="active"><span class="num">11</span>主流Agent工具生态</a>
+      <a href="12-project-packaging.html"><span class="num">12</span>项目经验包装与表达</a>
+      <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
+      <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
+      <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
+      <a href="16-spring-ai.html"><span class="num">16</span>Spring AI对比</a>
+      <a href="17-agent-security.html"><span class="num">17</span>Agent安全</a>
+  </nav>
+  </aside>
+
+  <!-- ===== 主内容 ===== -->
+  <main class="main">
+    <!-- 章节标题 -->
+    <header class="chapter-header">
+      <span class="chapter-num">CHAPTER 09</span>
+      <h2>主流Agent工具生态</h2>
+      <div class="goal">
+        <strong>🎯 学习目标：</strong>了解Agent生态中的主流框架和工具（Claude Code、Codex、Cursor、LangGraph、AutoGPT/MetaGPT/CrewAI、Dify/Coze/FastGPT、MCP），能用"定位+核心优势+适用场景"的框架讲清楚每个工具，回答"你除了langchain4j还关注哪些"这类面试高频问题。
+      </div>
+    </header>
+
+    <p class="one-liner">面试官问"你还关注哪些Agent框架"，不是要你背工具列表，而是考察你的<strong>技术视野</strong>——你能否判断不同工具的定位差异、能否说清"为什么选A不选B"，这比工具名字本身重要得多。</p>
+
+    <!-- ===================== 生态图谱 ===================== -->
+    <h3>Agent生态全景图谱 <span class="difficulty">★★★★☆ 高频</span></h3>
+
+    <p>先有一个全局视角：Agent生态大致分为<strong>编码Agent</strong>（直接写代码）、<strong>框架/编排</strong>（构建应用）、<strong>多Agent协作</strong>（模拟团队）、<strong>低代码平台</strong>（可视化搭建）、<strong>协议标准</strong>（生态互通）五层。</p>
+
+    <div class="diagram">
+      <svg viewBox="0 0 900 620" xmlns="http://www.w3.org/2000/svg">
+        <!-- 中心 -->
+        <circle cx="450" cy="310" r="70" fill="#1565c0"/>
+        <text x="450" y="305" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">Agent</text>
+        <text x="450" y="325" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">生态</text>
+
+        <!-- 五大分类区域 - 用圆角矩形表示 -->
+        <!-- 编码Agent (左上) -->
+        <rect x="40" y="40" width="240" height="180" rx="12" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <text x="160" y="65" text-anchor="middle" font-size="13" font-weight="700" fill="#1565c0">编码Agent</text>
+        <rect x="60" y="80" width="200" height="28" rx="6" fill="#fff" stroke="#90caf9"/>
+        <text x="160" y="99" text-anchor="middle" font-size="12" fill="#333">Claude Code (Anthropic)</text>
+        <rect x="60" y="115" width="200" height="28" rx="6" fill="#fff" stroke="#90caf9"/>
+        <text x="160" y="134" text-anchor="middle" font-size="12" fill="#333">OpenAI Codex / Codex CLI</text>
+        <rect x="60" y="150" width="200" height="28" rx="6" fill="#fff" stroke="#90caf9"/>
+        <text x="160" y="169" text-anchor="middle" font-size="12" fill="#333">Cursor / Windsurf (AI IDE)</text>
+        <text x="160" y="200" text-anchor="middle" font-size="11" fill="#666" font-style="italic">直接在终端/IDE里写代码</text>
+
+        <!-- 框架/编排 (右上) -->
+        <rect x="620" y="40" width="240" height="180" rx="12" fill="#e8f5e9" stroke="#2e7d32" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <text x="740" y="65" text-anchor="middle" font-size="13" font-weight="700" fill="#2e7d32">框架 / 编排</text>
+        <rect x="640" y="80" width="200" height="28" rx="6" fill="#fff" stroke="#a5d6a7"/>
+        <text x="740" y="99" text-anchor="middle" font-size="12" fill="#333">LangChain (Python) / langchain4j</text>
+        <rect x="640" y="115" width="200" height="28" rx="6" fill="#fff" stroke="#a5d6a7"/>
+        <text x="740" y="134" text-anchor="middle" font-size="12" fill="#333">LangGraph (状态图编排)</text>
+        <rect x="640" y="150" width="200" height="28" rx="6" fill="#fff" stroke="#a5d6a7"/>
+        <text x="740" y="169" text-anchor="middle" font-size="12" fill="#333">LlamaIndex / Semantic Kernel</text>
+        <text x="740" y="200" text-anchor="middle" font-size="11" fill="#666" font-style="italic">构建LLM应用的框架层</text>
+
+        <!-- 多Agent协作 (左下) -->
+        <rect x="40" y="400" width="240" height="180" rx="12" fill="#fff3e0" stroke="#ed6c02" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <text x="160" y="425" text-anchor="middle" font-size="13" font-weight="700" fill="#ed6c02">多Agent协作</text>
+        <rect x="60" y="440" width="200" height="28" rx="6" fill="#fff" stroke="#ffcc80"/>
+        <text x="160" y="459" text-anchor="middle" font-size="12" fill="#333">AutoGPT (自主Agent先驱)</text>
+        <rect x="60" y="475" width="200" height="28" rx="6" fill="#fff" stroke="#ffcc80"/>
+        <text x="160" y="494" text-anchor="middle" font-size="12" fill="#333">MetaGPT (模拟软件团队)</text>
+        <rect x="60" y="510" width="200" height="28" rx="6" fill="#fff" stroke="#ffcc80"/>
+        <text x="160" y="529" text-anchor="middle" font-size="12" fill="#333">CrewAI (角色驱动协作)</text>
+        <text x="160" y="560" text-anchor="middle" font-size="11" fill="#666" font-style="italic">多个Agent分工协作完成任务</text>
+
+        <!-- 低代码平台 (右下) -->
+        <rect x="620" y="400" width="240" height="180" rx="12" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <text x="740" y="425" text-anchor="middle" font-size="13" font-weight="700" fill="#7b1fa2">低代码平台</text>
+        <rect x="640" y="440" width="200" height="28" rx="6" fill="#fff" stroke="#ce93d8"/>
+        <text x="740" y="459" text-anchor="middle" font-size="12" fill="#333">Dify (开源LLM应用平台)</text>
+        <rect x="640" y="475" width="200" height="28" rx="6" fill="#fff" stroke="#ce93d8"/>
+        <text x="740" y="494" text-anchor="middle" font-size="12" fill="#333">Coze 扣子 (字节跳动)</text>
+        <rect x="640" y="510" width="200" height="28" rx="6" fill="#fff" stroke="#ce93d8"/>
+        <text x="740" y="529" text-anchor="middle" font-size="12" fill="#333">FastGPT (RAG知识库问答)</text>
+        <text x="740" y="560" text-anchor="middle" font-size="11" fill="#666" font-style="italic">可视化编排，快速搭建</text>
+
+        <!-- MCP协议 (底部中间) -->
+        <rect x="340" y="470" width="220" height="110" rx="12" fill="#fffde7" stroke="#f9a825" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <text x="450" y="495" text-anchor="middle" font-size="13" font-weight="700" fill="#f57f17">协议标准</text>
+        <rect x="360" y="510" width="180" height="28" rx="6" fill="#fff" stroke="#ffe082"/>
+        <text x="450" y="529" text-anchor="middle" font-size="12" fill="#333">MCP (Model Context Protocol)</text>
+        <text x="450" y="565" text-anchor="middle" font-size="11" fill="#666" font-style="italic">统一工具连接协议</text>
+
+        <!-- 连线 -->
+        <line x1="250" y1="180" x2="390" y2="270" stroke="#bbb" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <line x1="650" y1="180" x2="510" y2="270" stroke="#bbb" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <line x1="250" y1="440" x2="390" y2="350" stroke="#bbb" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <line x1="650" y1="440" x2="510" y2="350" stroke="#bbb" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <line x1="450" y1="470" x2="450" y2="380" stroke="#bbb" stroke-width="1.5" stroke-dasharray="4,3"/>
+      </svg>
+      <div class="caption">图9-1 Agent生态全景图谱：五大分类与代表工具</div>
+    </div>
+
+    <!-- ===================== 1. Claude Code ===================== -->
+    <h3>1. Claude Code (Anthropic) <span class="difficulty">★★★★★ 必知</span></h3>
+
+    <div class="concept-card">
+      <h4>📋 定位</h4>
+      <p>Anthropic推出的<strong>CLI编码Agent</strong>，直接在终端里写代码、改代码、跑测试、执行命令。不需要IDE插件，打开终端就能用，像跟一个真正的工程师结对编程。</p>
+    </div>
+
+    <div class="concept-card">
+      <h4>💪 核心优势</h4>
+      <ul>
+        <li><strong>200K超长上下文</strong>：能"读"完整个中型项目的代码，理解全局上下文后再动手</li>
+        <li><strong>强大的工具调用</strong>：文件系统读写、bash命令执行、代码搜索——Agent该有的工具都有</li>
+        <li><strong>多轮纠错能力</strong>：写完代码跑测试，测试挂了自己看报错、自己改，循环到通过为止</li>
+        <li><strong>上下文管理</strong>：自动决定哪些文件进上下文、何时压缩历史，不靠人工维护</li>
+      </ul>
+    </div>
+
+    <div class="concept-card">
+      <h4>🎯 适用场景</h4>
+      <p>日常编码、Bug修复、代码重构、写测试、代码审查。适合"任务能描述清楚、但步骤需要AI自己探索"的场景。</p>
+    </div>
+
+    <div class="concept-card">
+      <h4>📚 值得学习的设计理念</h4>
+      <ul>
+        <li><strong>工具描述的精确性</strong>：每个工具的description写得极其精确，这是LLM选对工具的基础——和我们写langchain4j Tool的@P描述一个道理</li>
+        <li><strong>Agentic Coding理念</strong>：让AI像真正的工程师一样工作——读需求→写代码→跑测试→看结果→改，而不是一次性生成</li>
+        <li><strong>上下文窗口管理策略</strong>：200K也不是无限的，它怎么裁剪、怎么保留关键信息，值得研究</li>
+      </ul>
+    </div>
+
+    <p>Claude Code的核心工作方式是<strong>Agentic Coding循环</strong>：它不是"一次性生成代码"，而是像真正的工程师一样——读需求→搜索相关代码→写代码→跑测试→看报错→自己改→循环到通过。这种多轮纠错能力让它区别于传统的代码补全工具（如Copilot）。</p>
+
+    <div class="diagram">
+    <svg viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="acc" markerWidth="8" markerHeight="8" refX="6" refY="2" orient="auto">
+          <path d="M0,0 L6,2 L0,4 Z" fill="#1565c0"/>
+        </marker>
+      </defs>
+      <text x="300" y="20" text-anchor="middle" font-size="14" fill="#1565c0" font-weight="bold">Claude Code Agentic Coding 循环</text>
+      <rect x="20" y="35" width="100" height="40" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+      <text x="70" y="52" text-anchor="middle" font-size="10" fill="#1565c0" font-weight="bold">读需求</text>
+      <text x="70" y="66" text-anchor="middle" font-size="9" fill="#555">理解任务</text>
+      <line x1="120" y1="55" x2="145" y2="55" stroke="#1565c0" stroke-width="2" marker-end="url(#acc)"/>
+      <rect x="145" y="35" width="100" height="40" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+      <text x="195" y="52" text-anchor="middle" font-size="10" fill="#ff6f00" font-weight="bold">搜索代码</text>
+      <text x="195" y="66" text-anchor="middle" font-size="9" fill="#555">读相关文件</text>
+      <line x1="245" y1="55" x2="270" y2="55" stroke="#1565c0" stroke-width="2" marker-end="url(#acc)"/>
+      <rect x="270" y="35" width="100" height="40" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+      <text x="320" y="52" text-anchor="middle" font-size="10" fill="#2e7d32" font-weight="bold">写代码</text>
+      <text x="320" y="66" text-anchor="middle" font-size="9" fill="#555">改文件</text>
+      <line x1="370" y1="55" x2="395" y2="55" stroke="#1565c0" stroke-width="2" marker-end="url(#acc)"/>
+      <rect x="395" y="35" width="100" height="40" rx="6" fill="#f3e5f5" stroke="#7b1fa2"/>
+      <text x="445" y="52" text-anchor="middle" font-size="10" fill="#7b1fa2" font-weight="bold">跑测试</text>
+      <text x="445" y="66" text-anchor="middle" font-size="9" fill="#555">bash执行</text>
+      <line x1="445" y1="75" x2="445" y2="95" stroke="#1565c0" stroke-width="2" marker-end="url(#acc)"/>
+      <polygon points="445,95 500,115 445,135 390,115" fill="#ffebee" stroke="#d32f2f" stroke-width="1.5"/>
+      <text x="445" y="113" text-anchor="middle" font-size="10" fill="#d32f2f" font-weight="bold">测试通过?</text>
+      <text x="445" y="127" text-anchor="middle" font-size="9" fill="#d32f2f">看报错</text>
+      <line x1="390" y1="115" x2="320" y2="115" stroke="#d32f2f" stroke-width="2" marker-end="url(#acc)"/>
+      <text x="355" y="108" text-anchor="middle" font-size="10" fill="#d32f2f" font-weight="bold">否→改</text>
+      <line x1="445" y1="135" x2="445" y2="155" stroke="#2e7d32" stroke-width="2" marker-end="url(#acc)"/>
+      <text x="470" y="148" font-size="10" fill="#2e7d32" font-weight="bold">是</text>
+      <rect x="380" y="155" width="130" height="36" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+      <text x="445" y="178" text-anchor="middle" font-size="11" fill="#2e7d32" font-weight="bold">完成！</text>
+      <text x="195" y="175" text-anchor="middle" font-size="11" fill="#555">多轮纠错循环：写→跑→挂→看报错→改→再跑</text>
+      <text x="195" y="195" text-anchor="middle" font-size="11" fill="#ff6f00">关键：200K上下文管理，自动决定哪些文件进上下文</text>
+    </svg>
+    <div class="caption">Claude Code Agentic Coding：读需求→搜代码→写→跑测试→看报错→改，循环到通过</div>
+    </div>
+
+    <div class="java-analogy">Claude Code是<strong>成品Agent</strong>——开箱即用的编码助手；langchain4j是<strong>框架</strong>——你用它来构建自己的Agent。类比Java：Claude Code像Spring Boot官方starter，拿来就用；langchain4j像Spring Framework，你基于它搭自己的应用。</div>
+
+    <!-- ===================== 2. OpenAI Codex ===================== -->
+    <h3>2. OpenAI Codex / Codex CLI <span class="difficulty">★★★★☆ 常问</span></h3>
+
+    <div class="concept-card">
+      <h4>📋 定位</h4>
+      <p>OpenAI推出的<strong>代码生成和执行Agent</strong>，Codex CLI是其在终端的Agent形态。和Claude Code定位高度重合——都是"终端里的编码Agent"。</p>
+    </div>
+
+    <div class="concept-card">
+      <h4>💪 核心优势</h4>
+      <ul>
+        <li>背靠OpenAI的模型能力（GPT-4o / o系列），推理和代码生成强</li>
+        <li>和GitHub Copilot生态打通，IDE和CLI双形态</li>
+        <li>支持沙箱执行，安全跑代码不污染本地环境</li>
+      </ul>
+    </div>
+
+    <table class="compare-table">
+      <thead>
+        <tr><th>对比维度</th><th>Claude Code</th><th>OpenAI Codex CLI</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>背后模型</td><td>Claude (Anthropic)</td><td>GPT-4o / o系列 (OpenAI)</td></tr>
+        <tr><td>上下文长度</td><td>200K tokens</td><td>128K tokens</td></tr>
+        <tr><td>工具调用</td><td>文件读写 + bash + 搜索</td><td>文件读写 + 沙箱执行</td></tr>
+        <tr><td>设计风格</td><td>更"放手干"，自主性强</td><td>更"谨慎"，倾向先确认</td></tr>
+        <tr><td>生态集成</td><td>独立CLI为主</td><td>GitHub Copilot生态</td></tr>
+      </tbody>
+    </table>
+
+    <div class="one-liner">Claude Code和Codex CLI的关系就像<strong>Vim和Emacs</strong>——定位一样、理念不同，选哪个看团队习惯和模型偏好。</div>
+
+    <!-- ===================== 3. Cursor / Windsurf ===================== -->
+    <h3>3. Cursor / Windsurf (AI IDE) <span class="difficulty">★★★★☆ 常问</span></h3>
+
+    <div class="concept-card">
+      <h4>📋 定位</h4>
+      <p><strong>内置Agent模式的IDE</strong>。Cursor基于VS Code fork，Windsurf是Codeium的产品。不只是一个补全工具，而是"代码补全 + 多文件编辑 + Agent对话"三合一。</p>
+    </div>
+
+    <div class="concept-card">
+      <h4>💪 核心特点</h4>
+      <ul>
+        <li><strong>代码补全</strong>：行级/块级补全，比传统Copilot更激进，能跨文件推测意图</li>
+        <li><strong>多文件编辑</strong>：Agent模式下可以一次改多个文件，不是只改当前文件</li>
+        <li><strong>Agent对话</strong>：侧边栏对话窗口，描述需求后Agent自己读代码、改代码、跑测试</li>
+        <li><strong>@引用机制</strong>：用@文件名/@文件夹/@函数手动指定上下文，精确控制"哪些代码进上下文"</li>
+      </ul>
+    </div>
+
+    <div class="concept-card">
+      <h4>📚 值得学习的设计理念</h4>
+      <ul>
+        <li><strong>上下文管理的交互设计</strong>：哪些文件进上下文不是AI黑箱决定，而是用户通过@引用参与决策——这个交互设计很值得学</li>
+        <li><strong>渐进式信任</strong>：补全是自动的，多文件改动需要确认，Agent模式有diff预览——不同粒度的操作对应不同的确认级别</li>
+        <li><strong>产品集成度</strong>：把AI能力深度嵌入IDE工作流，而不是外挂一个聊天窗口——体验差距巨大</li>
+      </ul>
+    </div>
+
+    <!-- ===================== 4. LangChain / LangGraph ===================== -->
+    <h3>4. LangChain (Python) / LangGraph <span class="difficulty">★★★★★ 必考</span></h3>
+
+    <div class="concept-card">
+      <h4>📋 定位</h4>
+      <p><strong>LangChain</strong>是Python生态的LLM应用框架，是langchain4j的"前辈"和"参考原型"——langchain4j很多设计直接对标LangChain Python。<strong>LangGraph</strong>是LangChain团队推出的图结构Agent编排工具，用状态机式工作流构建复杂Agent。</p>
+    </div>
+
+    <div class="concept-card">
+      <h4>LangGraph的核心思想：状态图编排</h4>
+      <p>传统LangChain的Chain是<strong>线性</strong>的（A→B→C），复杂分支难表达。LangGraph用<strong>有向图</strong>：</p>
+      <ul>
+        <li>每个节点是一个函数/Agent，接收状态、返回新状态</li>
+        <li>边可以是条件边（根据状态决定走哪个节点）</li>
+        <li>支持循环（ReAct循环就是图里的环）</li>
+        <li>有全局State对象，所有节点共享读写</li>
+      </ul>
+    </div>
+
+    <div class="java-analogy">LangGraph的状态图 ≈ <strong>Spring StateMachine + DAG工作流引擎</strong>。每个节点是State处理器，条件边是状态转移规则，全局State是StateMachine的Context。如果你用过Akka FSM或者Camunda BPMN流程引擎，LangGraph的模型几乎一样——只是"执行什么"从固定代码变成了LLM调用。</div>
+
+    <table class="compare-table">
+      <thead>
+        <tr><th>对比维度</th><th>LangChain (Python)</th><th>langchain4j (Java)</th><th>LangGraph</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>语言</td><td>Python</td><td>Java</td><td>Python</td></tr>
+        <tr><td>定位</td><td>LLM应用框架</td><td>LangChain的Java移植</td><td>图结构Agent编排</td></tr>
+        <tr><td>编排能力</td><td>线性Chain为主</td><td>线性Chain + AiServices</td><td>有向图 + 条件边 + 循环</td></tr>
+        <tr><td>生态成熟度</td><td>最成熟，社区最大</td><td>成长中，Java生态</td><td>较新，复杂Agent首选</td></tr>
+        <tr><td>适合团队</td><td>Python/AI团队</td><td>Java后端团队</td><td>需要复杂流程的AI团队</td></tr>
+      </tbody>
+    </table>
+
+    <div class="concept-card">
+      <h4>📚 值得学习的设计理念</h4>
+      <ul>
+        <li><strong>状态图设计思想</strong>：把Agent的执行流程显式化为图结构，比隐式的递归调用更可读、可调试、可可视化</li>
+        <li><strong>条件边</strong>：把"LLM决定走哪条路"这个决策点显式建模，而不是埋在if-else里</li>
+        <li><strong>持久化State</strong>：图执行到一半可以存档、恢复——长流程Agent（跨小时/跨天）的关键能力</li>
+      </ul>
+    </div>
+
+    <!-- ===================== 5. AutoGPT / MetaGPT / CrewAI ===================== -->
+    <h3>5. AutoGPT / MetaGPT / CrewAI <span class="difficulty">★★★☆☆ 了解</span></h3>
+
+    <div class="concept-card">
+      <h4>AutoGPT — 自主Agent的先驱</h4>
+      <p><strong>定位</strong>：2023年初爆火的"给个目标自己干"的自主Agent。用户给一个高层目标（如"帮我调研XX并写报告"），AutoGPT自己拆任务、自己调工具、自己执行。</p>
+      <p><strong>问题</strong>：理念超前但<strong>不够稳定</strong>——容易跑偏、死循环、token消耗失控。作为产品不够成熟，但作为概念验证影响深远。</p>
+      <p><strong>值得学习</strong>：自主任务拆解的思路、工具自动发现机制。</p>
+    </div>
+
+    <div class="concept-card">
+      <h4>MetaGPT — 模拟软件团队的多Agent</h4>
+      <p><strong>定位</strong>：把多Agent协作建模成一个<strong>软件团队</strong>——有产品经理（写PRD）、架构师（设计技术方案）、工程师（写代码）、QA（测试）。给一个需求，"团队"协作交付。</p>
+      <p><strong>核心创新</strong>：每个Agent有明确的<strong>角色定义</strong>和<strong>产出规范</strong>（产品经理产出标准PRD格式，工程师按PRD写代码），通过标准化文档传递信息。</p>
+      <p><strong>值得学习</strong>：角色定义的标准化、SOP（标准操作流程）在Agent协作中的作用。</p>
+    </div>
+
+    <div class="concept-card">
+      <h4>CrewAI — 角色驱动的多Agent框架</h4>
+      <p><strong>定位</strong>：轻量级多Agent框架，核心概念是<strong>Crew（团队）</strong> = Agents + Tasks + Process。每个Agent有role、goal、backstory，Task分配给Agent，Process定义协作方式。</p>
+      <p><strong>特点</strong>：API设计简洁，上手快；支持顺序执行和层级执行（Hierarchical，有manager agent协调）。</p>
+      <p><strong>值得学习</strong>：角色定义的参数化（role/goal/backstory三件套）、任务分配的声明式写法。</p>
+    </div>
+
+    <div class="one-liner">AutoGPT证明了"自主Agent"可行但不稳定；MetaGPT证明了"SOP+角色"能让多Agent协作产出可用结果；CrewAI把这个模式做成了易用框架。<strong>趋势是从"放飞自我"走向"结构化协作"</strong>。</div>
+
+    <!-- ===================== 6. Dify / Coze / FastGPT ===================== -->
+    <h3>6. Dify / Coze / FastGPT (低代码Agent平台) <span class="difficulty">★★★★☆ 国内常问</span></h3>
+
+    <div class="concept-card">
+      <h4>Dify — 开源LLM应用开发平台</h4>
+      <p><strong>定位</strong>：开源的LLM应用可视化编排平台，拖拽式搭建Agent工作流。支持RAG、Agent、Workflow三种应用类型，可私有化部署。</p>
+      <p><strong>核心特点</strong>：可视化编排画布、内置RAG管道、多模型切换、API一键发布。适合快速验证想法。</p>
+    </div>
+
+    <div class="concept-card">
+      <h4>Coze (扣子) — 字节跳动的Bot开发平台</h4>
+      <p><strong>定位</strong>：字节跳动的Bot/Agent开发平台，国内版叫"扣子"，国际版叫Coze。可视化搭建Bot，支持插件、工作流、知识库、多Agent。</p>
+      <p><strong>核心特点</strong>：生态丰富（大量官方插件）、发布渠道多（飞书/微信/抖音等）、低门槛。适合非技术人员快速搭Bot。</p>
+    </div>
+
+    <div class="concept-card">
+      <h4>FastGPT — 基于RAG的知识库问答平台</h4>
+      <p><strong>定位</strong>：开源的RAG知识库问答平台，侧重<strong>知识库管理 + 精准问答</strong>。可视化编排工作流，支持多种数据源导入。</p>
+      <p><strong>核心特点</strong>：知识库分块可视化、检索调试工具、支持工作流编排。适合企业内部知识库场景。</p>
+    </div>
+
+    <table class="compare-table">
+      <thead>
+        <tr><th>对比维度</th><th>低代码平台 (Dify/Coze)</th><th>代码框架 (langchain4j)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>上手门槛</td><td>低，可视化拖拽</td><td>中高，需写代码</td></tr>
+        <tr><td>定制能力</td><td>受限，平台能力边界内</td><td>完全自由</td></tr>
+        <tr><td>适合场景</td><td>快速验证、简单业务、非技术团队</td><td>深度定制、复杂逻辑、生产级</td></tr>
+        <tr><td>运维方式</td><td>平台托管或自部署</td><td>融入现有Java运维体系</td></tr>
+        <tr><td>迭代速度</td><td>快（改配置即生效）</td><td>中（需改代码发版）</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">低代码平台和代码框架不是"二选一"的关系。最佳实践是：<strong>用低代码快速验证原型</strong>（一天搭出来跑通），<strong>用代码框架做生产级实现</strong>（深度定制、融入运维）。面试时这个观点很加分。</div>
+
+<!-- ===================== 8. Hermes Agent / OpenClaw ===================== -->
+<h3>8. Hermes Agent / OpenClaw <span class="difficulty">★★★☆☆ 了解</span></h3>
+
+<div class="concept-card">
+<h4>📋 定位</h4>
+<p><strong>Hermes Agent</strong>（Nous Research）和<strong>OpenClaw</strong>都是开源CLI Agent框架，定位和Claude Code类似——终端里的AI助手，能执行命令、读写文件、搜索代码。它们和Claude Code的关键区别是<strong>模型无关</strong>——不绑定单一模型厂商，可以接入OpenRouter/Anthropic/OpenAI/DeepSeek/本地模型等20+提供商。</p>
+</div>
+
+<div class="concept-card">
+<h4>Hermes Agent的核心特点</h4>
+<ul>
+<li><strong>自学习Skills系统</strong>：Agent可以将解决过的问题保存为可复用的Skill，下次遇到类似任务自动加载。这是其他编码Agent没有的独特能力</li>
+<li><strong>跨平台Gateway</strong>：同一个Agent可以跑在终端、Telegram、Discord、Slack、微信等10+平台，消息互通</li>
+<li><strong>持久化记忆</strong>：跨会话记住用户偏好、环境细节、工具用法，不需要每次重新交代</li>
+<li><strong>多Profile隔离</strong>：可以运行多个独立Agent实例，每个有独立的配置、技能、记忆</li>
+<li><strong>Provider无关</strong>：支持20+模型提供商，可以在任务中动态切换模型</li>
+</ul>
+</div>
+
+<div class="concept-card">
+<h4>📚 值得学习的设计理念</h4>
+<ul>
+<li><strong>Skill积累机制</strong>：Agent越用越"聪明"——解决过的问题变成Skill，下次自动复用。这解决了"Agent每次都要从零开始"的痛点</li>
+<li><strong>持久化记忆</strong>：不依赖上下文窗口保存历史，有独立的记忆存储。跨会话也能记住之前讨论过的内容</li>
+<li><strong>Cron调度</strong>：内置定时任务系统，Agent可以定时执行任务（如每天早上检查代码仓库状态）</li>
+<li><strong>多平台部署</strong>：同一个Agent逻辑可以通过Gateway适配到不同平台，不用为每个平台重写</li>
+</ul>
+</div>
+
+<div class="java-analogy">Hermes Agent ≈ 一个<strong>自带持久化存储和定时任务的Shell脚本引擎</strong>——但它不是执行固定脚本，而是用LLM动态决策。Skills ≈ 可复用的函数库，Memory ≈ Redis缓存，Cron ≈ @Scheduled。对Java开发者来说，这些概念非常熟悉。</div>
+
+<!-- ===================== 9. 多Agent框架对比总结 ===================== -->
+<h3>9. 多Agent框架对比总结 <span class="difficulty">★★★★☆ 高频</span></h3>
+
+<table class="compare-table">
+<tr><th>框架</th><th>协作模式</th><th>角色定义</th><th>适合场景</th><th>Java友好度</th></tr>
+<tr><td><strong>MetaGPT</strong></td><td>SOP驱动（产品→架构→开发→测试）</td><td>预设角色+标准产出</td><td>软件项目从零到一</td><td>❌ Python</td></tr>
+<tr><td><strong>CrewAI</strong></td><td>顺序/层级执行</td><td>role+goal+backstory</td><td>通用多Agent任务</td><td>❌ Python</td></tr>
+<tr><td><strong>AutoGen</strong></td><td>对话驱动，Agent间聊天</td><td>自然语言定义</td><td>研究/分析类任务</td><td>❌ Python</td></tr>
+<tr><td><strong>LangGraph</strong></td><td>状态图+条件边</td><td>节点函数+State</td><td>复杂流程编排</td><td>❌ Python</td></tr>
+<tr><td><strong>langchain4j AiServices</strong></td><td>单Agent声明式</td><td>@AiService+@Tool</td><td>Java Agent应用</td><td>✅ Java原生</td></tr>
+<tr><td><strong>手写ReAct</strong></td><td>自定义循环</td><td>完全控制</td><td>需要精细控制的场景</td><td>✅ 任何语言</td></tr>
+</table>
+
+<div class="note">Java生态目前没有成熟的多Agent协作框架。如果面试被问到"Java怎么做多Agent"，两个思路：1）自己实现Supervisor-Worker模式（参考第10章）；2）用Python多Agent框架做编排层，Java Agent做工具执行层——通过MCP协议打通。</div>
+
+    <!-- ===================== 7. MCP ===================== -->
+    <h3>7. MCP (Model Context Protocol) <span class="difficulty">★★★★★ 热门</span></h3>
+
+    <div class="concept-card">
+      <h4>📋 定位</h4>
+      <p><strong>Model Context Protocol</strong>，Anthropic提出的开放标准协议。解决的核心问题是：<strong>每个Agent框架都自己定义工具接口格式，工具无法跨框架复用</strong>。MCP统一了"Agent怎么连接外部工具/数据源"这件事。</p>
+    </div>
+
+    <div class="concept-card">
+      <h4>💡 核心思想</h4>
+      <p>类似<strong>USB-C统一了接口</strong>——之前每个手机品牌自己的充电线，现在统一用USB-C。MCP之前，LangChain的工具、langchain4j的Tool、OpenAI的Function Calling，格式各不相同，一个工具要适配多个框架得写N遍。MCP定义了统一协议，工具只需实现一次，任何支持MCP的Agent都能用。</p>
+    </div>
+
+    <div class="java-analogy">MCP ≈ Java的<strong>SPI（Service Provider Interface）机制</strong>。SPI统一了"接口定义在API侧、实现在各Provider侧、运行时自动发现"的模式；MCP统一了"工具协议定义在标准侧、工具实现在各MCP Server侧、Agent运行时自动发现和调用"的模式。都是<strong>解耦接口和实现、实现生态互通</strong>的思路。也可以类比JDBC——各数据库实现JDBC接口，应用代码只面向JDBC API编程。</div>
+
+    <div class="concept-card">
+      <h4>🎯 为什么重要</h4>
+      <ul>
+        <li><strong>生态互通</strong>：一个MCP Server（如"查GitHub Issue"）写一次，Claude Code能用、Cursor能用、任何支持MCP的Agent都能用</li>
+        <li><strong>工具复用</strong>：不用每个框架都重新封装一遍同样的工具</li>
+        <li><strong>标准化</strong>：工具的发现、描述、调用、鉴权都有标准可循，降低集成成本</li>
+        <li><strong>趋势</strong>：OpenAI、Google等厂商已在跟进，MCP有成为事实标准的趋势</li>
+      </ul>
+    </div>
+
+    <div class="diagram">
+      <svg viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg">
+        <!-- MCP 中心层 -->
+        <rect x="280" y="100" width="160" height="80" rx="10" fill="#1565c0"/>
+        <text x="360" y="130" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">MCP 协议</text>
+        <text x="360" y="155" text-anchor="middle" font-size="12" fill="#bbdefb">统一工具接口标准</text>
+
+        <!-- 左侧: Agent客户端 -->
+        <text x="120" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#333">Agent 客户端</text>
+        <rect x="50" y="55" width="140" height="30" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+        <text x="120" y="75" text-anchor="middle" font-size="12" fill="#1565c0">Claude Code</text>
+        <rect x="50" y="95" width="140" height="30" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+        <text x="120" y="115" text-anchor="middle" font-size="12" fill="#1565c0">Cursor</text>
+        <rect x="50" y="135" width="140" height="30" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+        <text x="120" y="155" text-anchor="middle" font-size="12" fill="#1565c0">langchain4j Agent</text>
+        <rect x="50" y="175" width="140" height="30" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+        <text x="120" y="195" text-anchor="middle" font-size="12" fill="#1565c0">任何MCP客户端</text>
+
+        <!-- 右侧: MCP Server (工具) -->
+        <text x="600" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#333">MCP Server (工具)</text>
+        <rect x="530" y="55" width="140" height="30" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+        <text x="600" y="75" text-anchor="middle" font-size="12" fill="#2e7d32">GitHub 工具</text>
+        <rect x="530" y="95" width="140" height="30" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+        <text x="600" y="115" text-anchor="middle" font-size="12" fill="#2e7d32">数据库查询工具</text>
+        <rect x="530" y="135" width="140" height="30" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+        <text x="600" y="155" text-anchor="middle" font-size="12" fill="#2e7d32">文件系统工具</text>
+        <rect x="530" y="175" width="140" height="30" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+        <text x="600" y="195" text-anchor="middle" font-size="12" fill="#2e7d32">自定义业务工具</text>
+
+        <!-- 连线 -->
+        <line x1="190" y1="140" x2="280" y2="140" stroke="#999" stroke-width="2"/>
+        <line x1="440" y1="140" x2="530" y2="140" stroke="#999" stroke-width="2"/>
+        <text x="235" y="132" text-anchor="middle" font-size="10" fill="#999">调用</text>
+        <text x="485" y="132" text-anchor="middle" font-size="10" fill="#999">提供</text>
+
+        <!-- 底部说明 -->
+        <text x="360" y="230" text-anchor="middle" font-size="12" fill="#666" font-style="italic">工具只实现一次MCP Server，所有Agent客户端都能复用</text>
+      </svg>
+      <div class="caption">图9-2 MCP协议：统一Agent与工具之间的连接标准</div>
+    </div>
+
+    <!-- ===================== 面试问答 ===================== -->
+    <h3>面试场景问答</h3>
+
+    <div class="interview-q">
+      <div class="question">Q1：你除了langchain4j还关注哪些Agent框架？</div>
+      <div class="interview-answer">
+        <p>我持续关注几个方向：编码Agent方向看<strong>Claude Code和Codex CLI</strong>，关注它们的工具描述写法和上下文管理策略；编排框架方向看<strong>LangGraph</strong>，它的状态图设计思想对复杂Agent编排很有启发；多Agent方向看<strong>CrewAI和MetaGPT</strong>，关注角色定义和协作协议的设计；低代码方向了解<strong>Dify和Coze</strong>，用于快速验证原型；协议层面关注<strong>MCP</strong>，这是工具生态互通的关键标准。</p>
+        <p>我的判断是：langchain4j适合做生产级Java Agent应用，LangGraph适合复杂流程编排，低代码平台适合原型验证，它们不是竞争关系而是不同层面的工具。</p>
+      </div>
+      <div class="interview-tip">不要只报工具名，要说出每个工具的<strong>定位差异</strong>和你<strong>从中学到了什么</strong>——这体现技术视野而非跟风。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">Q2：Claude Code和langchain4j是什么关系？</div>
+      <div class="interview-answer">
+        <p>它们是<strong>不同层面</strong>的工具。Claude Code是<strong>成品Agent</strong>——Anthropic做好的、开箱即用的编码助手，你直接在终端用它写代码。langchain4j是<strong>框架</strong>——你用它来构建自己的Agent应用，比如我做的客服助手。</p>
+        <p>类比Java：Claude Code像Spring Boot官方starter，拿来就用，解决的是"编码"这个通用场景；langchain4j像Spring Framework，你基于它搭自己的应用，解决的是"你的业务场景"。</p>
+        <p>但它们有交集——Claude Code的Agent设计理念（工具描述精确性、多轮纠错、上下文管理）直接可以借鉴到langchain4j的Agent开发中。</p>
+      </div>
+      <div class="interview-tip">强调"不同层面"这个关键词，再给一个类比，面试官立刻理解你真的想清楚了，而不是混为一谈。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">Q3：LangGraph的状态图设计有什么优势？</div>
+      <div class="interview-answer">
+        <p>相比传统LangChain的线性Chain，LangGraph的状态图有三个核心优势：</p>
+        <p><strong>第一，显式建模分支和循环</strong>。ReAct的Think-Act-Observe循环在图里就是一个环，条件分支就是条件边——比埋在代码里的if-else和递归调用可读得多，也更容易可视化调试。</p>
+        <p><strong>第二，全局State共享</strong>。所有节点读写同一个State对象，不需要在节点间手动传参。这对复杂Agent（多步、多Agent协作）特别重要，状态管理是痛点。</p>
+        <p><strong>第三，可持久化和恢复</strong>。图执行到任何节点都可以存档State，后续从存档恢复继续执行——长流程Agent（跨小时甚至跨天）的关键能力。</p>
+        <p>类比Java的话，LangGraph ≈ Spring StateMachine + DAG工作流引擎，只是"节点执行什么"从固定代码变成了LLM调用。</p>
+      </div>
+      <div class="interview-tip">提到"可持久化和恢复"是高级加分项——说明你思考过长流程Agent的工程问题，而不只是"能跑起来就行"。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">Q4：MCP是什么，为什么重要？</div>
+      <div class="interview-answer">
+        <p>MCP是Anthropic提出的<strong>Model Context Protocol</strong>，一个开放标准协议，统一了"Agent怎么连接外部工具和数据源"这件事。</p>
+        <p><strong>它解决的问题是</strong>：之前每个Agent框架自己定义工具接口格式——LangChain有LangChain格式，langchain4j有langchain4j格式，OpenAI有Function Calling格式——同一个工具要适配多个框架得写N遍。MCP统一了协议，工具只实现一次MCP Server，任何支持MCP的Agent都能用。</p>
+        <p><strong>类比</strong>：就像USB-C统一了充电接口，或者Java里JDBC统一了数据库访问接口——各数据库实现JDBC接口，应用代码只面向JDBC API编程。MCP也是同样思路，解耦了工具接口和实现，实现生态互通和工具复用。</p>
+        <p><strong>为什么重要</strong>：工具生态互通后，社区开发的MCP Server可以被所有Agent复用，避免重复造轮子。目前OpenAI、Google等厂商已在跟进，有成为事实标准的趋势。</p>
+      </div>
+      <div class="interview-tip">用JDBC或USB-C类比一出来，面试官立刻get到MCP的价值。提到"多厂商跟进"体现你关注趋势。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">Q5：如果要你重新选，你会用什么技术栈做客服助手？</div>
+      <div class="interview-answer">
+        <p>核心选择还是<strong>langchain4j + Java</strong>，原因有三：</p>
+        <p>第一，团队是Java技术栈，用langchain4j可以复用现有的Spring Boot运维体系（监控、部署、CI/CD），团队学习成本低。如果为了用Python LangChain而引入Python技术栈，运维成本反而更高。</p>
+        <p>第二，如果流程复杂度上升（比如要多Agent协作、复杂状态流转），我会考虑在编排层引入<strong>LangGraph的设计思想</strong>——不一定直接用Python LangGraph，但可以在langchain4j侧用状态图模式组织Agent流程。</p>
+        <p>第三，工具层会关注<strong>MCP</strong>。如果MCP生态成熟，把客服工具（查订单、查物流、创建工单）实现为MCP Server，未来换Agent框架时工具可以直接复用，不被框架绑定。</p>
+        <p>所以不是推倒重来，而是在Java基础上吸收其他生态的好设计。</p>
+      </div>
+      <div class="interview-tip">这个回答的核心策略是：<strong>不否定原来的选择，但展示你在持续进化</strong>。提到MCP体现前瞻性，提到LangGraph设计思想体现学习能力。</div>
+    </div>
+
+    <!-- ===================== 重点回顾 ===================== -->
+    <div class="review-card">
+      <ul>
+        <li>Agent生态五大层：<strong>编码Agent</strong>(Claude Code/Codex/Hermes) → <strong>框架编排</strong>(LangChain/LangGraph) → <strong>多Agent协作</strong>(MetaGPT/CrewAI/AutoGen) → <strong>低代码平台</strong>(Dify/Coze) → <strong>协议标准</strong>(MCP)</li>
+        <li>Claude Code是<strong>成品Agent</strong>，langchain4j是<strong>框架</strong>——不同层面，不是竞争关系。类比：Spring Boot starter vs Spring Framework</li>
+        <li><strong>Hermes Agent</strong>：开源CLI Agent，模型无关，自学习Skills系统，持久化记忆，跨平台Gateway</li>
+        <li><strong>多Agent框架对比</strong>：MetaGPT(SOP驱动)/CrewAI(角色驱动)/AutoGen(对话驱动)/LangGraph(状态图)——Java生态暂无成熟方案</li>
+        <li>LangGraph核心：<strong>状态图 + 条件边 + 循环 + 全局State</strong>，把Agent流程显式化、可调试、可持久化。类比Spring StateMachine</li>
+        <li>多Agent趋势：从AutoGPT的"放飞自我"到MetaGPT/CrewAI的<strong>"结构化协作+角色定义"</strong>，SOP是关键</li>
+        <li>低代码 vs 代码框架不是二选一：<strong>低代码验证原型 + 代码框架做生产级</strong>是最佳实践</li>
+        <li>MCP = Agent界的USB-C/JDBC，统一工具连接协议，实现<strong>生态互通、工具复用</strong>，多厂商跟进中</li>
+        <li>面试回答"还关注哪些框架"的关键：不只报名字，要讲<strong>定位差异 + 学到了什么 + 和我的选择什么关系</strong></li>
+      </ul>
+    </div>
+
+    <!-- 章节导航 -->
+    <nav class="chapter-nav">
+      <a class="prev" href="10-agent-patterns.html">← 上一章：Agent设计模式与工程化</a>
+      <a class="next" href="12-project-packaging.html">下一章：项目经验包装与表达 →</a>
+    </nav>
+  </main>
+<script>
+(function(){
+  var btn = document.getElementById("sidebarToggle");
+  var body = document.body;
+  try { if(localStorage.getItem("sb")==="0") body.classList.add("sidebar-collapsed"); } catch(e){}
+  function update(){ btn.textContent = body.classList.contains("sidebar-collapsed") ? "▶" : "◀"; }
+  btn.addEventListener("click", function(){
+    body.classList.toggle("sidebar-collapsed");
+    try { localStorage.setItem("sb", body.classList.contains("sidebar-collapsed")?"0":"1"); } catch(e){}
+    update();
+  });
+  update();
+})();
+</script>
+</body>
+</html>

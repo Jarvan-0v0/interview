@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>向量数据库与Embedding · AI Agent面试宝典</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="sidebarToggle" class="sidebar-toggle" title="收起/展开菜单">◀</button>
+  <!-- ===== 侧边栏 ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1>AI Agent 面试宝典</h1>
+      <p>Java后端 → AI Agent 转行指南</p>
+    </div>
+    <nav>
+      <a href="index.html"><span class="num">00</span>首页</a>
+      <a href="01-java-foundation.html"><span class="num">01</span>Java后端核心复习</a>
+      <a href="02-middleware.html"><span class="num">02</span>常用中间件</a>
+      <a href="03-llm-foundation.html"><span class="num">03</span>LLM大模型基础</a>
+      <a href="04-prompt-engineering.html"><span class="num">04</span>Prompt工程</a>
+      <a href="05-langchain4j.html"><span class="num">05</span>LangChain4j框架详解</a>
+      <a href="06-agent-core.html"><span class="num">06</span>Agent核心概念</a>
+      <a href="07-rag.html"><span class="num">07</span>RAG检索增强生成</a>
+      <a href="08-vector-db.html" class="active"><span class="num">08</span>向量数据库与Embedding</a>
+      <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
+      <a href="10-agent-patterns.html"><span class="num">10</span>Agent测试与质量保障</a>
+      <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
+      <a href="12-project-packaging.html"><span class="num">12</span>项目经验包装与表达</a>
+      <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
+      <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
+      <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
+      <a href="16-spring-ai.html"><span class="num">16</span>Spring AI对比</a>
+      <a href="17-agent-security.html"><span class="num">17</span>Agent安全</a>
+  </nav>
+  </aside>
+
+  <!-- ===== 主内容 ===== -->
+  <main class="main">
+    <!-- 章节标题 -->
+    <header class="chapter-header">
+      <span class="chapter-num">CHAPTER 07</span>
+      <h2>向量数据库与 Embedding</h2>
+      <div class="goal">
+        <strong>🎯 学习目标：</strong>理解Embedding的本质（文本→高维向量的语义映射）与向量相似度计算（余弦/欧氏/点积），掌握ANN近似最近邻搜索（HNSW/IVF/PQ）解决暴力搜索性能问题，能对比Milvus/Pinecone/Chroma/Qdrant/Weaviate/pgvector做技术选型，并结合langchain4j的EmbeddingStore接口说清向量库的工程用法。
+      </div>
+    </header>
+
+    <p class="one-liner">向量数据库 = <strong>专门存高维向量并按"语义距离"做检索</strong>的存储引擎——不是替代MySQL，而是为"语义相似查询"这种传统数据库做不了的场景而生。</p>
+
+    <!-- ===================== 1. Embedding本质 ===================== -->
+    <h3>1. Embedding的本质 <span class="difficulty">★★★★★ 必考</span></h3>
+
+    <p>Embedding（嵌入）是把文本映射成<strong>高维浮点向量</strong>（如768维、1536维）的过程，核心思想是：<strong>语义相近的文本，向量距离也近</strong>。这样"语义相似度"就变成了可计算的"向量距离"。</p>
+
+    <div class="concept-card">
+      <h4>Embedding做了什么</h4>
+      <ul>
+        <li><strong>输入</strong>：一段文本（如"如何申请退货"）</li>
+        <li><strong>输出</strong>：一个固定长度的浮点数组，如 <code>[0.023, -0.187, 0.541, ..., 0.082]</code>（768个数）</li>
+        <li><strong>性质</strong>：语义相近的文本 → 向量在空间中离得近；语义无关 → 离得远</li>
+      </ul>
+    </div>
+
+    <div class="diagram">
+      <svg viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg">
+        <!-- 坐标轴 -->
+        <line x1="60" y1="320" x2="700" y2="320" stroke="#bbb" stroke-width="1"/>
+        <line x1="60" y1="320" x2="60" y2="30" stroke="#bbb" stroke-width="1"/>
+        <text x="710" y="325" font-size="11" fill="#999">dim1</text>
+        <text x="50" y="22" font-size="11" fill="#999" text-anchor="end">dim2</text>
+
+        <!-- 退货类簇 -->
+        <ellipse cx="180" cy="110" rx="95" ry="60" fill="none" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <circle cx="150" cy="90" r="6" fill="#1565c0"/>
+        <circle cx="190" cy="115" r="6" fill="#1565c0"/>
+        <circle cx="170" cy="140" r="6" fill="#1565c0"/>
+        <circle cx="220" cy="95" r="6" fill="#1565c0"/>
+        <text x="180" y="200" text-anchor="middle" font-size="12" font-weight="700" fill="#1565c0">退款/退货类</text>
+        <text x="150" y="78" font-size="9" fill="#666">如何申请退货</text>
+        <text x="195" y="130" font-size="9" fill="#666">退款流程是什么</text>
+
+        <!-- 物流类簇 -->
+        <ellipse cx="430" cy="220" rx="95" ry="60" fill="none" stroke="#2e7d32" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <circle cx="410" cy="210" r="6" fill="#2e7d32"/>
+        <circle cx="450" cy="230" r="6" fill="#2e7d32"/>
+        <circle cx="390" cy="245" r="6" fill="#2e7d32"/>
+        <circle cx="460" cy="200" r="6" fill="#2e7d32"/>
+        <text x="430" y="310" text-anchor="middle" font-size="12" font-weight="700" fill="#2e7d32">物流查询类</text>
+        <text x="410" y="195" font-size="9" fill="#666">我的快递到哪了</text>
+        <text x="455" y="245" font-size="9" fill="#666">物流状态查询</text>
+
+        <!-- 闲聊类簇 -->
+        <ellipse cx="620" cy="80" rx="80" ry="50" fill="none" stroke="#ed6c02" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <circle cx="600" cy="70" r="6" fill="#ed6c02"/>
+        <circle cx="640" cy="90" r="6" fill="#ed6c02"/>
+        <circle cx="615" cy="105" r="6" fill="#ed6c02"/>
+        <text x="620" y="160" text-anchor="middle" font-size="12" font-weight="700" fill="#ed6c02">闲聊类</text>
+        <text x="600" y="58" font-size="9" fill="#666">你好呀</text>
+        <text x="645" y="105" font-size="9" fill="#666">今天天气不错</text>
+
+        <!-- 查询点 -->
+        <circle cx="170" cy="115" r="9" fill="none" stroke="#d32f2f" stroke-width="3"/>
+        <text x="190" y="75" font-size="10" fill="#d32f2f" font-weight="700">Q: 怎么退款</text>
+      </svg>
+      <div class="caption">图7-1 Embedding语义空间示意：语义相近的文本聚成一簇，查询点落在哪个簇就能召回该簇的文档（注：真实向量是768+维，这里降维到2维仅作示意）</div>
+    </div>
+
+    <div class="java-analogy">Embedding ≈ <strong>带语义距离的HashMap</strong>。普通HashMap的hash只用来定位bucket，两个hash值接近毫无语义含义；而Embedding把文本映射到向量空间后，<strong>向量距离是有语义含义的</strong>——距离近=语义近。可以说Embedding是"保留了语义结构的hash映射"。</div>
+
+    <div class="note">关键认知：真实向量是几百上千维的浮点数组，无法直接画出来。上图把768维降维到2维只是为了直观展示"语义相近=距离近"这个性质，不代表真实分布。</div>
+
+    <!-- ===================== 2. 向量相似度计算 ===================== -->
+    <h3>2. 向量相似度计算 <span class="difficulty">★★★★☆</span></h3>
+
+    <p>有了向量，怎么算"相近"？有三种主流度量，面试要能写出公式并讲清差异。</p>
+
+    <table class="compare-table">
+      <thead>
+        <tr><th>度量</th><th>公式</th><th>关注点</th><th>适用场景</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>余弦相似度<br>Cosine Similarity</td>
+          <td>cos(A,B) = (A·B) / (|A|×|B|)</td>
+          <td>方向（夹角），不看大小</td>
+          <td><strong>文本检索最常用</strong>，只关心语义方向</td>
+        </tr>
+        <tr>
+          <td>欧氏距离<br>Euclidean</td>
+          <td>d = √Σ(Aᵢ-Bᵢ)²</td>
+          <td>绝对位置（直线距离）</td>
+          <td>图像特征、点云等</td>
+        </tr>
+        <tr>
+          <td>点积<br>Dot Product</td>
+          <td>A·B = Σ Aᵢ×Bᵢ</td>
+          <td>方向+大小（向量未归一化时）</td>
+          <td>向量已归一化时等价于余弦，速度快</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="diagram">
+      <svg viewBox="0 0 760 240" xmlns="http://www.w3.org/2000/svg">
+        <!-- 余弦 -->
+        <circle cx="120" cy="120" r="80" fill="none" stroke="#e0e0e0" stroke-width="1"/>
+        <line x1="120" y1="120" x2="50" y2="70" stroke="#1565c0" stroke-width="2.5" marker-end="url(#v1)"/>
+        <line x1="120" y1="120" x2="180" y2="50" stroke="#1565c0" stroke-width="2.5" marker-end="url(#v1)"/>
+        <path d="M 95 95 A 30 30 0 0 1 145 95" fill="none" stroke="#d32f2f" stroke-width="2"/>
+        <text x="120" y="155" text-anchor="middle" font-size="13" font-weight="700" fill="#1565c0">余弦相似度</text>
+        <text x="120" y="175" text-anchor="middle" font-size="11" fill="#555">看夹角θ</text>
+        <text x="120" y="192" text-anchor="middle" font-size="10" fill="#2e7d32">方向近=语义近</text>
+
+        <!-- 欧氏 -->
+        <line x1="300" y1="180" x2="430" y2="60" stroke="#1565c0" stroke-width="2.5" stroke-dasharray="4,3"/>
+        <circle cx="300" cy="180" r="5" fill="#d32f2f"/>
+        <circle cx="430" cy="60" r="5" fill="#d32f2f"/>
+        <text x="300" y="200" text-anchor="middle" font-size="9" fill="#666">A</text>
+        <text x="430" y="50" text-anchor="middle" font-size="9" fill="#666">B</text>
+        <text x="365" y="155" text-anchor="middle" font-size="13" font-weight="700" fill="#1565c0">欧氏距离</text>
+        <text x="365" y="175" text-anchor="middle" font-size="11" fill="#555">看直线长度</text>
+        <text x="365" y="192" text-anchor="middle" font-size="10" fill="#2e7d32">绝对位置近</text>
+
+        <!-- 点积 -->
+        <line x1="540" y1="180" x2="480" y2="80" stroke="#1565c0" stroke-width="2.5" marker-end="url(#v1)"/>
+        <line x1="540" y1="180" x2="620" y2="110" stroke="#1565c0" stroke-width="2.5" marker-end="url(#v1)"/>
+        <rect x="525" y="160" width="6" height="6" fill="#1565c0" opacity="0.3"/>
+        <text x="565" y="155" text-anchor="middle" font-size="13" font-weight="700" fill="#1565c0">点积</text>
+        <text x="565" y="175" text-anchor="middle" font-size="11" fill="#555">方向×长度</text>
+        <text x="565" y="192" text-anchor="middle" font-size="10" fill="#2e7d32">投影累加</text>
+
+        <defs>
+          <marker id="v1" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M0,0 L6,4 L0,8 z" fill="#1565c0"/>
+          </marker>
+        </defs>
+      </svg>
+      <div class="caption">图7-2 三种相似度度量的几何含义：余弦看夹角、欧氏看直线距离、点积看投影累加</div>
+    </div>
+
+    <div class="concept-card">
+      <h4>为什么文本检索多用余弦相似度</h4>
+      <p>文本Embedding后，向量的<strong>模长</strong>（长度）往往受文本长度、措辞等影响，而<strong>方向</strong>才代表语义。余弦相似度只看夹角不看模长，能屏蔽"长短不一"的干扰，更纯粹地反映语义相似度。很多Embedding模型在输出前就做了<strong>L2归一化</strong>（把向量长度统一为1），此时点积=余弦，算得更快。</p>
+    </div>
+
+    <h4>余弦相似度的公式与计算示例</h4>
+    <p><strong>数学公式</strong>：两个向量 A、B 的余弦相似度 = 它们的点积除以各自模长的乘积：<br>
+    <code>cos(A, B) = (A · B) / (||A|| × ||B||) = Σ(Aᵢ × Bᵢ) / (√ΣAᵢ² × √ΣBᵢ²)</code><br>
+    其中 A·B 是点积（对应位相乘再求和），||A|| 是A的L2范数（各维度平方和开根号）。取值范围 [-1, 1]：1 表示方向完全相同（语义最相近），0 表示正交（语义无关），-1 表示方向相反（语义对立，实际文本中罕见）。</p>
+
+    <p><strong>计算示例</strong>：假设3维向量 A = [3, 4, 0]（如"如何申请退货"的embedding简化），B = [4, 5, 0]（如"退款流程是什么"）。<br>
+    ① 点积 A·B = 3×4 + 4×5 + 0×0 = 12 + 20 + 0 = 32<br>
+    ② ||A|| = √(3²+4²+0²) = √25 = 5；||B|| = √(4²+5²+0²) = √41 ≈ 6.40<br>
+    ③ cos(A,B) = 32 / (5 × 6.40) = 32 / 32.0 = 1.0<br>
+    两个向量方向几乎一致（夹角≈0°），说明"如何申请退货"和"退款流程是什么"<strong>语义高度相似</strong>，会被向量检索召回为Top结果。</p>
+
+    <p><strong>对比无关文本</strong>：若 C = [0, 0, 5]（如"今天天气真好"）。A·C = 3×0+4×0+0×5 = 0，cos(A,C) = 0 / (5×5) = 0。两向量正交，语义无关，不会召回——这正是余弦相似度"只看方向不看大小"的价值：即使C的模长和A一样大，方向不同就判为不相关。</p>
+
+    <div class="diagram">
+      <svg viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="cv1" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M0,0 L6,4 L0,8 z" fill="#1565c0"/>
+          </marker>
+          <marker id="cv2" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M0,0 L6,4 L0,8 z" fill="#ed6c02"/>
+          </marker>
+        </defs>
+
+        <text x="380" y="22" text-anchor="middle" font-size="15" font-weight="700" fill="#1565c0">余弦相似度几何图解</text>
+
+        <!-- 左图：高相似 -->
+        <text x="190" y="50" text-anchor="middle" font-size="12" font-weight="700" fill="#2e7d32">cos ≈ 1 · 语义相似</text>
+        <circle cx="190" cy="180" r="6" fill="#333"/>
+        <text x="200" y="195" font-size="10" fill="#333">原点O</text>
+        <!-- 向量A -->
+        <line x1="190" y1="180" x2="120" y2="90" stroke="#1565c0" stroke-width="3" marker-end="url(#cv1)"/>
+        <text x="95" y="80" font-size="11" font-weight="700" fill="#1565c0">A: 如何申请退货</text>
+        <!-- 向量B (方向接近A) -->
+        <line x1="190" y1="180" x2="135" y2="75" stroke="#ed6c02" stroke-width="3" marker-end="url(#cv2)"/>
+        <text x="95" y="60" font-size="11" font-weight="700" fill="#ed6c02">B: 退款流程是什么</text>
+        <!-- 夹角θ (小) -->
+        <path d="M 165 130 A 35 35 0 0 1 178 125" fill="none" stroke="#d32f2f" stroke-width="2"/>
+        <text x="172" y="148" font-size="11" fill="#d32f2f" font-weight="700">θ≈0°</text>
+        <!-- 公式 -->
+        <text x="190" y="240" text-anchor="middle" font-size="10" fill="#555">A·B=32, |A|=5, |B|=6.4</text>
+        <text x="190" y="258" text-anchor="middle" font-size="10" fill="#555">cos = 32/(5×6.4) ≈ 1.0</text>
+        <text x="190" y="285" text-anchor="middle" font-size="10" fill="#2e7d32" font-weight="700">✓ 方向一致 → 召回</text>
+
+        <!-- 右图：正交 -->
+        <text x="570" y="50" text-anchor="middle" font-size="12" font-weight="700" fill="#999">cos = 0 · 语义无关</text>
+        <circle cx="570" cy="180" r="6" fill="#333"/>
+        <text x="580" y="195" font-size="10" fill="#333">原点O</text>
+        <!-- 向量A -->
+        <line x1="570" y1="180" x2="500" y2="90" stroke="#1565c0" stroke-width="3" marker-end="url(#cv1)"/>
+        <text x="475" y="80" font-size="11" font-weight="700" fill="#1565c0">A: 如何申请退货</text>
+        <!-- 向量C (垂直) -->
+        <line x1="570" y1="180" x2="650" y2="180" stroke="#999" stroke-width="3" marker-end="url(#cv2)"/>
+        <text x="660" y="175" font-size="11" font-weight="700" fill="#999">C: 今天天气真好</text>
+        <!-- 直角标记 -->
+        <path d="M 560 170 L 560 180 L 570 180" fill="none" stroke="#d32f2f" stroke-width="2"/>
+        <text x="548" y="168" font-size="11" fill="#d32f2f" font-weight="700">θ=90°</text>
+        <!-- 公式 -->
+        <text x="570" y="240" text-anchor="middle" font-size="10" fill="#555">A·C=0, |A|=5, |C|=5</text>
+        <text x="570" y="258" text-anchor="middle" font-size="10" fill="#555">cos = 0/(5×5) = 0</text>
+        <text x="570" y="285" text-anchor="middle" font-size="10" fill="#d32f2f" font-weight="700">✗ 正交 → 不召回</text>
+
+        <!-- 中间分隔 -->
+        <line x1="380" y1="55" x2="380" y2="300" stroke="#ddd" stroke-width="1" stroke-dasharray="4,4"/>
+      </svg>
+      <div class="caption">图7-5 余弦相似度几何图解：左图两向量夹角≈0°(方向一致,cos≈1,语义相似召回) / 右图两向量正交θ=90°(cos=0,语义无关不召回)</div>
+    </div>
+
+    <div class="java-analogy">相似度计算 ≈ <strong>Comparator的compare实现</strong>。向量库本质是给每个查询向量找出"排序后Top-K"的元素，和SQL的ORDER BY+LIMIT思想一致——只不过排序键从标量变成了"向量距离"这个特殊比较函数。</div>
+
+    <!-- ===================== 3. ANN近似最近邻搜索 ===================== -->
+    <h3>3. ANN 近似最近邻搜索 <span class="difficulty">★★★★☆</span></h3>
+
+    <p>有了一堆向量，怎么找出和查询向量最相近的Top-K？最朴素的做法是<strong>暴力搜索</strong>：和库里每个向量都算一遍相似度，排序取Top-K。问题是——库里有上亿条向量时，每次查询都算上亿次，<strong>O(N)复杂度根本扛不住</strong>。</p>
+
+    <div class="warn">暴力搜索的痛点：1000万条向量、每次查询算1000万次相似度，单次查询几百毫秒到秒级，高并发下数据库直接被打爆。必须用索引加速——这就是ANN算法要解决的问题。</div>
+
+    <p>ANN（Approximate Nearest Neighbor，近似最近邻）的核心思路：<strong>牺牲一点精度换取巨大速度提升</strong>。不要求100%精确，只要recall（召回率）够高（如95%），但速度能快几个数量级。三种主流算法：</p>
+
+    <h4>HNSW 算法的分层图原理详解</h4>
+    <p>HNSW（Hierarchical Navigable Small World，分层可导航小世界图）的<strong>核心思想</strong>是"空间换时间+分层导航"。它把所有向量组织成一张多层图结构，每层都是一个"小世界图"——节点之间用边连接，相邻向量之间有边。关键是<strong>层级越往上，节点越稀疏、边越长（连接距离远的节点）；层级越往下，节点越密集、边越短（只连接近邻）</strong>。插入节点时，先用指数衰减概率决定它最高出现在哪一层（大部分节点只在最底层），顶层节点是"长距离高速公路"。</p>
+
+    <p><strong>查询流程</strong>：从最高层的入口节点出发，先在稀疏层利用长距离边<strong>大步跳</strong>到查询向量附近的区域（粗定位），然后下沉到下一层，在更密的图里做更精细的局部搜索（逼近），逐层下沉直到最底层（密集层），在邻域内做最终的精确排序返回Top-K。整个过程像<strong>地图导航：先上高速走大方向→下省道缩小区间→最后县道精确定位</strong>。由于每层只访问少量节点（图搜索的局部性），总访问数远小于暴力搜索的N，复杂度接近 O(logN)。</p>
+
+    <p><strong>为什么快、代价是什么</strong>：快的原因有二：①分层结构让搜索"先粗后细"，避免在最密的底层从头遍历；②小世界图的特性是<strong>任意两节点间只需少量跳数即可到达</strong>（六度分隔理论），即使上亿节点，平均跳数也是对数级。代价是<strong>内存占用大</strong>——要存所有层的图结构（节点+邻接表），且建图是增量的、插入慢。所以 HNSW 适合<strong>内存充足、追求查询速度的中小到中大规模</strong>场景；超大规模（十亿级）常和 IVF/PQ 组合，用 IVF 分桶缩小搜索范围、桶内再用 HNSW 加速。</p>
+
+    <div class="diagram">
+      <svg viewBox="0 0 920 420" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="hn1" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M0,0 L6,4 L0,8 z" fill="#d32f2f"/>
+          </marker>
+        </defs>
+
+        <text x="460" y="22" text-anchor="middle" font-size="15" font-weight="700" fill="#1565c0">HNSW 分层小世界图结构</text>
+
+        <!-- Layer 2 (最稀疏) -->
+        <rect x="30" y="40" width="860" height="90" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <text x="50" y="60" font-size="12" font-weight="700" fill="#1565c0">Layer 2 (稀疏·长距离边)</text>
+        <circle cx="150" cy="90" r="7" fill="#1565c0"/>
+        <circle cx="450" cy="75" r="7" fill="#1565c0"/>
+        <circle cx="750" cy="95" r="7" fill="#1565c0"/>
+        <line x1="150" y1="90" x2="450" y2="75" stroke="#1565c0" stroke-width="2"/>
+        <line x1="450" y1="75" x2="750" y2="95" stroke="#1565c0" stroke-width="2"/>
+        <text x="300" y="78" text-anchor="middle" font-size="9" fill="#666" font-style="italic">长距离边</text>
+        <text x="600" y="80" text-anchor="middle" font-size="9" fill="#666" font-style="italic">长距离边</text>
+        <!-- 入口标记 -->
+        <circle cx="150" cy="90" r="12" fill="none" stroke="#d32f2f" stroke-width="2.5"/>
+        <text x="150" y="115" text-anchor="middle" font-size="9" fill="#d32f2f" font-weight="700">入口</text>
+
+        <!-- 下沉箭头 L2->L1 -->
+        <path d="M 450 90 L 450 135" stroke="#d32f2f" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#hn1)"/>
+        <text x="470" y="122" font-size="9" fill="#d32f2f">下沉</text>
+
+        <!-- Layer 1 (中等) -->
+        <rect x="30" y="140" width="860" height="90" rx="8" fill="#bbdefb" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <text x="50" y="160" font-size="12" font-weight="700" fill="#1565c0">Layer 1 (中等密度)</text>
+        <circle cx="120" cy="185" r="5" fill="#1565c0"/>
+        <circle cx="220" cy="175" r="5" fill="#1565c0"/>
+        <circle cx="330" cy="195" r="5" fill="#1565c0"/>
+        <circle cx="450" cy="180" r="5" fill="#1565c0"/>
+        <circle cx="560" cy="190" r="5" fill="#1565c0"/>
+        <circle cx="670" cy="175" r="5" fill="#1565c0"/>
+        <circle cx="780" cy="195" r="5" fill="#1565c0"/>
+        <line x1="120" y1="185" x2="220" y2="175" stroke="#1565c0" stroke-width="1.2"/>
+        <line x1="220" y1="175" x2="330" y2="195" stroke="#1565c0" stroke-width="1.2"/>
+        <line x1="330" y1="195" x2="450" y2="180" stroke="#1565c0" stroke-width="1.2"/>
+        <line x1="450" y1="180" x2="560" y2="190" stroke="#1565c0" stroke-width="1.2"/>
+        <line x1="560" y1="190" x2="670" y2="175" stroke="#1565c0" stroke-width="1.2"/>
+        <line x1="670" y1="175" x2="780" y2="195" stroke="#1565c0" stroke-width="1.2"/>
+        <!-- 当前位置 -->
+        <circle cx="450" cy="180" r="10" fill="none" stroke="#d32f2f" stroke-width="2.5"/>
+
+        <!-- 下沉箭头 L1->L0 -->
+        <path d="M 450 185 L 450 235" stroke="#d32f2f" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#hn1)"/>
+        <text x="470" y="222" font-size="9" fill="#d32f2f">下沉</text>
+
+        <!-- Layer 0 (密集) -->
+        <rect x="30" y="240" width="860" height="100" rx="8" fill="#90caf9" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <text x="50" y="260" font-size="12" font-weight="700" fill="#1565c0">Layer 0 (密集·短距离边·全量数据)</text>
+        <!-- 密集节点 -->
+        <g fill="#1565c0">
+          <circle cx="100" cy="295" r="4"/><circle cx="150" cy="285" r="4"/><circle cx="200" cy="300" r="4"/>
+          <circle cx="250" cy="288" r="4"/><circle cx="300" cy="298" r="4"/><circle cx="350" cy="283" r="4"/>
+          <circle cx="400" cy="295" r="4"/><circle cx="450" cy="290" r="4"/><circle cx="500" cy="300" r="4"/>
+          <circle cx="550" cy="287" r="4"/><circle cx="600" cy="298" r="4"/><circle cx="650" cy="283" r="4"/>
+          <circle cx="700" cy="295" r="4"/><circle cx="750" cy="300" r="4"/><circle cx="800" cy="288" r="4"/>
+          <circle cx="850" cy="298" r="4"/>
+        </g>
+        <g stroke="#1565c0" stroke-width="0.7" fill="none">
+          <line x1="100" y1="295" x2="150" y2="285"/><line x1="150" y1="285" x2="200" y2="300"/>
+          <line x1="200" y1="300" x2="250" y2="288"/><line x1="250" y1="288" x2="300" y2="298"/>
+          <line x1="300" y1="298" x2="350" y2="283"/><line x1="350" y1="283" x2="400" y2="295"/>
+          <line x1="400" y1="295" x2="450" y2="290"/><line x1="450" y1="290" x2="500" y2="300"/>
+          <line x1="500" y1="300" x2="550" y2="287"/><line x1="550" y1="287" x2="600" y2="298"/>
+          <line x1="600" y1="298" x2="650" y2="283"/><line x1="650" y1="283" x2="700" y2="295"/>
+          <line x1="700" y1="295" x2="750" y2="300"/><line x1="750" y1="300" x2="800" y2="288"/>
+          <line x1="800" y1="288" x2="850" y2="298"/>
+        </g>
+        <!-- 目标 + TopK -->
+        <circle cx="450" cy="290" r="11" fill="none" stroke="#d32f2f" stroke-width="2.5"/>
+        <text x="450" y="320" text-anchor="middle" font-size="9" fill="#d32f2f" font-weight="700">目标→精排Top-K</text>
+
+        <!-- 右侧流程说明 -->
+        <rect x="640" y="355" width="250" height="55" rx="6" fill="#fff8e1" stroke="#ed6c02" stroke-width="1.5"/>
+        <text x="765" y="373" text-anchor="middle" font-size="10" font-weight="700" fill="#ed6c02">查询路径: L2粗定位→L1逼近→L0精排</text>
+        <text x="765" y="390" text-anchor="middle" font-size="9" fill="#555">类似: 高速→省道→县道</text>
+        <text x="765" y="404" text-anchor="middle" font-size="9" fill="#2e7d32">✓ O(logN) · 召回高</text>
+      </svg>
+      <div class="caption">图7-4 HNSW分层图结构：顶层稀疏长距离(粗定位) → 中层过渡 → 底层密集全量数据(精排Top-K)，逐层下沉收敛</div>
+    </div>
+
+    <div class="diagram">
+      <svg viewBox="0 0 920 340" xmlns="http://www.w3.org/2000/svg">
+        <!-- HNSW -->
+        <rect x="20" y="20" width="280" height="300" rx="10" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+        <text x="160" y="50" text-anchor="middle" font-size="15" font-weight="700" fill="#1565c0">HNSW 分层小世界图</text>
+        <!-- 上层稀疏 -->
+        <circle cx="100" cy="90" r="6" fill="#1565c0"/>
+        <circle cx="220" cy="90" r="6" fill="#1565c0"/>
+        <line x1="100" y1="90" x2="220" y2="90" stroke="#1565c0" stroke-width="1.5"/>
+        <text x="160" y="78" text-anchor="middle" font-size="9" fill="#666">Layer2 (稀疏)</text>
+        <!-- 中层 -->
+        <circle cx="80" cy="140" r="5" fill="#1565c0"/>
+        <circle cx="160" cy="140" r="5" fill="#1565c0"/>
+        <circle cx="240" cy="140" r="5" fill="#1565c0"/>
+        <line x1="80" y1="140" x2="160" y2="140" stroke="#1565c0" stroke-width="1"/>
+        <line x1="160" y1="140" x2="240" y2="140" stroke="#1565c0" stroke-width="1"/>
+        <text x="160" y="128" text-anchor="middle" font-size="9" fill="#666">Layer1</text>
+        <!-- 下层密集 -->
+        <circle cx="70" cy="200" r="4" fill="#1565c0"/>
+        <circle cx="110" cy="200" r="4" fill="#1565c0"/>
+        <circle cx="150" cy="200" r="4" fill="#1565c0"/>
+        <circle cx="190" cy="200" r="4" fill="#1565c0"/>
+        <circle cx="230" cy="200" r="4" fill="#1565c0"/>
+        <circle cx="270" cy="200" r="4" fill="#1565c0"/>
+        <line x1="70" y1="200" x2="110" y2="200" stroke="#1565c0" stroke-width="0.8"/>
+        <line x1="110" y1="200" x2="150" y2="200" stroke="#1565c0" stroke-width="0.8"/>
+        <line x1="150" y1="200" x2="190" y2="200" stroke="#1565c0" stroke-width="0.8"/>
+        <line x1="190" y1="200" x2="230" y2="200" stroke="#1565c0" stroke-width="0.8"/>
+        <line x1="230" y1="200" x2="270" y2="200" stroke="#1565c0" stroke-width="0.8"/>
+        <text x="160" y="188" text-anchor="middle" font-size="9" fill="#666">Layer0 (密集)</text>
+        <text x="160" y="240" text-anchor="middle" font-size="11" fill="#555">从顶层入口快速导航</text>
+        <text x="160" y="258" text-anchor="middle" font-size="11" fill="#555">逐层下沉到密集层</text>
+        <text x="160" y="285" text-anchor="middle" font-size="10" fill="#2e7d32" font-weight="600">✓ 召回高·查询快</text>
+        <text x="160" y="303" text-anchor="middle" font-size="10" fill="#d32f2f">✗ 内存占用大</text>
+
+        <!-- IVF -->
+        <rect x="320" y="20" width="280" height="300" rx="10" fill="#fff3e0" stroke="#ed6c02" stroke-width="2"/>
+        <text x="460" y="50" text-anchor="middle" font-size="15" font-weight="700" fill="#ed6c02">IVF 倒排文件</text>
+        <!-- 聚类中心 -->
+        <circle cx="390" cy="110" r="14" fill="none" stroke="#ed6c02" stroke-width="2"/>
+        <circle cx="490" cy="100" r="14" fill="none" stroke="#ed6c02" stroke-width="2"/>
+        <circle cx="430" cy="170" r="14" fill="none" stroke="#ed6c02" stroke-width="2"/>
+        <circle cx="540" cy="180" r="14" fill="none" stroke="#ed6c02" stroke-width="2"/>
+        <text x="390" y="114" text-anchor="middle" font-size="9" fill="#ed6c02">c1</text>
+        <text x="490" y="104" text-anchor="middle" font-size="9" fill="#ed6c02">c2</text>
+        <text x="430" y="174" text-anchor="middle" font-size="9" fill="#ed6c02">c3</text>
+        <text x="540" y="184" text-anchor="middle" font-size="9" fill="#ed6c02">c4</text>
+        <!-- 聚类成员 -->
+        <circle cx="375" cy="95" r="3" fill="#ed6c02"/>
+        <circle cx="405" cy="105" r="3" fill="#ed6c02"/>
+        <circle cx="395" cy="125" r="3" fill="#ed6c02"/>
+        <circle cx="475" cy="90" r="3" fill="#ed6c02"/>
+        <circle cx="500" cy="115" r="3" fill="#ed6c02"/>
+        <circle cx="420" cy="160" r="3" fill="#ed6c02"/>
+        <circle cx="445" cy="180" r="3" fill="#ed6c02"/>
+        <circle cx="525" cy="170" r="3" fill="#ed6c02"/>
+        <circle cx="555" cy="195" r="3" fill="#ed6c02"/>
+        <text x="460" y="230" text-anchor="middle" font-size="11" fill="#555">K-Means预聚类</text>
+        <text x="460" y="248" text-anchor="middle" font-size="11" fill="#555">查最近的nprobe个簇</text>
+        <text x="460" y="275" text-anchor="middle" font-size="10" fill="#2e7d32" font-weight="600">✓ 内存省·可分布式</text>
+        <text x="460" y="293" text-anchor="middle" font-size="10" fill="#d32f2f">✗ 召回依赖nprobe</text>
+
+        <!-- PQ -->
+        <rect x="620" y="20" width="280" height="300" rx="10" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2"/>
+        <text x="760" y="50" text-anchor="middle" font-size="15" font-weight="700" fill="#7b1fa2">PQ 乘积量化</text>
+        <!-- 向量分段 -->
+        <rect x="650" y="80" width="220" height="24" fill="#fff" stroke="#7b1fa2" stroke-width="1.5"/>
+        <line x1="705" y1="80" x2="705" y2="104" stroke="#7b1fa2"/>
+        <line x1="760" y1="80" x2="760" y2="104" stroke="#7b1fa2"/>
+        <line x1="815" y1="80" x2="815" y2="104" stroke="#7b1fa2"/>
+        <text x="677" y="97" text-anchor="middle" font-size="9" fill="#7b1fa2">段1</text>
+        <text x="732" y="97" text-anchor="middle" font-size="9" fill="#7b1fa2">段2</text>
+        <text x="787" y="97" text-anchor="middle" font-size="9" fill="#7b1fa2">段3</text>
+        <text x="842" y="97" text-anchor="middle" font-size="9" fill="#7b1fa2">段4</text>
+        <text x="760" y="72" text-anchor="middle" font-size="10" fill="#666">向量切成M段</text>
+        <!-- 码本 -->
+        <rect x="650" y="125" width="50" height="40" fill="#fff" stroke="#7b1fa2" stroke-width="1"/>
+        <text x="675" y="148" text-anchor="middle" font-size="9" fill="#7b1fa2">码本1</text>
+        <rect x="705" y="125" width="50" height="40" fill="#fff" stroke="#7b1fa2" stroke-width="1"/>
+        <text x="730" y="148" text-anchor="middle" font-size="9" fill="#7b1fa2">码本2</text>
+        <rect x="760" y="125" width="50" height="40" fill="#fff" stroke="#7b1fa2" stroke-width="1"/>
+        <text x="785" y="148" text-anchor="middle" font-size="9" fill="#7b1fa2">码本3</text>
+        <rect x="815" y="125" width="50" height="40" fill="#fff" stroke="#7b1fa2" stroke-width="1"/>
+        <text x="840" y="148" text-anchor="middle" font-size="9" fill="#7b1fa2">码本4</text>
+        <text x="760" y="180" text-anchor="middle" font-size="11" fill="#555">每段量化成码字</text>
+        <text x="760" y="198" text-anchor="middle" font-size="11" fill="#555">向量→短编码序列</text>
+        <text x="760" y="240" text-anchor="middle" font-size="10" fill="#2e7d32" font-weight="600">✓ 压缩率极高</text>
+        <text x="760" y="258" text-anchor="middle" font-size="10" fill="#555">10亿级也能存下</text>
+        <text x="760" y="285" text-anchor="middle" font-size="10" fill="#d32f2f">✗ 有精度损失</text>
+      </svg>
+      <div class="caption">图7-3 三种ANN算法对比：HNSW(图分层导航) / IVF(聚类倒排) / PQ(分段量化压缩)</div>
+    </div>
+
+    <table class="compare-table">
+      <thead>
+        <tr><th>算法</th><th>原理</th><th>优点</th><th>缺点</th><th>典型场景</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>HNSW</strong><br>分层小世界图</td>
+          <td>构建多层图，上层稀疏下层密集，从顶层快速导航逐层下沉到目标区域</td>
+          <td>召回率高、查询极快</td>
+          <td>内存占用大（要存图结构）</td>
+          <td>中小规模、追求速度</td>
+        </tr>
+        <tr>
+          <td><strong>IVF</strong><br>倒排文件</td>
+          <td>K-Means预聚类成nlist个簇，查询时只扫最近的nprobe个簇</td>
+          <td>内存省、可分布式</td>
+          <td>召回依赖nprobe，调参敏感</td>
+          <td>大规模、分布式</td>
+        </tr>
+        <tr>
+          <td><strong>PQ</strong><br>乘积量化</td>
+          <td>向量切M段，每段用码本量化成短编码，大幅压缩存储</td>
+          <td>压缩率极高，10亿级可存</td>
+          <td>有精度损失</td>
+          <td>超大规模、内存受限</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="concept-card">
+      <h4>工程实战：组合使用 IVF + PQ</h4>
+      <p>Milvus等向量库常用<strong>IVF+PQ组合</strong>：先用IVF聚类缩小搜索范围（粗筛），再用PQ压缩向量减少内存和计算（精算）。还可以在IVF内部套HNSW加速簇内搜索。面试提到"组合索引"会显得懂工程优化。</p>
+    </div>
+
+    <div class="java-analogy">ANN ≈ <strong>数据库索引（B+Tree）的思想</strong>。B+Tree用空间换时间——建索引慢、占空间，但查询从O(N)降到O(logN)。ANN索引同理：建库时要先构建HNSW图/IVF聚类（慢、占内存），但查询从O(N)降到O(logN)级别。<strong>都是"预计算结构+牺牲空间+近似换取速度"</strong>。</div>
+
+    <!-- ===================== 3.5 为什么不用MySQL做向量检索 ===================== -->
+    <h3>3.5 为什么不用 MySQL 直接做向量检索 <span class="difficulty">★★★★☆</span></h3>
+
+    <p>这是Java后端转AI Agent的同学最容易问的问题——"我已经有MySQL了，为什么还要引入Milvus/pgvector这种新组件？把向量塞进MySQL的一列不就行了？"答案是：<strong>MySQL在架构上就不是为高维向量距离检索设计的，硬做会在三个层面撞墙</strong>。</p>
+
+    <p><strong>第一堵墙：没有原生的向量索引</strong>。MySQL的B+Tree索引、Hash索引、全文索引，都是为<strong>标量精确匹配或范围查询</strong>设计的——WHERE id=123、WHERE age BETWEEN 20 AND 30。但向量检索是"给一个768维的查询向量，找出和它余弦相似度最高的Top-K"——这是一个<strong>高维空间的距离排序问题</strong>，B+Tree根本无法索引（高维距离没有单调性，无法用区间剪枝）。MySQL最多能用全文索引做关键词匹配，但关键词匹配<strong>不懂语义</strong>：用户问"怎么退款"，文档里写的是"退货政策"，LIKE和MATCH都召回不了，而向量检索能识别它们语义相近。</p>
+
+    <p><strong>第二堵墙：暴力全表扫描的O(N)性能灾难</strong>。如果硬把768维向量存进MySQL的BLOB/JSON列，查询时只能"SELECT出所有行 → 在应用层逐行算余弦相似度 → 排序取Top-K"。这是<strong>O(N)复杂度</strong>，N=百万级时单次查询就要扫百万行+算百万次768维点积，耗时秒级；N=千万级直接不可用。专业向量库靠ANN索引（HNSW/IVF）把复杂度压到O(logN)，同样千万级数据查询只要毫秒——差距是几个数量级。这就像<strong>用MySQL的COUNT全表扫来做计数 vs 用Redis的INCR</strong>，技术上能做，但工程上不可接受。</p>
+
+    <p><strong>第三堵墙：缺乏向量计算的原语和优化</strong>。专业向量库在底层做了大量向量计算优化——SIMD指令集并行计算、批量矩阵乘法、GPU加速、量化压缩（PQ）减少内存带宽瓶颈。MySQL完全没有这些，每个维度的乘加都要逐条记录逐字段处理，效率天差地别。打个比方：这就像<strong>用通用HashMap做图算法</strong>——能存数据但没图的遍历原语，每一步都要自己手写循环，既慢又易错。</p>
+
+    <p><strong>折中方案与选型建议</strong>：如果公司已有PostgreSQL且数据量不大（百万级），<strong>pgvector</strong>是最佳折中——它是PG的扩展插件，带HNSW/IVFFlat索引、SQL原生查询（<code>ORDER BY embedding &lt;-&gt; '[0.1,...]' LIMIT 5</code>），复用现有DBA和运维，无需引入新组件。MySQL 8.x虽然也开始加向量类型，但索引能力、生态成熟度远不及pgvector。规模再大（千万到亿级）就必须上<strong>Milvus</strong>这类专业分布式向量库了——就像全文检索量大了要上ES一样，是<strong>"专用工具做专用的事"</strong>的工程常识。</p>
+
+    <div class="java-analogy">为什么不用MySQL做向量检索 ≈ <strong>为什么不用MySQL做全文检索而要上ES</strong>。MySQL的LIKE能做简单搜索，但量一大、相关性排序要求一高，就得用专门的Elasticsearch（倒排索引+TF-IDF/BM25）。同理，向量语义检索量大、要ANN加速，就得用专业向量库或pgvector。<strong>都是"通用DB不够用→上专用引擎"</strong>的经典演进。</div>
+
+    <div class="note">面试加分点：能补一句"pgvector和Milvus不是对立的——pgvector适合已有PG、数据量百万级、想低成本接入；Milvus适合从0搭建、千万到亿级、要分布式"，体现你懂按场景选型而非一概而论。</div>
+
+    <!-- ===================== 4. 向量数据库对比选型 ===================== -->
+    <h3>4. 向量数据库对比选型 <span class="difficulty">★★★★★ 必考</span></h3>
+
+    <p>向量数据库不止一家，面试常问"你怎么选"。要能从部署方式、性能、生态、Java友好度等维度对比。</p>
+
+    <table class="compare-table">
+      <thead>
+        <tr><th>数据库</th><th>部署方式</th><th>语言/实现</th><th>Java生态</th><th>特点</th><th>适用场景</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Milvus</strong></td>
+          <td>自托管/云托管</td>
+          <td>Go/C++</td>
+          <td>SDK好</td>
+          <td>分布式、高性能、索引类型全、支持十亿级</td>
+          <td><strong>企业级生产首选</strong>，Java后端友好</td>
+        </tr>
+        <tr>
+          <td><strong>Pinecone</strong></td>
+          <td>全托管SaaS</td>
+          <td>闭源</td>
+          <td>HTTP API</td>
+          <td>零运维、自动扩缩、稳定</td>
+          <td>不想运维、海外业务、快速验证</td>
+        </tr>
+        <tr>
+          <td><strong>Chroma</strong></td>
+          <td>嵌入式/本地</td>
+          <td>Python</td>
+          <td>弱</td>
+          <td>轻量、开发友好、Python原生</td>
+          <td>原型开发、Demo、小数据量</td>
+        </tr>
+        <tr>
+          <td><strong>Qdrant</strong></td>
+          <td>自托管/云</td>
+          <td>Rust</td>
+          <td>HTTP API</td>
+          <td>Rust写的高性能、内存效率高、过滤强</td>
+          <td>追求性能、过滤条件复杂</td>
+        </tr>
+        <tr>
+          <td><strong>Weaviate</strong></td>
+          <td>自托管/云</td>
+          <td>Go</td>
+          <td>HTTP API</td>
+          <td>GraphQL接口、内置模块化向量化</td>
+          <td>喜欢GraphQL、一站式</td>
+        </tr>
+        <tr>
+          <td><strong>pgvector</strong></td>
+          <td>PostgreSQL扩展</td>
+          <td>C/SQL</td>
+          <td><strong>JDBC原生</strong></td>
+          <td>复用PG生态、SQL查询、IVFFlat/HNSW索引</td>
+          <td><strong>已有PG、不想引入新组件</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="concept-card">
+      <h4>选型决策树</h4>
+      <ul>
+        <li><strong>已有PostgreSQL且数据量不大（百万级）</strong> → pgvector，复用现有DBA和运维，SQL原生</li>
+        <li><strong>企业级生产、千万到亿级、需分布式</strong> → Milvus，Java SDK成熟</li>
+        <li><strong>不想运维、海外业务</strong> → Pinecone，全托管省心</li>
+        <li><strong>追求极致性能、过滤条件多</strong> → Qdrant，Rust内存效率高</li>
+        <li><strong>快速原型/Demo</strong> → Chroma，几行代码跑起来</li>
+      </ul>
+    </div>
+
+    <div class="java-analogy">向量库选型 ≈ <strong>选消息队列</strong>。Kafka（Milvus，重量级但能扛大规模）、RabbitMQ（Chroma，轻量友好）、Redis Stream（pgvector，复用现有组件）——根据规模、运维能力、生态需求选，没有银弹。</div>
+
+    <div class="note">国内Java后端转Agent，Milvus和pgvector是重点。Milvus适合从0搭建的大规模场景；pgvector适合公司已有PG、想低成本接入向量检索的场景。两者面试都要能讲清。</div>
+
+    <!-- ===================== 5. langchain4j向量存储 ===================== -->
+    <h3>5. langchain4j 中的向量存储</h3>
+
+    <p>langchain4j抽象了统一的 <code>EmbeddingStore</code> 接口，屏蔽底层是Milvus/PgVector/Chroma的差异，切换成本极低。</p>
+
+    <div class="code-block">
+      <span class="lang">Java · langchain4j EmbeddingStore 用法</span>
+<pre><span class="cmt">// 1. 创建Embedding模型（离线建库和在线检索必须用同一个）</span>
+EmbeddingModel embeddingModel = <span class="kw">new</span> <span class="fn">BgeSmallZhEmbeddingModel</span>();  <span class="cmt">// 768维，中文友好</span>
+
+<span class="cmt">// 2. 创建向量存储——以Milvus为例</span>
+EmbeddingStore&lt;TextSegment&gt; store = MilvusEmbeddingStore.builder()
+    .host(<span class="str">"localhost"</span>)
+    .port(<span class="str">19530</span>)
+    .collectionName(<span class="str">"kb_docs"</span>)
+    .dimension(<span class="num">768</span>)                  <span class="cmt">// 必须和Embedding模型维度一致</span>
+    .indexType(IndexType.IVFFLAT)   <span class="cmt">// ANN索引类型</span>
+    .metricType(MetricType.COSINE)  <span class="cmt">// 相似度度量</span>
+    .build();
+
+<span class="cmt">// 3. 离线：把文档分块后向量化并入库</span>
+TextSegment segment1 = TextSegment.from(<span class="str">"退货政策：7天内可无理由退货..."</span>);
+Embedding emb1 = embeddingModel.embed(segment1).content();  <span class="cmt">// 文本→向量</span>
+store.add(emb1, segment1);   <span class="cmt">// 向量+原文一起存</span>
+
+<span class="cmt">// 4. 在线：用户提问→向量化→检索Top-K</span>
+Embedding queryEmb = embeddingModel.embed(<span class="str">"怎么退货"</span>).content();
+List&lt;EmbeddingMatch&lt;TextSegment&gt;&gt; matches = store.findRelevant(
+    queryEmb,
+    <span class="num">5</span>,          <span class="cmt">// maxResults: Top-5</span>
+    <span class="num">0.7</span>         <span class="cmt">// minScore: 相似度阈值</span>
+);
+
+<span class="cmt">// 5. 拼成context给LLM</span>
+String context = matches.stream()
+    .map(m -> m.embedded().text())
+    .collect(Collectors.joining(<span class="str">"\n---\n"</span>));
+<span class="cmt">// 再把context塞进Prompt调LLM——见第6章RAG</span></pre>
+    </div>
+
+    <div class="warn">踩坑点：① 维度必须一致——换Embedding模型导致维度变了，旧库数据全部作废要重建。② minScore阈值要调——太高召回少、太低混入噪声，需结合语料A/B测。③ 索引类型在建表时定，建好后再改要重建索引。</div>
+
+    <div class="java-analogy">EmbeddingStore接口 ≈ <strong>JDBC的DataSource</strong>。上层代码只面向接口编程，底下接MySQL/PG/Oracle都行。langchain4j同理——业务代码面向EmbeddingStore，底下Milvus/PgVector/Chroma无缝切换，这就是抽象的力量。</div>
+
+    <!-- ===================== 面试问答 ===================== -->
+    <h3>面试场景演练</h3>
+
+    <div class="interview-q">
+      <div class="question">Q1：向量检索的原理是什么？</div>
+      <div class="interview-answer">
+        <p>分三步：①离线用Embedding模型把文档映射成高维向量存入向量库；②在线用<strong>同一个</strong>Embedding模型把用户问题也映射成向量；③在向量库里按相似度度量（一般用余弦相似度）算查询向量和所有文档向量的距离，取Top-K最相近的返回。</p>
+        <p>底层靠的是"语义相近的文本向量距离也近"这个性质，本质是把"语义匹配"问题转化成了"向量距离计算"问题。</p>
+      </div>
+      <div class="interview-tip">关键词："同一个Embedding模型""语义相近=距离近""余弦相似度Top-K"。能补一句"这和HashMap不同——hash值相近没语义，向量距离近是有语义的"会显得理解到位。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">Q2：HNSW算法是什么？</div>
+      <div class="interview-answer">
+        <p>HNSW（Hierarchical Navigable Small World，分层可导航小世界图）是一种ANN近似最近邻索引算法。它把向量组织成<strong>多层图结构</strong>：上层节点稀疏、连接长距离，下层节点密集、连接短距离。查询时从顶层入口节点开始，利用长距离边快速跳到目标区域附近，再逐层下沉到密集层做精细搜索，像走高速公路→省道→县道逐级收敛。</p>
+        <p>优点是召回率高、查询快（接近O(logN)）；缺点是建图慢、内存占用大（要存图结构）。适合中小规模、追求速度的场景，Milvus/Qdrant默认推荐的就是HNSW。</p>
+      </div>
+      <div class="interview-tip">类比"地图导航：高速→省道→县道逐级下沉"特别好记。能再补一句"内存大是它的代价，超大规模时会和IVF+PQ组合"就是高手答法。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">Q3：Milvus和Pinecone怎么选？</div>
+      <div class="interview-answer">
+        <p>Milvus是<strong>开源、可自托管</strong>的分布式向量库，Java SDK成熟、索引类型全、支持十亿级规模，适合企业级生产、对数据主权敏感、有运维团队的场景，国内Java后端首选。Pinecone是<strong>全托管SaaS</strong>，零运维、自动扩缩容、稳定，适合不想碰运维、海外业务、快速验证的场景，缺点是闭源、数据要出本地、按用量付费成本可能高。</p>
+        <p>决策点：数据量小且要快上线→Pinecone；企业级大规模、数据不出本地、Java生态→Milvus。我项目里选Milvus，因为公司数据合规要求私有化部署，且Java SDK好对接现有Spring Boot技术栈。</p>
+      </div>
+      <div class="interview-tip">关键差异是"自托管 vs 全托管"。结合"数据合规、Java生态、运维能力"三点讲选型理由，体现你懂工程权衡而非盲选。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">Q4：为什么不用MySQL直接做向量检索？</div>
+      <div class="interview-answer">
+        <p>核心原因是MySQL<strong>没有原生的向量索引和距离计算能力</strong>。用MySQL做向量检索只能用LIKE或全文索引做关键词匹配，做不了<strong>语义相似</strong>——"退款"和"退货"LIKE匹配不到，但向量检索能召回。即使把向量存进MySQL，也只能全表扫描算距离，O(N)复杂度，上百万条就慢得不可用。</p>
+        <p>两个折中方案：①用<strong>pgvector</strong>——给PostgreSQL加向量扩展，带HNSW/IVFFlat索引，SQL原生查询，适合已有PG、数据量不大的场景；②MySQL自己也在8.x加向量类型，但生态和索引能力远不如专业向量库。大规模语义检索还是得上Milvus这类专业组件。</p>
+      </div>
+      <div class="interview-tip">答到"MySQL做不了语义相似，只能关键词匹配"是核心。再补"pgvector是折中、大规模上专业向量库"就完整了。类比"用MySQL做全文检索要上ES"——Java工程师秒懂。</div>
+    </div>
+
+    <!-- ===================== 重点回顾 ===================== -->
+    <div class="review-card">
+      <ul>
+        <li>Embedding本质：文本→高维向量，<strong>语义相近=距离近</strong>，是"保留语义结构的hash映射"</li>
+        <li>相似度三度量：余弦(看方向，文本最常用) / 欧氏(看直线距离) / 点积(归一化后等价余弦，最快)</li>
+        <li>暴力搜索O(N)扛不住，ANN牺牲精度换速度：HNSW(图分层导航) / IVF(聚类倒排) / PQ(分段量化压缩)</li>
+        <li>工程常用<strong>IVF+PQ组合</strong>：IVF粗筛+PQ压缩精算，兼顾速度和内存</li>
+        <li>向量库选型：Milvus(企业级、Java友好) / Pinecone(全托管) / Chroma(原型) / Qdrant(高性能) / Weaviate(GraphQL) / pgvector(复用PG)</li>
+        <li>Java后端重点：Milvus(大规模新建) 和 pgvector(已有PG、低成本接入)</li>
+        <li>langchain4j的EmbeddingStore≈JDBC的DataSource，面向接口编程，底层库无缝切换</li>
+        <li>关键约束：离线建库和在线检索必须用<strong>同一个Embedding模型</strong>，换模型=全部重新入库</li>
+      </ul>
+    </div>
+
+    <!-- 章节导航 -->
+    <nav class="chapter-nav">
+      <a class="prev" href="07-rag.html">← 上一章：RAG检索增强生成</a>
+      <a class="next" href="10-agent-patterns.html">下一章：Agent测试与质量保障 →</a>
+    </nav>
+  </main>
+<script>
+(function(){
+  var btn = document.getElementById("sidebarToggle");
+  var body = document.body;
+  try { if(localStorage.getItem("sb")==="0") body.classList.add("sidebar-collapsed"); } catch(e){}
+  function update(){ btn.textContent = body.classList.contains("sidebar-collapsed") ? "▶" : "◀"; }
+  btn.addEventListener("click", function(){
+    body.classList.toggle("sidebar-collapsed");
+    try { localStorage.setItem("sb", body.classList.contains("sidebar-collapsed")?"0":"1"); } catch(e){}
+    update();
+  });
+  update();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,502 @@
+/* ===== Agent面试宝典 共享样式 ===== */
+:root {
+  --primary: #1565c0;
+  --primary-light: #e3f2fd;
+  --accent: #ff6f00;
+  --bg: #ffffff;
+  --bg-soft: #f8f9fa;
+  --text: #1a1a1a;
+  --text-soft: #555;
+  --text-muted: #999;
+  --border: #e0e0e0;
+  --success: #2e7d32;
+  --warning: #ed6c02;
+  --danger: #d32f2f;
+  --code-bg: #f5f5f5;
+  --review-bg: #fff8e1;
+  --review-border: #ffc107;
+  --answer-bg: #e8f5e9;
+  --answer-border: #4caf50;
+  --sidebar-w: 280px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.8;
+  font-size: 15px;
+}
+
+/* ===== 侧边栏 ===== */
+.sidebar {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--bg-soft);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 20px 0;
+  z-index: 100;
+}
+.sidebar-header {
+  padding: 0 24px 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.sidebar-header h1 {
+  font-size: 18px;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+.sidebar-header p {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.sidebar nav a {
+  display: block;
+  padding: 8px 24px;
+  color: var(--text-soft);
+  text-decoration: none;
+  font-size: 14px;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+}
+.sidebar nav a:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+.sidebar nav a.active {
+  background: var(--primary-light);
+  color: var(--primary);
+  border-left-color: var(--primary);
+  font-weight: 600;
+}
+.sidebar nav a .num {
+  display: inline-block;
+  width: 28px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* ===== 主内容区 ===== */
+.main {
+  margin-left: var(--sidebar-w);
+  padding: 40px 56px;
+  max-width: 900px;
+}
+
+/* ===== 章节标题 ===== */
+.chapter-header {
+  margin-bottom: 32px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid var(--primary);
+}
+.chapter-header .chapter-num {
+  display: inline-block;
+  background: var(--primary);
+  color: #fff;
+  padding: 2px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.chapter-header h2 {
+  font-size: 28px;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.chapter-header .goal {
+  background: var(--primary-light);
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--primary);
+  margin-top: 12px;
+}
+.chapter-header .goal strong { font-weight: 700; }
+
+/* ===== 通用元素 ===== */
+h3 {
+  font-size: 22px;
+  color: var(--text);
+  margin: 36px 0 16px;
+  padding-left: 12px;
+  border-left: 4px solid var(--primary);
+}
+h4 {
+  font-size: 17px;
+  color: var(--text);
+  margin: 24px 0 12px;
+}
+p { margin-bottom: 12px; }
+ul, ol { margin: 8px 0 16px 24px; }
+li { margin-bottom: 6px; }
+
+strong { color: var(--text); font-weight: 700; }
+em { color: var(--primary); font-style: normal; font-weight: 600; }
+
+/* ===== 代码块 ===== */
+.code-block {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 16px 0;
+  overflow-x: auto;
+  font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.code-block .lang {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+.code-block pre { white-space: pre-wrap; }
+.code-block .kw { color: #d73a49; }
+.code-block .str { color: #032f62; }
+.code-block .cmt { color: #6a737d; font-style: italic; }
+.code-block .fn { color: #6f42c1; }
+.code-block .num { color: #005cc5; }
+
+/* ===== 面试回答框 ===== */
+.interview-q {
+  background: #fff;
+  border: 2px solid var(--primary);
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin: 24px 0;
+  position: relative;
+}
+.interview-q::before {
+  content: '🎤 面试官提问';
+  position: absolute;
+  top: -12px;
+  left: 16px;
+  background: var(--primary);
+  color: #fff;
+  padding: 2px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.interview-q .question {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+  margin-top: 4px;
+}
+.interview-answer {
+  background: var(--answer-bg);
+  border-left: 4px solid var(--answer-border);
+  border-radius: 0 8px 8px 0;
+  padding: 16px 20px;
+  margin: 12px 0;
+}
+.interview-answer::before {
+  content: '💡 参考回答';
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--success);
+  margin-bottom: 8px;
+}
+.interview-answer p { margin-bottom: 8px; }
+.interview-tip {
+  background: #fff3e0;
+  border-left: 4px solid var(--accent);
+  padding: 10px 16px;
+  border-radius: 0 6px 6px 0;
+  margin: 8px 0;
+  font-size: 13px;
+}
+.interview-tip::before {
+  content: '⚡ 加分技巧';
+  font-weight: 700;
+  color: var(--accent);
+  margin-right: 8px;
+}
+
+/* ===== 重点回顾卡片 ===== */
+.review-card {
+  background: var(--review-bg);
+  border: 2px solid var(--review-border);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin: 40px 0;
+  position: relative;
+}
+.review-card::before {
+  content: '🎯 重点回顾';
+  position: absolute;
+  top: -14px;
+  left: 20px;
+  background: var(--review-border);
+  color: #fff;
+  padding: 4px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.review-card ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.review-card li {
+  padding: 8px 0 8px 28px;
+  position: relative;
+  border-bottom: 1px dashed rgba(255,193,7,0.4);
+}
+.review-card li:last-child { border-bottom: none; }
+.review-card li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  color: var(--success);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+/* ===== 概念卡片 ===== */
+.concept-card {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin: 16px 0;
+}
+.concept-card h4 {
+  color: var(--primary);
+  margin-top: 0;
+}
+
+/* ===== 对比表格 ===== */
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 14px;
+}
+.compare-table th {
+  background: var(--primary);
+  color: #fff;
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+}
+.compare-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.compare-table tr:nth-child(even) td {
+  background: var(--bg-soft);
+}
+
+/* ===== 难度标记 ===== */
+.difficulty {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--accent);
+  margin-left: 8px;
+}
+
+/* ===== 一句话说清楚 ===== */
+.one-liner {
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  border-radius: 8px;
+  padding: 14px 20px;
+  margin: 12px 0;
+  font-size: 14px;
+}
+.one-liner::before {
+  content: '🗣️ 一句话说清楚：';
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* ===== Java类比框 ===== */
+.java-analogy {
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  border-radius: 8px;
+  padding: 14px 20px;
+  margin: 12px 0;
+  font-size: 14px;
+}
+.java-analogy::before {
+  content: '☕ Java类比：';
+  font-weight: 700;
+  color: var(--success);
+}
+
+/* ===== 插图区域 ===== */
+.diagram {
+  text-align: center;
+  margin: 24px 0;
+  padding: 20px;
+  background: var(--bg-soft);
+  border-radius: 12px;
+  border: 1px dashed var(--border);
+}
+.diagram svg { max-width: 100%; height: auto; }
+.diagram .caption {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  font-style: italic;
+}
+
+/* ===== 折叠面板 ===== */
+.collapse {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 8px 0;
+  overflow: hidden;
+}
+.collapse summary {
+  padding: 12px 16px;
+  cursor: pointer;
+  font-weight: 600;
+  background: var(--bg-soft);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.collapse summary::before {
+  content: '▶';
+  font-size: 12px;
+  color: var(--primary);
+  transition: transform 0.2s;
+}
+.collapse[open] summary::before { transform: rotate(90deg); }
+.collapse .content {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* ===== 章节导航 ===== */
+.chapter-nav {
+  display: flex;
+  justify-content: space-between;
+  margin: 40px 0 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.chapter-nav a {
+  display: inline-block;
+  padding: 8px 20px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.chapter-nav .prev {
+  background: var(--bg-soft);
+  color: var(--text-soft);
+  border: 1px solid var(--border);
+}
+.chapter-nav .next {
+  background: var(--primary);
+  color: #fff;
+}
+.chapter-nav a:hover { opacity: 0.85; }
+
+/* ===== 标签 ===== */
+.tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0 4px;
+}
+.tag-hot { background: #ffebee; color: #c62828; }
+.tag-mid { background: #fff3e0; color: #e65100; }
+.tag-low { background: #e8f5e9; color: #2e7d32; }
+
+/* ===== 侧边栏收起 ===== */
+.sidebar-toggle {
+  position: fixed;
+  left: calc(var(--sidebar-w) - 16px);
+  top: 12px;
+  width: 30px;
+  height: 30px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 200;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: left 0.3s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  color: var(--text-soft);
+  padding: 0;
+  line-height: 1;
+}
+.sidebar-toggle:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+body.sidebar-collapsed .sidebar {
+  width: 0;
+  overflow: hidden;
+  padding: 0;
+  border-right: none;
+}
+body.sidebar-collapsed .main {
+  margin-left: 0;
+}
+body.sidebar-collapsed .sidebar-toggle {
+  left: 8px;
+}
+
+/* 移动端自动收起 */
+@media (max-width: 900px) {
+  body:not(.sidebar-collapsed) .sidebar {
+    box-shadow: 4px 0 16px rgba(0,0,0,0.15);
+  }
+}
+.note {
+  background: #e3f2fd;
+  border-left: 4px solid var(--primary);
+  padding: 12px 16px;
+  border-radius: 0 8px 8px 0;
+  margin: 12px 0;
+  font-size: 14px;
+}
+.note::before {
+  content: '📌 注意';
+  display: block;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+.warn {
+  background: #fff3e0;
+  border-left: 4px solid var(--warning);
+  padding: 12px 16px;
+  border-radius: 0 8px 8px 0;
+  margin: 12px 0;
+  font-size: 14px;
+}
+.warn::before {
+  content: '⚠️ 常见陷阱';
+  display: block;
+  font-weight: 700;
+  color: var(--warning);
+  margin-bottom: 4px;
+}

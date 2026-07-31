@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spring AI vs LangChain4j · AI Agent面试宝典</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="sidebarToggle" class="sidebar-toggle" title="收起/展开菜单">◀</button>
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1>AI Agent 面试宝典</h1>
+      <p>Java后端 → AI Agent 转行指南</p>
+    </div>
+    <nav>
+      <a href="index.html"><span class="num">00</span>首页</a>
+      <a href="01-java-foundation.html"><span class="num">01</span>Java后端核心复习</a>
+      <a href="02-middleware.html"><span class="num">02</span>常用中间件</a>
+      <a href="03-llm-foundation.html"><span class="num">03</span>LLM大模型基础</a>
+      <a href="04-prompt-engineering.html"><span class="num">04</span>Prompt工程</a>
+      <a href="05-langchain4j.html"><span class="num">05</span>LangChain4j框架详解</a>
+      <a href="06-agent-core.html"><span class="num">06</span>Agent核心概念</a>
+      <a href="07-rag.html"><span class="num">07</span>RAG检索增强生成</a>
+      <a href="08-vector-db.html"><span class="num">08</span>向量数据库与Embedding</a>
+      <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
+      <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
+      <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
+      <a href="12-project-packaging.html"><span class="num">12</span>项目经验：mall-agent</a>
+      <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
+      <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
+      <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
+      <a href="16-spring-ai.html" class="active"><span class="num">16</span>Spring AI对比</a>
+  </nav>
+  </aside>
+
+  <main class="main">
+    <header class="chapter-header">
+      <span class="chapter-num">专题</span>
+      <h2>Spring AI vs LangChain4j <span class="tag tag-hot">高频</span></h2>
+      <div class="goal">
+        <strong>🎯 学习目标：</strong>掌握Spring AI的定位、核心概念（ChatClient/FunctionCallback/VectorStore/ETL Pipeline）、与langchain4j的全面对比（架构/API风格/生态/成熟度），能在面试中清晰回答"为什么选langchain4j不选Spring AI"以及"什么时候应该选Spring AI"。
+      </div>
+    </header>
+
+    <p class="one-liner">Spring AI是Spring官方推出的AI框架，和langchain4j是Java生态的"双子星"——面试官问你"为什么选A不选B"，不是要你贬低另一个，而是考察你对<strong>技术选型的判断力</strong>。</p>
+
+    <!-- ===================== 1. Spring AI是什么 ===================== -->
+    <h3>1. Spring AI是什么 <span class="difficulty">★★★★☆</span></h3>
+
+    <p>Spring AI是Spring团队在2024年推出的<strong>AI应用开发框架</strong>，旨在将AI能力像数据库访问、消息队列一样"Spring化"——用熟悉的Spring风格（注解、自动配置、Starter依赖）开发AI应用。</p>
+
+    <div class="concept-card">
+      <h4>Spring AI的定位</h4>
+      <p>Spring AI不是要"重新发明"AI框架，而是把AI能力融入Spring生态。它的设计哲学是：<strong>如果你会Spring Boot，你就会Spring AI</strong>。ChatClient就像RestTemplate，VectorStore就像JdbcTemplate，FunctionCallback就像@EventListener。</p>
+      <p>版本历程：2024年中0.8.x（里程碑版，API不稳）→ 2025年初1.0.0-M1 → 2025年下半年1.0.0正式版 → 2026年1.x持续迭代。当前（2026年中）已进入稳定期。</p>
+    </div>
+
+    <div class="java-analogy">Spring AI之于AI开发 ≈ Spring Data之于数据库访问。Spring Data让你用@Repository注解操作MongoDB/Redis/MySQL，不需要写原生驱动代码。Spring AI让你用@Tool注解定义工具、用ChatClient调用LLM，不需要手写HTTP请求和JSON解析。</div>
+
+    <!-- ===================== 2. 核心概念 ===================== -->
+    <h3>2. Spring AI核心概念速览 <span class="difficulty">★★★★☆</span></h3>
+
+    <table class="compare-table">
+      <tr><th>Spring AI概念</th><th>对应langchain4j</th><th>作用</th></tr>
+      <tr><td><strong>ChatClient</strong></td><td>ChatLanguageModel / AiServices</td><td>调用LLM的入口，支持流式+同步+异步</td></tr>
+      <tr><td><strong>@Tool + FunctionCallback</strong></td><td>@Tool + AiServices自动</td><td>定义LLM可调用的工具</td></tr>
+      <tr><td><strong>VectorStore</strong></td><td>EmbeddingStore</td><td>向量存储抽象，支持Milvus/PGVector/Chroma等</td></tr>
+      <tr><td><strong>ETL Pipeline</strong></td><td>DocumentLoader + DocumentSplitter</td><td>文档加载→分块→向量化→存储的离线管道</td></tr>
+      <tr><td><strong>Advisors</strong></td><td>ContentRetriever + ChatMemory</td><td>增强LLM调用的拦截器链（RAG注入/记忆管理/安全过滤）</td></tr>
+      <tr><td><strong>Observability</strong></td><td>AiMetricsService</td><td>内置Micrometer指标+OpenTelemetry追踪</td></tr>
+    </table>
+
+    <div class="code-block">
+      <span class="lang">Spring AI 代码示例</span>
+<pre><span class="cmt">// 定义工具</span>
+<span class="kw">@Component</span>
+<span class="kw">public class</span> OrderTools {
+    <span class="kw">@Tool</span>(description = <span class="str">"查询订单状态（只读）"</span>)
+    <span class="kw">public</span> OrderDTO queryOrder(
+        <span class="kw">@ToolParam</span>(description = <span class="str">"订单号，如ORD12345"</span>) String orderId) {
+        <span class="kw">return</span> orderService.findByOrderId(orderId);
+    }
+}
+
+<span class="cmt">// 调用LLM（带工具）</span>
+<span class="kw">@RestController</span>
+<span class="kw">public class</span> ChatController {
+    <span class="kw">private final</span> ChatClient chatClient;
+
+    <span class="kw">public</span> ChatController(ChatClient.Builder builder, OrderTools orderTools) {
+        <span class="kw">this</span>.chatClient = builder
+            .defaultSystem(<span class="str">"你是客服助手，基于工具返回的信息回答"</span>)
+            .defaultTools(orderTools)  <span class="cmt">// 注册工具</span>
+            .build();
+    }
+
+    <span class="kw">@GetMapping</span>(<span class="str">"/chat"</span>)
+    <span class="kw">public</span> String chat(<span class="kw">@RequestParam</span> String query) {
+        <span class="kw">return</span> chatClient.prompt()
+            .user(query)
+            .call()
+            .content();  <span class="cmt">// 同步调用</span>
+    }
+
+    <span class="kw">@GetMapping</span>(value = <span class="str">"/chat/stream"</span>, produces = TEXT_EVENT_STREAM_VALUE)
+    <span class="kw">public</span> Flux&lt;String&gt; chatStream(<span class="kw">@RequestParam</span> String query) {
+        <span class="kw">return</span> chatClient.prompt()
+            .user(query)
+            .stream()
+            .content();  <span class="cmt">// 流式调用，返回Flux&lt;String&gt;</span>
+    }
+}</pre>
+    </div>
+
+    <!-- ===================== 3. 全面对比 ===================== -->
+    <h3>3. Spring AI vs LangChain4j 全面对比 <span class="difficulty">★★★★★ 必考</span></h3>
+
+    <h4>3.1 架构设计对比</h4>
+
+    <table class="compare-table">
+      <tr><th>对比维度</th><th>LangChain4j</th><th>Spring AI</th></tr>
+      <tr><td>设计哲学</td><td>独立框架，模仿Python LangChain</td><td>Spring原生，融入Spring生态</td></tr>
+      <tr><td>架构层次</td><td>三层：应用层(@AiService) + 核心层(接口) + 集成层(模块)</td><td>Spring Boot自动配置 + Starter依赖</td></tr>
+      <tr><td>API风格</td><td>Builder模式 + 声明式注解</td><td>Fluent API + Spring注解</td></tr>
+      <tr><td>Agent支持</td><td>✅ AiServices自动Agent + 手写ReAct</td><td>⚠ 需手动编排（ChatClient + Tool循环）</td></tr>
+      <tr><td>RAG支持</td><td>EasyRAG + ContentRetriever + EmbeddingStore</td><td>ETL Pipeline + VectorStore + Advisors</td></tr>
+      <tr><td>记忆管理</td><td>ChatMemory（MessageWindow/TokenWindow）</td><td>ChatMemory（内置Advisor）</td></tr>
+      <tr><td>流式输出</td><td>StreamingChatModel + TokenStream</td><td>ChatClient.stream() → Flux&lt;String&gt;</td></tr>
+      <tr><td>可观测性</td><td>需手动集成Prometheus</td><td>✅ 内置Micrometer + OpenTelemetry</td></tr>
+      <tr><td>Spring集成深度</td><td>兼容Spring Boot（非强依赖）</td><td>✅ 深度集成（Spring原生）</td></tr>
+    </table>
+
+    <h4>3.2 生态与成熟度</h4>
+
+    <table class="compare-table">
+      <tr><th>对比维度</th><th>LangChain4j</th><th>Spring AI</th></tr>
+      <tr><td>模型支持</td><td>OpenAI / Azure / Ollama / 通义千问 / Claude / Gemini / DeepSeek 等15+</td><td>OpenAI / Azure / Ollama / 通义千问 / Claude / Gemini 等10+</td></tr>
+      <tr><td>向量库支持</td><td>Milvus / Chroma / Pinecone / Weaviate / Qdrant / PgVector / Elasticsearch 等10+</td><td>Milvus / Chroma / Pinecone / PgVector / Cassandra / Neo4j 等8+</td></tr>
+      <tr><td>版本稳定</td><td>0.30+（2024年已稳定）</td><td>1.0（2025年下半年才稳定）</td></tr>
+      <tr><td>社区活跃度</td><td>活跃（GitHub 5k+ stars）</td><td>活跃（Spring官方维护，GitHub 3k+ stars）</td></tr>
+      <tr><td>文档质量</td><td>中等（官方文档+社区示例）</td><td>中上（Spring风格文档，但部分模块文档不全）</td></tr>
+      <tr><td>企业支持</td><td>社区驱动</td><td>✅ VMware/Spring官方支持</td></tr>
+    </table>
+
+    <h4>3.3 关键差异：Agent能力</h4>
+
+    <div class="concept-card">
+      <h4>这是两框架最核心的差异</h4>
+      <p><strong>LangChain4j的AiServices</strong>：声明式Agent。定义接口+@AiService注解→框架自动生成实现类→LLM决定调用哪个@Tool方法→自动循环直到完成。一行代码一个Agent。</p>
+      <p><strong>Spring AI的ChatClient</strong>：调用式Agent。ChatClient是调用入口，但你得自己写ReAct循环——调LLM→解析响应→判断是否需要工具→调用工具→把结果拼回Prompt→再调LLM。工具调用循环需要手动编排。</p>
+      <p><strong>结论</strong>：如果要做复杂Agent（多工具+多轮循环），langchain4j的AiServices更省事。如果只是"调LLM回答问题"或"RAG检索+生成"，两者差别不大。但Spring AI可以手动实现ReAct循环（和mall-agent手写ReAct一样），控制粒度更细。</p>
+    </div>
+
+    <!-- ===================== 4. 选型建议 ===================== -->
+    <h3>4. 选型建议：什么时候选哪个 <span class="difficulty">★★★★★ 必考</span></h3>
+
+    <table class="compare-table">
+      <tr><th>场景</th><th>推荐</th><th>理由</th></tr>
+      <tr><td>新项目，团队是Spring Boot技术栈</td><td>Spring AI</td><td>Spring原生集成，自动配置，运维体系一致</td></tr>
+      <tr><td>需要复杂Agent（多工具+多轮循环）</td><td>LangChain4j</td><td>AiServices声明式Agent，开箱即用</td></tr>
+      <tr><td>需要快速原型验证</td><td>LangChain4j</td><td>社区示例多，集成模块丰富，上手快</td></tr>
+      <tr><td>企业级项目，需要长期维护</td><td>Spring AI</td><td>Spring官方支持，版本稳定，长期可预期</td></tr>
+      <tr><td>已有langchain4j项目</td><td>不迁移</td><td>迁移成本高，ROI不划算。两个框架共存</td></tr>
+      <tr><td>需要可观测性开箱即用</td><td>Spring AI</td><td>内置Micrometer+OpenTelemetry，零配置</td></tr>
+      <tr><td>需要兼容非Spring项目</td><td>LangChain4j</td><td>不强制依赖Spring，纯Java也能用</td></tr>
+      <tr><td>需要对接Python生态</td><td>LangChain4j</td><td>与Python LangChain概念对齐，团队协作更顺畅</td></tr>
+    </table>
+
+    <div class="note">mall-agent选择langchain4j的原因：项目启动于2024年中，当时Spring AI还在0.8.x里程碑版本，API不稳定。langchain4j已经0.30+，有完整的Agent支持（AiServices）。如果现在（2026年）启动新项目，会重新评估Spring AI——它已经1.0+，成熟度大幅提升。</div>
+
+    <!-- ===================== 5. 迁移策略 ===================== -->
+    <h3>5. 迁移策略：langchain4j → Spring AI <span class="difficulty">★★★☆☆</span></h3>
+
+    <p>如果团队决定从langchain4j迁移到Spring AI，需要评估迁移成本和收益。以下是指南：</p>
+
+    <div class="concept-card">
+      <h4>迁移代价评估</h4>
+      <ul>
+        <li><strong>@AiService → ChatClient + 手动循环</strong>：迁移量最大。AiServices的声明式Agent需要改为手动ReAct循环。如果项目已经手写ReAct（如mall-agent），迁移成本低——循环逻辑不变，只需换API调用方式。</li>
+        <li><strong>@Tool → @Tool (Spring AI)</strong>：注解名相同但包不同，方法签名基本一致。迁移成本低，主要是改import。</li>
+        <li><strong>ChatMemory → ChatMemory (Spring AI)</strong>：接口相似，迁移成本中等。</li>
+        <li><strong>EmbeddingStore → VectorStore</strong>：抽象层不同，需要重写检索逻辑。迁移成本高。</li>
+        <li><strong>RAG Pipeline → ETL Pipeline</strong>：文档加载/分块/向量化逻辑需重写。迁移成本高。</li>
+      </ul>
+    </div>
+
+    <div class="warn">
+      <p><strong>迁移建议</strong>：不要全量迁移。采用<strong>绞杀者模式</strong>——新功能用Spring AI写，旧功能保持langchain4j。两个框架可以在同一个Spring Boot项目中共存（依赖不冲突），通过配置切换。等langchain4j部分逐渐被替换完后，再移除依赖。</p>
+      <p>mall-agent的评估：当前深度绑定langchain4j的@AiService和ChatMemory，迁移成本>收益，<strong>不建议迁移</strong>。但新项目启动会优先考虑Spring AI。</p>
+    </div>
+
+    <!-- ===================== 6. 面试Q&A ===================== -->
+    <h3>6. 面试Q&A <span class="difficulty">★★★★★</span></h3>
+
+    <div class="interview-q">
+      <div class="question">为什么选langchain4j而不是Spring AI？</div>
+      <div class="interview-answer">
+        <p>项目启动时（2024年中）Spring AI还在0.8.x里程碑版本，API不稳定，文档缺失严重。langchain4j已经0.30+版本，有完整的三层架构、声明式Agent（AiServices）、丰富的集成模块。从工程稳定性角度，选langchain4j是稳妥的选择。</p>
+        <p>现在Spring AI已经1.0+，成熟度大幅提升。但mall-agent已深度绑定langchain4j的AiServices、ChatMemory、StreamingChatModel等接口，迁移成本高，ROI不划算。新项目启动会重新评估——如果团队是纯Spring Boot技术栈，Spring AI是更自然的选择。</p>
+      </div>
+      <div class="interview-tip">关键：说清楚"为什么当时选"和"现在怎么看"两个维度。展示你的技术判断有历史视角，不是"始终选一个"。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">Spring AI和langchain4j的核心区别是什么？</div>
+      <div class="interview-answer">
+        <p>核心区别三个：</p>
+        <p>1）<strong>设计哲学</strong>：langchain4j是独立框架（模仿Python LangChain），Spring AI是Spring原生（融入Spring生态）。Spring AI的ChatClient就像RestTemplate，VectorStore就像JdbcTemplate——Spring开发者零学习成本。</p>
+        <p>2）<strong>Agent能力</strong>：langchain4j的AiServices是声明式Agent——定义接口→框架自动生成实现→LLM决定调用工具→自动循环。Spring AI的ChatClient需要手动编排ReAct循环。做复杂Agent，langchain4j更省事。</p>
+        <p>3）<strong>可观测性</strong>：Spring AI内置Micrometer+OpenTelemetry，零配置。langchain4j需要手动集成Prometheus。</p>
+      </div>
+      <div class="interview-tip">三个维度对比要清晰。说"Spring AI需要手动编排ReAct"是核心差异，展示你真的理解两个框架。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">Spring AI的Advisors是什么？和langchain4j的ContentRetriever有什么区别？</div>
+      <div class="interview-answer">
+        <p>Advisors是Spring AI的<strong>拦截器链</strong>机制，在LLM调用前后插入处理逻辑。类似Spring MVC的Interceptor。常见Advisor：</p>
+        <p>1）<strong>QuestionAnswerAdvisor</strong>：在调用前自动做RAG检索，把检索结果注入Prompt——等价于langchain4j的ContentRetriever。2）<strong>ChatMemoryAdvisor</strong>：管理对话历史，自动注入历史消息。3）<strong>SafeGuardAdvisor</strong>：过滤敏感内容。</p>
+        <p>核心区别：Advisors是更通用的<strong>AOP切面</strong>机制，不限于RAG——你可以自定义任何前置/后置处理。langchain4j的ContentRetriever只是RAG检索的专用接口。</p>
+      </div>
+      <div class="interview-tip">"AOP切面"类比展示Spring思维。说"不限于RAG"展示你理解Advisors的通用性。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">如果让你从零开始选，langchain4j还是Spring AI？</div>
+      <div class="interview-answer">
+        <p>取决于三个因素：</p>
+        <p>1）<strong>团队技术栈</strong>：纯Spring Boot团队→Spring AI（零学习成本）；混合技术栈团队→langchain4j（不强制Spring依赖）。</p>
+        <p>2）<strong>项目复杂度</strong>：需要复杂Agent（多工具+多轮循环）→langchain4j（AiServices声明式）；简单RAG+问答→两者都可以，Spring AI更省事（自动配置）。</p>
+        <p>3）<strong>长期维护</strong>：企业级项目，需要5年+维护→Spring AI（官方支持，Spring生态长期稳定）；快速迭代的创业项目→langchain4j（社区活跃，更新快）。</p>
+        <p>如果是我现在启动新项目：纯Spring Boot团队+企业级项目→Spring AI。需要复杂Agent+快速验证→langchain4j。</p>
+      </div>
+      <div class="interview-tip">三个因素（团队/复杂度/维护）的系统性思考展示架构判断力。不要只说"选X好"，要说"在什么条件下选X"。</div>
+    </div>
+
+    <div class="review-card">
+      <ul>
+        <li><strong>Spring AI定位</strong>：Spring官方的AI框架，将AI能力Spring化——ChatClient如RestTemplate，VectorStore如JdbcTemplate</li>
+        <li><strong>核心差异</strong>：设计哲学（独立框架 vs Spring原生）+ Agent能力（AiServices声明式 vs ChatClient手动编排）+ 可观测性（手动 vs 内置）</li>
+        <li><strong>Agent关键区别</strong>：langchain4j的AiServices自动生成Agent实现，Spring AI需手动写ReAct循环</li>
+        <li><strong>选型建议</strong>：纯Spring团队+企业级→Spring AI；复杂Agent+快速验证→langchain4j；已有项目→不迁移</li>
+        <li><strong>迁移策略</strong>：绞杀者模式，新功能用Spring AI，旧功能保持langchain4j，两个框架可共存</li>
+        <li><strong>mall-agent选择</strong>：2024年启动，langchain4j更成熟。现在不迁移（成本>收益）。新项目会重新评估</li>
+        <li><strong>面试要点</strong>：说清"当时为什么选"+"现在怎么看"+"什么条件下选什么"三个维度</li>
+      </ul>
+    </div>
+
+    <div class="chapter-nav">
+      <a href="15-mcp-protocol.html" class="prev">← MCP协议深度</a>
+      <a href="index.html" class="next">返回首页 →</a>
+    </div>
+
+  </main>
+<script>
+(function(){
+  var btn = document.getElementById("sidebarToggle");
+  var body = document.body;
+  try { if(localStorage.getItem("sb")==="0") body.classList.add("sidebar-collapsed"); } catch(e){}
+  function update(){ btn.textContent = body.classList.contains("sidebar-collapsed") ? "▶" : "◀"; }
+  btn.addEventListener("click", function(){
+    body.classList.toggle("sidebar-collapsed");
+    try { localStorage.setItem("sb", body.classList.contains("sidebar-collapsed")?"0":"1"); } catch(e){}
+    update();
+  });
+  update();
+})();
+</script>
+</body>
+</html>

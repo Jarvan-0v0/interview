@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM大模型基础 — Agent面试宝典</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="sidebarToggle" class="sidebar-toggle" title="收起/展开菜单">◀</button>
+
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <h1>Agent面试宝典</h1>
+    <p>Java后端 → AI Agent 转型指南</p>
+  </div>
+  <nav>
+    <a href="index.html"><span class="num">00</span>首页</a>
+    <a href="01-java-foundation.html"><span class="num">01</span>Java后端核心复习</a>
+    <a href="02-middleware.html"><span class="num">02</span>常用中间件</a>
+    <a href="03-llm-foundation.html" class="active"><span class="num">03</span>LLM大模型基础</a>
+    <a href="04-prompt-engineering.html"><span class="num">04</span>Prompt工程</a>
+    <a href="05-langchain4j.html"><span class="num">05</span>LangChain4j框架详解</a>
+    <a href="06-agent-core.html"><span class="num">06</span>Agent核心概念</a>
+    <a href="07-rag.html"><span class="num">07</span>RAG检索增强生成</a>
+    <a href="08-vector-db.html"><span class="num">08</span>向量数据库与Embedding</a>
+    <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
+    <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
+    <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
+    <a href="12-project-packaging.html"><span class="num">12</span>项目经验包装与表达</a>
+    <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
+      <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
+      <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
+      <a href="16-spring-ai.html"><span class="num">16</span>Spring AI对比</a>
+      <a href="17-agent-security.html"><span class="num">17</span>Agent安全</a>
+  </nav>
+</aside>
+
+<main class="main">
+
+<div class="chapter-header">
+  <span class="chapter-num">第03章</span>
+  <h2>LLM大模型基础</h2>
+  <div class="goal"><strong>学习目标：</strong>理解LLM底层原理——Transformer架构、Token与Embedding、关键参数调优、幻觉成因、Function Calling机制。这是转行Agent开发必须补的知识地基，面试会问"LLM是怎么工作的"。</div>
+</div>
+
+<h3>1. Transformer架构 <span class="difficulty">⭐⭐⭐</span></h3>
+
+<p>Transformer是当前所有主流大模型（GPT/Claude/Gemini/Llama）的基础架构，2017年Google在《Attention Is All You Need》中提出。理解Transformer是理解LLM一切行为的基础。</p>
+
+<div class="one-liner">Transformer的核心是自注意力：让句子中每个词都能"看到"所有其他词，根据相关性分配注意力，用矩阵乘法并行计算。</div>
+
+<h4>1.1 自注意力机制 (Self-Attention)</h4>
+
+<p>传统RNN处理文本时逐词串行处理，前面的词要等后面处理完。自注意力让<strong>每个词同时和所有词计算关联度</strong>，根据关联度加权融合信息。这解决了两个问题：一是并行化（GPU友好），二是长距离依赖（任意两个词直接相连，不像RNN距离远了就"遗忘"）。</p>
+
+<p>具体实现用三个矩阵：<strong>Q(Query)</strong>表示"我在找什么信息"，<strong>K(Key)</strong>表示"我能提供什么信息"，<strong>V(Value)</strong>表示"我的实际内容是什么"。计算时，用Q和所有K做点积算相似度，softmax归一化后作为权重，对V加权求和。公式：Attention(Q,K,V) = softmax(QK<sup>T</sup>/√d<sub>k</sub>)V。√d<sub>k</sub>是缩放因子，防止点积过大导致softmax梯度消失。</p>
+
+<div class="java-analogy">Self-Attention ≈ Java里的双重for循环：对集合中每个元素，和其他所有元素做一次对比算关联度。但Transformer用矩阵乘法把这个O(n²)操作高度并行化了，跑在GPU上非常快。类比：你开会有10个人，每个人同时和所有人交流（自注意力），比一个人一个人轮流发言（RNN）效率高得多。</div>
+
+<div class="diagram">
+<svg viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">
+  <rect x="50" y="30" width="80" height="40" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="90" y="55" text-anchor="middle" font-size="14" fill="#1565c0">小</text>
+  <rect x="180" y="30" width="80" height="40" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="220" y="55" text-anchor="middle" font-size="14" fill="#1565c0">马</text>
+  <rect x="310" y="30" width="80" height="40" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="350" y="55" text-anchor="middle" font-size="14" fill="#1565c0">写</text>
+  <rect x="440" y="30" width="80" height="40" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="480" y="55" text-anchor="middle" font-size="14" fill="#1565c0">代码</text>
+  <line x1="90" y1="70" x2="220" y2="70" stroke="#1565c0" stroke-width="4" opacity="0.8"/>
+  <line x1="90" y1="75" x2="350" y2="75" stroke="#1565c0" stroke-width="1" opacity="0.3"/>
+  <line x1="90" y1="80" x2="480" y2="80" stroke="#1565c0" stroke-width="1" opacity="0.2"/>
+  <line x1="220" y1="70" x2="480" y2="70" stroke="#1565c0" stroke-width="5" opacity="0.9"/>
+  <line x1="220" y1="75" x2="350" y2="75" stroke="#1565c0" stroke-width="2" opacity="0.5"/>
+  <line x1="350" y1="70" x2="480" y2="70" stroke="#1565c0" stroke-width="4" opacity="0.7"/>
+  <line x1="350" y1="75" x2="220" y2="75" stroke="#1565c0" stroke-width="2" opacity="0.4"/>
+  <line x1="480" y1="75" x2="220" y2="75" stroke="#1565c0" stroke-width="3" opacity="0.6"/>
+  <text x="300" y="110" text-anchor="middle" font-size="12" fill="#999">线越粗 = 注意力权重越高（关联越强）</text>
+  <text x="300" y="135" text-anchor="middle" font-size="13" fill="#555">每个词的新表示 = 所有词的Value按注意力权重加权求和</text>
+  <rect x="50" y="150" width="80" height="40" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+  <text x="90" y="175" text-anchor="middle" font-size="12" fill="#ff6f00">小'</text>
+  <rect x="180" y="150" width="80" height="40" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+  <text x="220" y="175" text-anchor="middle" font-size="12" fill="#ff6f00">马'</text>
+  <rect x="310" y="150" width="80" height="40" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+  <text x="350" y="175" text-anchor="middle" font-size="12" fill="#ff6f00">写'</text>
+  <rect x="440" y="150" width="80" height="40" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+  <text x="480" y="175" text-anchor="middle" font-size="12" fill="#ff6f00">代码'</text>
+  <text x="300" y="215" text-anchor="middle" font-size="13" fill="#d32f2f">RNN: 词→词→词→词（串行，慢，遗忘远端）</text>
+  <text x="300" y="240" text-anchor="middle" font-size="13" fill="#2e7d32">Transformer: 每个词同时看到所有词（并行，快，全局视野）</text>
+  <text x="300" y="270" text-anchor="middle" font-size="12" fill="#999">代价：O(n²)复杂度，序列长度翻倍计算量变4倍</text>
+</svg>
+<div class="caption">自注意力机制：每个词与所有词计算关联度，线越粗注意力越高</div>
+</div>
+
+<h4>1.2 Multi-Head Attention（多头注意力）</h4>
+
+<p>一个注意力头只能学到一种关联模式。多头注意力就是<strong>同时用多组Q/K/V</strong>（如GPT-4有96个头），每组学到不同模式——有的关注语法关系，有的关注语义关系，有的关注位置关系。最后把所有头的输出拼接起来。类比：同一篇文章，用语法、语义、逻辑三个视角各读一遍，综合理解。</p>
+
+<h4>1.3 Encoder-Decoder vs Decoder-only</h4>
+
+<p>原始Transformer有Encoder(理解输入)和Decoder(生成输出)两部分。但不同模型选择不同：</p>
+<ul>
+  <li><strong>GPT系列</strong>：只用Decoder(Decoder-only)，擅长<strong>生成</strong>文本。你给它前文，它预测下一个token。</li>
+  <li><strong>BERT</strong>：只用Encoder(Encoder-only)，擅长<strong>理解</strong>文本。适合分类、情感分析等理解任务。</li>
+  <li><strong>T5/BART</strong>：Encoder+Decoder都用，Encoder编码输入，Decoder生成输出。</li>
+</ul>
+
+<p>当前主流聊天/Agent模型（GPT/Claude/Llama）都是Decoder-only，因为聊天本质是"根据上下文生成下一个token"。</p>
+
+<h4>1.4 为什么不用RNN/LSTM</h4>
+
+<table class="compare-table">
+<tr><th>对比</th><th>RNN/LSTM</th><th>Transformer</th></tr>
+<tr><td>并行化</td><td>❌ 必须串行（等前一个词算完）</td><td>✅ 所有词同时计算</td></tr>
+<tr><td>长距离依赖</td><td>❌ 距离远了"遗忘"</td><td>✅ 任意两词直接相连</td></tr>
+<tr><td>梯度稳定</td><td>❌ 容易梯度消失/爆炸</td><td>✅ 残差连接+LayerNorm缓解</td></tr>
+<tr><td>计算复杂度</td><td>O(n) — 线性</td><td>O(n²) — 平方（序列长2倍算4倍）</td></tr>
+<tr><td>适合</td><td>短序列、实时流式</td><td>长序列、大规模训练</td></tr>
+</table>
+
+<div class="note">O(n²)复杂度意味着：上下文从4K→128K，计算量增加了1024倍！这就是为什么超长上下文模型贵且慢——不是线性增长，是平方增长。</div>
+
+<h3>2. Token与Tokenizer <span class="difficulty">⭐⭐⭐</span></h3>
+
+<p>LLM不直接处理文本，它处理的是<strong>token</strong>——文本被切分后的最小单元。理解token对成本估算和上下文管理至关重要。</p>
+
+<div class="one-liner">Token是LLM的"原子"：文本→切成token→查表变成向量→送入模型计算。Token数量直接影响成本和上下文窗口。</div>
+
+<h4>2.1 什么是Token</h4>
+
+<p>Token不等于单词，也不等于字符。它介于字符和词之间：英文"hello"是1个token，"unbelievable"可能被切成"un"+"bel"+"ievable"3个token。中文"你好"通常是2个token（每个汉字1个），但也可能因为词表里收录了"你好"这个词而只算1个。</p>
+
+<h4>2.2 BPE分词算法</h4>
+
+<p><strong>Byte Pair Encoding (BPE)</strong>是最常用的分词算法，原理是"高频子串合并"：</p>
+<ol>
+  <li>初始：把所有文本拆成单个字符</li>
+  <li>统计：找出出现频率最高的字符对（如"t"+"h"出现了100万次）</li>
+  <li>合并：把它们合并成新token"th"，加入词表</li>
+  <li>重复：不断合并高频对，直到达到预设词表大小（如GPT-4的cl100k词表约10万token）</li>
+</ol>
+
+<div class="java-analogy">BPE ≈ Java的字符串压缩算法：先统计高频子串，再合并，最终建一个"词表"。Tokenizer就是这个词表的查找表，类似于HashMap&lt;String, Integer&gt;。文本→Tokenizer→token ID序列。</div>
+
+<h4>2.3 中英文Token差异（影响成本！）</h4>
+
+<table class="compare-table">
+<tr><th>语言</th><th>示例</th><th>Token数</th><th>说明</th></tr>
+<tr><td>英文</td><td>"Hello world"</td><td>2</td><td>基本1词=1token</td></tr>
+<tr><td>中文</td><td>"你好世界"</td><td>4-6</td><td>1字≈1-2token，中文更费token</td></tr>
+<tr><td>代码</td><td>public static void</td><td>3-4</td><td>关键字+空格各为token</td></tr>
+<tr><td>Emoji</td><td>😀</td><td>2-4</td><td>特殊字符更费token</td></tr>
+</table>
+
+<div class="warn">中文场景的token成本是英文的2-3倍！做中文Agent时，上下文窗口和成本预算要特别注意。这也是为什么国产模型（Qwen/GLM）在中文token效率上做了优化——它们的词表收录了更多中文高频词。</div>
+
+<h4>2.4 Token到向量(Embedding)</h4>
+
+<p>每个token ID通过查表得到一个高维向量（通常768/1024/4096维）。这个向量是模型在训练中学到的——<strong>语义相近的token向量距离也近</strong>。如"猫"和"狗"的向量距离近，"猫"和"汽车"的向量距离远。这个"向量空间"是所有语义理解的基础。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 700 100" xmlns="http://www.w3.org/2000/svg">
+  <rect x="10" y="30" width="100" height="40" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="60" y="55" text-anchor="middle" font-size="13" fill="#1565c0">小马写代码</text>
+  <text x="130" y="55" font-size="20" fill="#999">→</text>
+  <rect x="160" y="30" width="80" height="40" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+  <text x="200" y="55" text-anchor="middle" font-size="12" fill="#ff6f00">Tokenizer</text>
+  <text x="260" y="55" font-size="20" fill="#999">→</text>
+  <rect x="290" y="30" width="100" height="40" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="340" y="55" text-anchor="middle" font-size="12" fill="#2e7d32">[1234,5678,...]</text>
+  <text x="410" y="55" font-size="20" fill="#999">→</text>
+  <rect x="440" y="30" width="80" height="40" rx="6" fill="#f3e5f5" stroke="#7b1fa2"/>
+  <text x="480" y="55" text-anchor="middle" font-size="12" fill="#7b1fa2">Embedding</text>
+  <text x="540" y="55" font-size="20" fill="#999">→</text>
+  <rect x="570" y="30" width="120" height="40" rx="6" fill="#ffebee" stroke="#c62828"/>
+  <text x="630" y="55" text-anchor="middle" font-size="11" fill="#c62828">[0.12,-0.34,...]</text>
+</svg>
+<div class="caption">文本处理流水线：原文→Tokenizer→Token IDs→Embedding查表→高维向量</div>
+</div>
+
+<h3>3. 关键参数详解 <span class="difficulty">⭐⭐⭐</span></h3>
+
+<p>调参是Agent开发的核心技能。理解每个参数的数学原理才能精准调优。</p>
+
+<h4>3.1 Temperature（温度）</h4>
+
+<p>温度控制LLM生成的<strong>随机性</strong>。模型在每个位置输出一个概率分布，温度决定如何从这个分布中采样。数学上：<strong>adjusted_prob = softmax(logits / T)</strong>。温度小(T→0)放大logits差异，概率分布更尖锐（几乎总选最高概率token）；温度大(T→∞)抹平差异，概率分布更均匀（选token接近随机）。</p>
+
+<table class="compare-table">
+<tr><th>场景</th><th>推荐温度</th><th>原因</th></tr>
+<tr><td>客服问答/知识检索</td><td>0.3-0.7</td><td>要准确稳定，不能乱编</td></tr>
+<tr><td>代码生成</td><td>0.2-0.5</td><td>代码要精确，不能"创造性"乱写</td></tr>
+<tr><td>创意写作/头脑风暴</td><td>0.8-1.2</td><td>需要多样性和创造力</td></tr>
+<tr><td>数据提取/分类</td><td>0-0.3</td><td>要确定性输出，同一输入同一输出</td></tr>
+</table>
+
+<div class="java-analogy">Temperature ≈ Java的Random(seed)中的分布参数。温度=0相当于直接取max（贪心解码，确定性），温度高相当于从均匀分布随机取。客服场景我用0.5——既不呆板也不乱说。</div>
+
+<h4>3.2 Top-K / Top-P采样</h4>
+
+<p>除了温度，还有两种控制采样的方法，常和温度配合使用：</p>
+<ul>
+  <li><strong>Top-K</strong>：只从概率最高的K个token中采样，直接截断长尾。如Top-K=40，只考虑前40个最可能的token。简单粗暴。</li>
+  <li><strong>Top-P (nucleus sampling)</strong>：从概率累加达到P的最小token集合中采样。如Top-P=0.9，选最少的token使概率和≥0.9。比Top-K更自适应——当模型很确定时（一个token概率0.95），Top-P只选1个；当模型不确定时（多个token概率相近），Top-P会选更多。</li>
+</ul>
+
+<h4>3.3 Context Window（上下文窗口）</h4>
+
+<p>上下文窗口是模型能<strong>"看到"的最大token数</strong>，包括输入+输出的总和。GPT-4是128K，Claude 3.5是200K。但这不意味着200K以内效果都一样——存在<strong>"Lost in the Middle"</strong>问题：模型对上下文开头和结尾的信息记忆最好，中间的信息容易被忽略。</p>
+
+<div class="java-analogy">Context Window ≈ Java的BufferedReader缓冲区大小。缓冲区装不下的内容被丢弃。LLM上下文满了后，最早的消息被"遗忘"——类似于固定大小的环形缓冲区。所以RAG检索结果放在prompt开头或结尾效果更好。</div>
+
+<div class="warn">"Lost in the Middle"对RAG的启示：检索到的相关文档放在prompt的开头或结尾，不要放在中间。System Prompt放最前面，用户问题放最后面，RAG结果放中间偏后。</div>
+
+<h3>4. 大模型分类与选型 <span class="difficulty">⭐⭐</span></h3>
+
+<table class="compare-table">
+<tr><th>模型</th><th>厂商</th><th>优势</th><th>劣势</th><th>适合场景</th></tr>
+<tr><td>GPT-4/4o</td><td>OpenAI</td><td>综合最强，Function Calling成熟，生态好</td><td>贵，国内访问受限</td><td>复杂Agent、Function Calling</td></tr>
+<tr><td>Claude 3.5 Sonnet</td><td>Anthropic</td><td>200K超长上下文，代码能力强</td><td>国内访问受限</td><td>长文档、代码Agent</td></tr>
+<tr><td>Gemini 1.5</td><td>Google</td><td>多模态强，1M超长上下文</td><td>中文能力一般</td><td>多模态、超长上下文</td></tr>
+<tr><td>Llama 3</td><td>Meta</td><td>开源，可本地部署</td><td>中文一般，Function Calling弱</td><td>私有部署、研究</td></tr>
+<tr><td>Qwen2</td><td>阿里</td><td>中文最强，开源，FC支持好</td><td>英文略弱</td><td>中文Agent、国内项目</td></tr>
+<tr><td>DeepSeek-V3</td><td>深度求索</td><td>性价比极高，代码强</td><td>生态待完善</td><td>成本敏感场景</td></tr>
+<tr><td>GLM-4</td><td>智谱</td><td>中文好，Agent能力不错</td><td>英文一般</td><td>国内企业Agent</td></tr>
+</table>
+
+<div class="note">选型维度：能力→成本→延迟→隐私合规→中文支持→Function Calling稳定性。国内企业项目优先Qwen2/GLM-4/DeepSeek；要最强用GPT-4/Claude；要私有部署用Llama 3。</div>
+
+<h3>5. 幻觉 (Hallucination) <span class="difficulty">⭐⭐⭐</span></h3>
+
+<p>幻觉是LLM<strong>生成看似合理但实际错误的内容</strong>。这是LLM最被诟病的问题，也是面试必问。</p>
+
+<div class="one-liner">LLM不是知识库，是概率模型——它"生成"最可能的内容，而非"检索"正确的内容。所以会一本正经地胡说八道。</div>
+
+<h4>5.1 为什么会产生幻觉</h4>
+
+<p>本质原因：LLM是<strong>next-token predictor</strong>（预测下一个token），它预测的是"统计上最可能的"而非"事实正确的"。当遇到训练数据中没见过的知识时，它会根据概率分布生成一个"看起来合理"的答案，而非承认不知道。这和搜索引擎完全不同——搜索引擎是"检索"已有信息，LLM是"生成"新文本。</p>
+
+<p>产生幻觉的具体场景：①知识盲区（模型没学过的知识）；②模糊提问（问题不明确，模型"猜"你要什么）；③prompt引导错误（prompt里的错误信息会引导模型输出错误内容）；④温度过高（增加随机性，更容易选到不靠谱的token）。</p>
+
+<h4>5.2 如何缓解幻觉</h4>
+
+<table class="compare-table">
+<tr><th>方法</th><th>原理</th><th>效果</th></tr>
+<tr><td>RAG（检索增强）</td><td>给模型参考资料，让它"看着资料回答"</td><td>⭐⭐⭐ 最有效</td></tr>
+<tr><td>降低温度</td><td>减少随机性，更倾向选高概率token</td><td>⭐⭐ 有效但牺牲多样性</td></tr>
+<tr><td>结构化输出</td><td>强制输出JSON，限制格式减少"发挥空间"</td><td>⭐⭐ 特定场景有效</td></tr>
+<tr><td>System Prompt约束</td><td>"如果不确定就说不知道"</td><td>⭐ 有一定效果但不可靠</td></tr>
+<tr><td>多模型交叉验证</td><td>多个模型回答同一问题，对比结果</td><td>⭐⭐⭐ 但成本高</td></tr>
+<tr><td>人工审核</td><td>关键场景人工确认</td><td>⭐⭐⭐ 最可靠但无法规模化</td></tr>
+</table>
+
+<div class="java-analogy">LLM ≈ 一个读过很多书但可能记错的人。RAG ≈ 给他一本参考手册，让他"看着手册回答，不要靠自己记"。结构化输出 ≈ 让他填表而不是自由发挥，减少编造空间。我在客服助手项目里用RAG+温度0.5+结构化输出三管齐下控制幻觉。</div>
+
+<h3>6. 上下文长度与成本 <span class="difficulty">⭐⭐</span></h3>
+
+<p>大模型按token计费，<strong>输入token和输出token分别计价</strong>，输出通常比输入贵2-5倍。</p>
+
+<table class="compare-table">
+<tr><th>模型</th><th>输入价格</th><th>输出价格</th><th>说明</th></tr>
+<tr><td>GPT-4o</td><td>$2.5/1M</td><td>$10/1M</td><td>输出是输入的4倍</td></tr>
+<tr><td>Claude 3.5</td><td>$3/1M</td><td>$15/1M</td><td>输出是输入的5倍</td></tr>
+<tr><td>DeepSeek-V3</td><td>$0.27/1M</td><td>$1.1/1M</td><td>性价比极高</td></tr>
+<tr><td>Qwen2-72B</td><td>约¥4/1M</td><td>约¥12/1M</td><td>国内价格</td></tr>
+</table>
+
+<p><strong>长上下文 vs RAG权衡</strong>：如果知识量小于20K token且不常更新，直接塞进上下文窗口（简单、信息完整）。但超过50K token或频繁更新，用RAG更划算——RAG只检索相关片段(几K token)，成本远低于全塞进上下文。</p>
+
+<div class="note">实际经验法则：文档&lt;20K token且不更新→直接塞上下文；>50K token或频繁更新→用RAG。客服助手场景几乎都需要RAG——产品文档、FAQ太多了，全塞进去既贵又影响效果。</div>
+
+<h3>7. Function Calling原理 <span class="difficulty">⭐⭐⭐</span></h3>
+
+<p>Function Calling是LLM调用外部工具的核心机制，也是Agent能"做事"的关键能力。</p>
+
+<div class="one-liner">Function Calling = LLM看了工具说明书后，输出一段结构化JSON告诉你要调哪个函数、传什么参数，你的代码执行后把结果喂回LLM。</div>
+
+<h4>7.1 完整流程</h4>
+
+<p>Function Calling不是魔法，它是<strong>模型训练出来的能力</strong>。模型在训练时见过大量"工具描述+用户问题→工具调用JSON"的样本，学会了根据工具描述和用户意图输出结构化调用请求。推理时，API把工具描述拼接到prompt中，模型"学会"了输出特定格式的JSON。你的代码解析JSON执行函数，把结果作为新消息送回模型，模型再生成最终自然语言回答。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arf" markerWidth="8" markerHeight="8" refX="6" refY="2" orient="auto">
+      <path d="M0,0 L6,2 L0,4 Z" fill="#1565c0"/>
+    </marker>
+  </defs>
+  <rect x="20" y="20" width="130" height="45" rx="8" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="85" y="40" text-anchor="middle" font-size="12" fill="#1565c0">1.用户提问</text>
+  <text x="85" y="56" text-anchor="middle" font-size="10" fill="#555">"查北京天气"</text>
+  <line x1="150" y1="42" x2="190" y2="42" stroke="#1565c0" stroke-width="2" marker-end="url(#arf)"/>
+  <rect x="190" y="20" width="150" height="45" rx="8" fill="#fff3e0" stroke="#ff6f00"/>
+  <text x="265" y="40" text-anchor="middle" font-size="12" fill="#ff6f00">2.LLM分析+工具描述</text>
+  <text x="265" y="56" text-anchor="middle" font-size="10" fill="#555">决定调getWeather</text>
+  <line x1="340" y1="42" x2="380" y2="42" stroke="#1565c0" stroke-width="2" marker-end="url(#arf)"/>
+  <rect x="380" y="20" width="150" height="45" rx="8" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="455" y="40" text-anchor="middle" font-size="12" fill="#2e7d32">3.LLM输出JSON</text>
+  <text x="455" y="56" text-anchor="middle" font-size="9" fill="#555">{"city":"北京"}</text>
+  <line x1="455" y1="65" x2="455" y2="100" stroke="#1565c0" stroke-width="2" marker-end="url(#arf)"/>
+  <rect x="380" y="100" width="150" height="45" rx="8" fill="#f3e5f5" stroke="#7b1fa2"/>
+  <text x="455" y="120" text-anchor="middle" font-size="12" fill="#7b1fa2">4.你的代码执行函数</text>
+  <text x="455" y="136" text-anchor="middle" font-size="10" fill="#555">调天气API</text>
+  <line x1="380" y1="122" x2="340" y2="122" stroke="#1565c0" stroke-width="2" marker-end="url(#arf)"/>
+  <rect x="190" y="100" width="150" height="45" rx="8" fill="#ffebee" stroke="#c62828"/>
+  <text x="265" y="120" text-anchor="middle" font-size="12" fill="#c62828">5.结果返回LLM</text>
+  <text x="265" y="136" text-anchor="middle" font-size="9" fill="#555">"晴天32°C"</text>
+  <line x1="265" y1="145" x2="265" y2="180" stroke="#1565c0" stroke-width="2" marker-end="url(#arf)"/>
+  <rect x="190" y="180" width="150" height="45" rx="8" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="265" y="200" text-anchor="middle" font-size="12" fill="#1565c0">6.LLM整合回答</text>
+  <text x="265" y="216" text-anchor="middle" font-size="10" fill="#555">"北京今天晴天32度"</text>
+</svg>
+<div class="caption">Function Calling完整流程：用户提问→LLM选工具→输出JSON→执行→结果回传→LLM整合回答</div>
+</div>
+
+<div class="java-analogy">Function Calling ≈ Java的动态代理+反射调用：工具描述≈接口文档/Javadoc，告诉"代理"有哪些方法可调；LLM≈动态代理层，根据输入决定调哪个方法、传什么参数；执行函数≈Method.invoke()反射执行；结果回传≈把方法返回值序列化后给代理处理。</div>
+
+<div class="note">关键：工具的description写得越好，LLM选择工具越准确。好的description应该说明：这个工具做什么、什么时候该用、什么时候不该用、参数含义。这和写好的Javadoc是一个道理。</div>
+
+<h3>🎤 面试实战</h3>
+
+<div class="interview-q">
+  <div class="question">Transformer的自注意力机制是什么？为什么比RNN好？</div>
+  <div class="interview-answer">
+    <p>自注意力让序列中每个位置都能直接和所有其他位置计算关联度，用QKV三个矩阵实现：Q是查询("我在找什么")，K是键("我能提供什么")，V是值("我的内容")，attention=softmax(QK<sup>T</sup>/√d)V。每个词的新表示是所有词的V按注意力权重加权求和。</p>
+    <p>比RNN好三个原因：1）<strong>并行化</strong>——所有位置同时计算，RNN必须串行；2）<strong>长距离依赖</strong>——任意两个位置直接相连，RNN距离远了就遗忘；3）<strong>梯度稳定</strong>——残差连接+LayerNorm缓解梯度消失。代价是O(n²)复杂度。</p>
+  </div>
+  <div class="interview-tip">画QKV计算流程图加分。提一句Multi-Head是多个注意力头并行学不同模式。再提O(n²)复杂度说明你知道代价。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">为什么LLM会产生幻觉？如何缓解？</div>
+  <div class="interview-answer">
+    <p>本质原因是LLM是<strong>概率模型不是知识库</strong>。它预测"最可能的下一个token"，而非"正确的下一个token"。遇到知识盲区时，它生成一个"看起来合理"的答案而非承认不知道。</p>
+    <p>缓解方法：RAG最有效(给参考资料看着回答)；降低温度减少随机性；结构化输出限制格式；System Prompt加约束"不确定就说不知道"；关键场景人工审核。我在客服助手用RAG+温度0.5+结构化输出三管齐下。</p>
+  </div>
+  <div class="interview-tip">必须结合项目说"三管齐下"展示工程化思维。能说出"LLM是概率模型不是知识库"这句本质话说明理解到位。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Temperature参数怎么调？数学原理是什么？</div>
+  <div class="interview-answer">
+    <p>温度控制采样随机性。数学原理：adjusted_prob = softmax(logits / T)。T小放大logits差异，分布更尖锐(更确定)；T大抹平差异，分布更均匀(更随机)。</p>
+    <p>调参经验：客服用0.3-0.7要准确稳定；代码生成0.2-0.5要精确；创意写作0.8-1.2要多样性；数据提取0-0.3要确定性。我的客服助手实际用0.5。</p>
+  </div>
+  <div class="interview-tip">能说出softmax(logits/T)数学公式是加分项。说"客服场景用0.5"结合项目更有说服力。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">中英文token有什么差异？对成本有什么影响？</div>
+  <div class="interview-answer">
+    <p>英文基本1词≈1-2个token，中文1字≈1-2个token。同样含义的文本，中文token数量是英文的2-3倍。这意味着中文场景API成本更高，上下文窗口消耗更快。</p>
+    <p>影响：1）成本预算要按中文token量估算；2）上下文窗口更容易满，需要更激进的Memory管理；3）选模型时优先考虑中文token效率优化的国产模型(Qwen2/GLM-4)。</p>
+  </div>
+  <div class="interview-tip">"中文token是英文2-3倍"这个具体数字说明你真的踩过坑。提国产模型中文优化说明你有选型经验。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Function Calling的底层原理是什么？</div>
+  <div class="interview-answer">
+    <p>Function Calling是模型训练出来的能力，不是魔法。模型在训练时见过大量"工具描述+用户问题→工具调用JSON"的样本，学会了根据工具描述和用户意图输出结构化调用请求。</p>
+    <p>推理时流程：1）API把工具描述拼进prompt；2）模型输出JSON指定要调的函数和参数；3）你的代码解析JSON并执行函数；4）把执行结果作为新消息送回模型；5）模型根据结果生成最终自然语言回答。类比Java就是动态代理+反射。</p>
+  </div>
+  <div class="interview-tip">用Java类比解释是转行面试最佳策略——展示你能把新知识和存量经验关联。提"工具description越准确选择越准"说明你有实战经验。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">长上下文和RAG什么时候用哪个？</div>
+  <div class="interview-answer">
+    <p>经验法则：知识量&lt;20K token且不常更新→直接塞上下文，简单有效；>50K token或频繁更新→用RAG，便宜且可控。</p>
+    <p>长上下文优点是简单、信息完整，但贵(O(n²)计算量)且有"Lost in the Middle"问题——中间内容容易被忽略。RAG需要向量库基建但可扩展到海量数据，且只检索相关片段成本低。生产环境推荐混合方案：System Prompt+少量RAG结果放入上下文。</p>
+  </div>
+  <div class="interview-tip">提"Lost in the Middle"说明你对LLM局限性有深入理解。提"混合方案"展示工程判断力。</div>
+</div>
+
+<div class="review-card">
+  <ul>
+    <li><strong>Transformer核心</strong>：自注意力让每个词看到所有词，QKV矩阵并行计算，O(n²)复杂度是上下文窗口贵的原因</li>
+    <li><strong>Multi-Head</strong>：多组QKV并行学不同模式(语法/语义/位置)，最后拼接</li>
+    <li><strong>Decoder-only</strong>：GPT/Claude/Llama都是Decoder-only，擅长生成；BERT是Encoder-only擅长理解</li>
+    <li><strong>vs RNN</strong>：并行化+长距离依赖+梯度稳定，代价是O(n²)复杂度</li>
+    <li><strong>Token是LLM原子</strong>：中文token是英文2-3倍，直接影响成本和上下文窗口</li>
+    <li><strong>BPE分词</strong>：高频子串合并建词表，tokenizer≈HashMap查找表</li>
+    <li><strong>Temperature</strong>：softmax(logits/T)，客服0.3-0.7、代码0.2-0.5、创作0.8-1.2</li>
+    <li><strong>Top-K/Top-P</strong>：Top-K截断长尾，Top-P更自适应(概率累加达P的最小集合)</li>
+    <li><strong>Lost in the Middle</strong>：模型对开头结尾记忆好，中间易忽略。RAG结果放开头或结尾</li>
+    <li><strong>幻觉本质</strong>：LLM是概率模型不是知识库。缓解靠RAG+低温度+结构化输出+人工审核</li>
+    <li><strong>Function Calling</strong>：模型训练出的能力，工具description越准选择越准，类比动态代理+反射</li>
+    <li><strong>长上下文vs RAG</strong>：&lt;20K直接塞、>50K用RAG、生产用混合方案</li>
+    <li><strong>选型维度</strong>：能力→成本→延迟→隐私→中文→FC稳定性，国内优先Qwen2/GLM-4/DeepSeek</li>
+  </ul>
+</div>
+
+<div class="chapter-nav">
+  <a href="02-middleware.html" class="prev">← 常用中间件</a>
+  <a href="04-prompt-engineering.html" class="next">Prompt工程 →</a>
+</div>
+
+</main>
+<script>
+(function(){
+  var btn = document.getElementById("sidebarToggle");
+  var body = document.body;
+  try { if(localStorage.getItem("sb")==="0") body.classList.add("sidebar-collapsed"); } catch(e){}
+  function update(){ btn.textContent = body.classList.contains("sidebar-collapsed") ? "▶" : "◀"; }
+  btn.addEventListener("click", function(){
+    body.classList.toggle("sidebar-collapsed");
+    try { localStorage.setItem("sb", body.classList.contains("sidebar-collapsed")?"0":"1"); } catch(e){}
+    update();
+  });
+  update();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LangChain4j框架详解 - AI Agent面试宝典</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="sidebarToggle" class="sidebar-toggle" title="收起/展开菜单">◀</button>
+
+<!-- ===== 侧边栏 ===== -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <h1>AI Agent 面试宝典</h1>
+    <p>Java后端 -> AI Agent 开发</p>
+  </div>
+  <nav>
+      <a href="index.html"><span class="num">00</span>首页</a>
+      <a href="01-java-foundation.html"><span class="num">01</span>Java后端核心复习</a>
+      <a href="02-middleware.html"><span class="num">02</span>常用中间件</a>
+      <a href="03-llm-foundation.html"><span class="num">03</span>LLM大模型基础</a>
+      <a href="04-prompt-engineering.html"><span class="num">04</span>Prompt工程</a>
+      <a href="05-langchain4j.html" class="active"><span class="num">05</span>LangChain4j框架详解</a>
+      <a href="06-agent-core.html"><span class="num">06</span>Agent核心概念</a>
+      <a href="07-rag.html"><span class="num">07</span>RAG检索增强生成</a>
+      <a href="08-vector-db.html"><span class="num">08</span>向量数据库与Embedding</a>
+      <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
+      <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
+      <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
+      <a href="12-project-packaging.html"><span class="num">12</span>项目经验包装与表达</a>
+      <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
+      <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
+      <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
+      <a href="16-spring-ai.html"><span class="num">16</span>Spring AI对比</a>
+      <a href="17-agent-security.html"><span class="num">17</span>Agent安全</a>
+  </nav>
+</aside>
+
+<!-- ===== 主内容 ===== -->
+<main class="main">
+
+  <!-- 章节标题 -->
+  <div class="chapter-header">
+    <span class="chapter-num">第 05 章</span>
+    <h2>LangChain4j框架详解 <span class="tag tag-hot">面试重点</span></h2>
+    <div class="goal">
+      <strong>🎯 学习目标：</strong>掌握LangChain4j整体架构、同步与流式模型、@AiService声明式接口、Tools工具调用机制、ChatMemory对话记忆、RAG支持及高级特性，能在面试中清晰阐述框架设计原理与底层机制。
+    </div>
+  </div>
+
+  <!-- ===== 1. LangChain4j整体架构 ===== -->
+  <h3>1. LangChain4j整体架构 <span class="difficulty">★★★★☆</span></h3>
+
+  <p>LangChain4j是Java生态的LLM应用开发框架，对标Python的LangChain。它采用经典的三层架构设计，借鉴了Spring的分层思想，让Java开发者能用熟悉的注解和接口方式构建AI应用。</p>
+
+  <p><strong>三层架构的职责划分：</strong>最上层是<strong>应用层</strong>，开发者通过<code>@AiService</code>注解或<code>AiServices</code> Builder声明Agent接口，框架生成实现类，这一层屏蔽了所有底层细节。中间是<strong>核心层</strong>（langchain4j-core），它定义了所有能力的接口契约——<code>ChatLanguageModel</code>、<code>EmbeddingModel</code>、<code>ChatMemory</code>、<code>EmbeddingStore</code>、<code>ContentRetriever</code>、<code>DocumentLoader</code>等，核心层本身不依赖任何具体模型厂商。最底层是<strong>集成层</strong>，各种独立的模块（langchain4j-open-ai、langchain4j-ollama、langchain4j-milvus等）实现核心层接口，对接具体的模型、向量库和文档解析器。</p>
+
+  <p>这种分层带来两个工程价值：一是<strong>可替换性</strong>——换模型只换集成层的依赖和Builder，业务代码完全不动；二是<strong>可测试性</strong>——核心层是纯接口，可以用Mock实现做单测，不依赖真实LLM API。</p>
+
+  <div class="one-liner">LangChain4j = Spring Boot风格的LLM开发框架——核心层提供能力契约，集成层对接各种模型和存储，应用层用@AiService像写Bean一样开发Agent。</div>
+
+  <div class="diagram">
+    <svg viewBox="0 0 620 380" xmlns="http://www.w3.org/2000/svg">
+      <!-- 标题 -->
+      <text x="310" y="22" font-size="14" fill="#1565c0" font-weight="bold" text-anchor="middle">LangChain4j 三层架构</text>
+
+      <!-- 应用层 -->
+      <rect x="20" y="40" width="580" height="50" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+      <text x="40" y="60" font-size="12" fill="#1565c0" font-weight="bold">应用层 (Application)</text>
+      <text x="40" y="78" font-size="11" fill="#555">@AiService 声明式接口  |  AiServices Builder  |  Tools / Memory / RAG</text>
+
+      <!-- 核心层 -->
+      <rect x="20" y="110" width="580" height="80" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>
+      <text x="40" y="130" font-size="12" fill="#2e7d32" font-weight="bold">核心层 (langchain4j-core) —— 纯接口契约，无厂商依赖</text>
+      <text x="40" y="150" font-size="11" fill="#555">ChatLanguageModel  |  StreamingChatLanguageModel  |  EmbeddingModel</text>
+      <text x="40" y="168" font-size="11" fill="#555">ChatMemory  |  EmbeddingStore  |  DocumentLoader  |  ContentRetriever</text>
+
+      <!-- 集成层 - 模型 -->
+      <rect x="20" y="210" width="185" height="150" rx="8" fill="#fff3e0" stroke="#ff6f00" stroke-width="2"/>
+      <text x="40" y="230" font-size="12" fill="#ff6f00" font-weight="bold">模型集成</text>
+      <text x="35" y="252" font-size="11" fill="#555">• OpenAI (GPT-4/3.5)</text>
+      <text x="35" y="272" font-size="11" fill="#555">• Anthropic (Claude)</text>
+      <text x="35" y="292" font-size="11" fill="#555">• Ollama (本地模型)</text>
+      <text x="35" y="312" font-size="11" fill="#555">• 通义千问</text>
+      <text x="35" y="332" font-size="11" fill="#555">• Azure OpenAI</text>
+      <text x="35" y="352" font-size="11" fill="#555">• HuggingFace</text>
+
+      <!-- 集成层 - 向量存储 -->
+      <rect x="220" y="210" width="185" height="150" rx="8" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2"/>
+      <text x="240" y="230" font-size="12" fill="#7b1fa2" font-weight="bold">向量存储</text>
+      <text x="235" y="252" font-size="11" fill="#555">• Milvus</text>
+      <text x="235" y="272" font-size="11" fill="#555">• Chroma</text>
+      <text x="235" y="292" font-size="11" fill="#555">• Pinecone</text>
+      <text x="235" y="312" font-size="11" fill="#555">• Weaviate</text>
+      <text x="235" y="332" font-size="11" fill="#555">• Qdrant</text>
+      <text x="235" y="352" font-size="11" fill="#555">• PgVector</text>
+
+      <!-- 集成层 - 加载器 -->
+      <rect x="420" y="210" width="180" height="150" rx="8" fill="#fce4ec" stroke="#c2185b" stroke-width="2"/>
+      <text x="440" y="230" font-size="12" fill="#c2185b" font-weight="bold">文档加载器</text>
+      <text x="435" y="252" font-size="11" fill="#555">• PDF解析</text>
+      <text x="435" y="272" font-size="11" fill="#555">• Word/Docx</text>
+      <text x="435" y="292" font-size="11" fill="#555">• Markdown</text>
+      <text x="435" y="312" font-size="11" fill="#555">• URL抓取</text>
+      <text x="435" y="332" font-size="11" fill="#555">• CSV/Excel</text>
+      <text x="435" y="352" font-size="11" fill="#555">• Text</text>
+
+      <!-- 箭头 -->
+      <line x1="310" y1="90" x2="310" y2="108" stroke="#999" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="112" y1="190" x2="112" y2="208" stroke="#999" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="312" y1="190" x2="312" y2="208" stroke="#999" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="510" y1="190" x2="510" y2="208" stroke="#999" stroke-width="2" marker-end="url(#arr)"/>
+      <defs>
+        <marker id="arr" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#999"/>
+        </marker>
+      </defs>
+    </svg>
+    <div class="caption">图5-1 LangChain4j三层架构：应用层 -> 核心层（接口契约）-> 集成层（模型/存储/加载器）</div>
+  </div>
+
+  <h4>和Python LangChain的核心区别</h4>
+
+  <table class="compare-table">
+    <tr><th>维度</th><th>LangChain4j (Java)</th><th>LangChain (Python)</th></tr>
+    <tr><td>设计风格</td><td>强类型、接口驱动、注解声明式</td><td>动态类型、链式调用、灵活</td></tr>
+    <tr><td>Agent抽象</td><td>@AiService声明式接口（类@FeignClient）</td><td>Chain/LCEL表达式链</td></tr>
+    <tr><td>类型安全</td><td>结构化输出用Java泛型+record，编译期检查</td><td>运行时Dict，无编译期保护</td></tr>
+    <tr><td>并发模型</td><td>无GIL，真正多线程并行</td><td>受GIL限制，IO并行靠asyncio</td></tr>
+    <tr><td>生态集成</td><td>原生Spring Boot starter，Bean注入</td><td>Python生态，FastAPI集成</td></tr>
+    <tr><td>社区成熟度</td><td>起步较晚，组件数较少</td><td>起步早，社区大，组件最全</td></tr>
+  </table>
+
+  <div class="java-analogy">
+    LangChain4j的架构定位≈<strong>Spring Cloud生态</strong>——核心层像Spring的<code>BeanFactory</code>定义契约，集成层像各种starter（spring-boot-starter-redis）提供实现，<code>@AiService</code>则像<code>@FeignClient</code>——你只声明接口，框架用JDK动态代理生成实现类，把"调用远程LLM"变成"调用本地方法"。
+  </div>
+
+  <div class="note">
+    <strong>无GIL优势</strong>：Python有GIL（全局解释器锁），多线程无法真正并行CPU任务；JVM没有这个限制。在Agent场景下——多个用户并发请求、同时调用多个Tool、并行检索多个向量库——Java的多线程能力是真实的生产优势，不是噱头。
+  </div>
+
+  <!-- ===== 2. ChatLanguageModel vs StreamingChatLanguageModel ===== -->
+  <h3>2. ChatLanguageModel vs StreamingChatLanguageModel <span class="difficulty">★★★☆☆</span></h3>
+
+  <p>核心层提供两种调用LLM的接口：<code>ChatLanguageModel</code>（同步）和<code>StreamingChatLanguageModel</code>（流式）。它们对应同一套能力（生成对话），但返回机制完全不同。</p>
+
+  <p><strong>同步模式</strong>：<code>ChatLanguageModel.generate()</code>是阻塞调用——发起HTTP请求后线程挂起，等待LLM把整个回答生成完毕，再一次性返回完整的<code>Response&lt;AiMessage&gt;</code>。这就像调用普通REST API，简单直接，但首字延迟高（3-10秒），用户体验差——用户盯着空白页面等待。</p>
+
+  <p><strong>流式模式</strong>：<code>StreamingChatLanguageModel.generate()</code>是非阻塞回调——发起请求后立即返回，LLM每生成一个Token就通过<code>StreamingResponseHandler</code>回调推送。三个回调方法：<code>onPartialResponse(String token)</code>每来一个Token触发一次，<code>onComplete(Response&lt;AiMessage&gt;)</code>全部生成完触发，<code>onError(Throwable)</code>异常时触发。底层用的是HTTP的SSE（Server-Sent Events）或chunked transfer，连接保持打开，服务端持续推送。</p>
+
+  <p><strong>为什么需要流式</strong>：人眼对延迟敏感，3秒空白会觉得"卡住了"，但3秒内逐字出现会觉得"正在思考"。所有主流ChatBot（ChatGPT、Claude、通义千问）都用流式输出，这是用户体验的刚需。</p>
+
+  <div class="one-liner">同步等全部生成再返回，流式逐Token回调——前者像REST API，后者像Server-Sent Events。</div>
+
+  <div class="diagram">
+    <svg viewBox="0 0 620 260" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="ar_s" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+          <path d="M0,0 L6,4 L0,8 Z" fill="#555"/>
+        </marker>
+      </defs>
+      <!-- 同步 -->
+      <text x="155" y="20" text-anchor="middle" font-size="13" fill="#1565c0" font-weight="bold">同步 ChatLanguageModel</text>
+      <rect x="40" y="35" width="80" height="40" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+      <text x="80" y="60" text-anchor="middle" font-size="11" fill="#1565c0">调用generate()</text>
+      <rect x="140" y="35" width="120" height="40" rx="6" fill="#ffebee" stroke="#c62828"/>
+      <text x="200" y="55" text-anchor="middle" font-size="11" fill="#c62828">阻塞等待</text>
+      <text x="200" y="70" text-anchor="middle" font-size="9" fill="#555">3-10秒...</text>
+      <rect x="280" y="35" width="80" height="40" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+      <text x="320" y="55" text-anchor="middle" font-size="11" fill="#2e7d32">一次性返回</text>
+      <text x="320" y="70" text-anchor="middle" font-size="9" fill="#555">完整回答</text>
+      <line x1="120" y1="55" x2="138" y2="55" stroke="#555" stroke-width="2" marker-end="url(#ar_s)"/>
+      <line x1="260" y1="55" x2="278" y2="55" stroke="#555" stroke-width="2" marker-end="url(#ar_s)"/>
+      <text x="155" y="100" text-anchor="middle" font-size="10" fill="#999">首字延迟=总生成时间，用户等空白</text>
+
+      <!-- 流式 -->
+      <text x="155" y="135" text-anchor="middle" font-size="13" fill="#ff6f00" font-weight="bold">流式 StreamingChatLanguageModel</text>
+      <rect x="40" y="150" width="80" height="40" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+      <text x="80" y="175" text-anchor="middle" font-size="11" fill="#ff6f00">调用generate()</text>
+      <rect x="140" y="150" width="40" height="40" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+      <text x="160" y="172" text-anchor="middle" font-size="9" fill="#2e7d32">tok</text>
+      <rect x="185" y="150" width="40" height="40" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+      <text x="205" y="172" text-anchor="middle" font-size="9" fill="#2e7d32">tok</text>
+      <rect x="230" y="150" width="40" height="40" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+      <text x="250" y="172" text-anchor="middle" font-size="9" fill="#2e7d32">tok</text>
+      <rect x="275" y="150" width="40" height="40" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+      <text x="295" y="172" text-anchor="middle" font-size="9" fill="#2e7d32">...</text>
+      <rect x="320" y="150" width="80" height="40" rx="6" fill="#f3e5f5" stroke="#7b1fa2"/>
+      <text x="360" y="172" text-anchor="middle" font-size="10" fill="#7b1fa2">onComplete</text>
+      <text x="360" y="185" text-anchor="middle" font-size="9" fill="#555">结束</text>
+      <line x1="120" y1="170" x2="138" y2="170" stroke="#555" stroke-width="2" marker-end="url(#ar_s)"/>
+      <text x="155" y="215" text-anchor="middle" font-size="10" fill="#999">首字延迟≈0.3秒，逐字回调onPartialResponse</text>
+      <text x="155" y="235" text-anchor="middle" font-size="10" fill="#ff6f00">用户看到打字机效果，体验最佳</text>
+    </svg>
+    <div class="caption">图5-2 同步阻塞返回 vs 流式逐Token回调对比</div>
+  </div>
+
+  <div class="code-block">
+    <span class="lang">Java / langchain4j</span>
+<pre><span class="cmt">// 1. 同步模式——阻塞等待完整回复</span>
+ChatLanguageModel model = OpenAiChatModel.builder()
+        .apiKey(System.getenv(<span class="str">"OPENAI_API_KEY"</span>))
+        .build();
+
+String answer = model.generate(<span class="str">"什么是Spring Boot？"</span>);
+<span class="cmt">// 等待3-10秒后，一次性拿到完整回答</span>
+
+<span class="cmt">// 2. 流式模式——逐Token回调，实时显示</span>
+StreamingChatLanguageModel streamingModel = OpenAiStreamingChatModel.builder()
+        .apiKey(System.getenv(<span class="str">"OPENAI_API_KEY"</span>))
+        .build();
+
+streamingModel.generate(<span class="str">"什么是Spring Boot？"</span>, <span class="kw">new</span> StreamingResponseHandler() {
+    @Override
+    <span class="kw">public void</span> onPartialResponse(String token) {
+        System.out.print(token);  <span class="cmt">// 逐Token输出</span>
+    }
+    @Override
+    <span class="kw">public void</span> onComplete(Response&lt;AiMessage&gt; response) {
+        System.out.println(<span class="str">"\n--- 完成 ---"</span>);
+    }
+    @Override
+    <span class="kw">public void</span> onError(Throwable error) {
+        error.printStackTrace();
+    }
+});</pre>
+  </div>
+
+  <div class="concept-card">
+    <h4>同步 vs 流式 对比</h4>
+    <table class="compare-table">
+      <tr><th>特性</th><th>ChatLanguageModel（同步）</th><th>StreamingChatLanguageModel（流式）</th></tr>
+      <tr><td>响应方式</td><td>阻塞等待，一次性返回</td><td>逐Token回调，实时推送</td></tr>
+      <tr><td>首字延迟</td><td>高（等待全部生成）</td><td>低（立即开始返回）</td></tr>
+      <tr><td>用户体验</td><td>等待->突然出现</td><td>打字机效果，更像人类</td></tr>
+      <tr><td>底层协议</td><td>普通HTTP，等完整响应体</td><td>HTTP SSE/chunked，持续推送</td></tr>
+      <tr><td>适用场景</td><td>后台处理、API调用、批处理</td><td>聊天界面、实时展示</td></tr>
+    </table>
+  </div>
+
+  <!-- ===== 2.5 SSE流式输出深度 ===== -->
+  <h3>2.5 SSE流式输出：Agent的打字机效果 <span class="difficulty">⭐⭐⭐ 必考</span></h3>
+
+  <p>大模型生成一个完整回答通常需要2-10秒，如果等全部生成再返回，用户体验极差。当前主流Agent/ChatBot全部采用<strong>SSE(Server-Sent Events)</strong>流式输出——LLM每生成一个token就立即推送到前端，用户看到"打字机效果"。</p>
+
+  <div class="one-liner">SSE = HTTP长连接 + 服务端逐条推送，比WebSocket简单(单向)，比轮询高效(不断开)，是LLM流式输出的标准方案。</div>
+
+  <h4>SSE vs WebSocket vs 轮询</h4>
+
+  <table class="compare-table">
+    <tr><th>对比</th><th>HTTP轮询</th><th>SSE</th><th>WebSocket</th></tr>
+    <tr><td>方向</td><td>客户端拉</td><td>服务端->客户端(单向)</td><td>双向</td></tr>
+    <tr><td>协议</td><td>HTTP(反复请求)</td><td>HTTP(长连接)</td><td>WS(升级协议)</td></tr>
+    <tr><td>实现复杂度</td><td>低</td><td>低(最简)</td><td>高(握手/心跳/重连)</td></tr>
+    <tr><td>断线重连</td><td>天然(每次新请求)</td><td>浏览器自动重连</td><td>需手动实现</td></tr>
+    <tr><td>代理友好</td><td>✓</td><td>✓(标准HTTP)</td><td>✗(部分Nginx/CDN不支持)</td></tr>
+    <tr><td>适合LLM</td><td>✗(延迟高)</td><td>⭐ 最佳</td><td>过重(LLM只需单向推送)</td></tr>
+  </table>
+
+  <div class="note">为什么Agent用SSE不用WebSocket：LLM流式输出是<strong>服务端->客户端的单向推送</strong>，用户不需要在生成过程中给LLM发消息。SSE用标准HTTP协议，Nginx/CDN/防火墙全兼容，实现最简单。WebSocket的双向能力在这里是浪费。</div>
+
+  <h4>SSE协议原理</h4>
+
+  <div class="code-block">
+    <span class="lang">HTTP响应头</span>
+<pre>HTTP/1.1 200 OK
+Content-Type: <strong>text/event-stream</strong>    <span class="cmt"># SSE的核心：这个MIME类型</span>
+Cache-Control: no-cache                <span class="cmt"># 禁止缓存</span>
+Connection: keep-alive                 <span class="cmt"># 长连接</span>
+Access-Control-Allow-Origin: *        <span class="cmt"># 跨域(如果前后端不同域)</span>
+
+<span class="cmt"># 响应体格式：每条消息以 data: 开头，两个\n结尾</span>
+data: {"token": "你"}\n\n
+data: {"token": "好"}\n\n
+data: {"token": "，"}\n\n
+data: {"token": "有什么"}\n\n
+data: [DONE]\n\n    <span class="cmt"># 结束标记</span></pre>
+  </div>
+
+  <div class="java-analogy">SSE ≈ Java Servlet的AsyncContext + PrintWriter逐步flush()，但浏览器原生支持自动解析和重连。比WebSocket简单得多——不需要握手协议、不需要心跳维持、不需要处理帧(frame)。</div>
+
+  <h4>Spring Boot实现SSE的两种方式</h4>
+
+  <div class="code-block">
+    <span class="lang">Java (Spring Boot SseEmitter)</span>
+<pre><span class="cmt">// 方式1：SseEmitter（Spring原生，推荐）</span>
+@GetMapping(value = "/chat/stream", produces = <span class="str">"text/event-stream"</span>)
+<span class="kw">public</span> SseEmitter chatStream(@RequestParam String message) {
+    <span class="cmt">// 超时设长一点，LLM生成可能要10秒+</span>
+    SseEmitter emitter = <span class="kw">new</span> SseEmitter(60_000L);
+    
+    <span class="cmt">// 异步调用流式模型</span>
+    CompletableFuture.runAsync(() -> {
+        streamingModel.generate(message, <span class="kw">new</span> StreamingResponseHandler() {
+            @Override
+            <span class="kw">public void</span> onPartialResponse(String token) {
+                <span class="kw">try</span> {
+                    <span class="cmt">// 每生成一个token就推送到前端</span>
+                    emitter.send(SseEmitter.event()
+                        .data(Map.of(<span class="str">"token"</span>, token)));
+                } <span class="kw">catch</span> (IOException e) {
+                    emitter.completeWithError(e);
+                }
+            }
+            
+            @Override
+            <span class="kw">public void</span> onComplete(Response&lt;AiMessage&gt; response) {
+                emitter.send(SseEmitter.event().data(<span class="str">"[DONE]"</span>));
+                emitter.complete();
+            }
+        });
+    });
+    
+    <span class="kw">return</span> emitter;
+}
+
+<span class="cmt">// 方式2：Flux&lt;ServerSentEvent&gt;（WebFlux响应式，更优雅）</span>
+@GetMapping(value = "/chat/stream", produces = <span class="str">"text/event-stream"</span>)
+<span class="kw">public</span> Flux&lt;ServerSentEvent&lt;String&gt;&gt; chatStream(@RequestParam String message) {
+    <span class="kw">return</span> Flux.create(sink -> {
+        streamingModel.generate(message, <span class="kw">new</span> StreamingResponseHandler() {
+            @Override
+            <span class="kw">public void</span> onPartialResponse(String token) {
+                sink.next(ServerSentEvent.builder(token).build());
+            }
+            @Override
+            <span class="kw">public void</span> onComplete(Response&lt;AiMessage&gt; response) {
+                sink.next(ServerSentEvent.builder(<span class="str">"[DONE]"</span>).build());
+                sink.complete();
+            }
+        });
+    });
+}</pre>
+  </div>
+
+  <h4>前端消费SSE（EventSource）</h4>
+
+  <div class="code-block">
+    <span class="lang">JavaScript (前端EventSource)</span>
+<pre><span class="cmt">// 浏览器原生EventSource API，无需第三方库</span>
+const eventSource = new EventSource('/chat/stream?message=怎么退款');
+
+eventSource.onmessage = (event) => {
+    if (event.data === '[DONE]') {
+        eventSource.close();    <span class="cmt">// 生成结束，关闭连接</span>
+        return;
+    }
+    const data = JSON.parse(event.data);
+    
+    <span class="cmt">// 逐token追加到页面，实现打字机效果</span>
+    document.getElementById('answer').textContent += data.token;
+};
+
+eventSource.onerror = (e) => {
+    console.error('SSE连接异常', e);
+    eventSource.close();
+};
+
+<span class="cmt">// 注意：EventSource只支持GET请求
+// 如果要POST(发长消息)，用fetch + ReadableStream:
+// const response = await fetch('/chat/stream', {method:'POST', ...})
+// const reader = response.body.getReader()</span></pre>
+  </div>
+
+  <div class="warn">EventSource只支持GET请求！如果用户消息很长（超出URL长度限制）或要发POST，需要用fetch + ReadableStream方案，手动解析text/event-stream流。这是面试常追问的点。</div>
+
+  <h4>Nginx配置SSE（必须！）</h4>
+
+  <div class="code-block">
+    <span class="lang">Nginx配置</span>
+<pre>location /chat/stream/ {
+    proxy_pass http://backend;
+    
+    <span class="cmt"># 关键1：关闭缓冲！否则Nginx会等全部生成再转发</span>
+    proxy_buffering off;
+    proxy_cache off;
+    
+    <span class="cmt"># 关键2：支持HTTP/1.1长连接</span>
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    
+    <span class="cmt"># 关键3：超时设长（LLM生成可能10秒+）</span>
+    proxy_read_timeout 60s;
+    
+    <span class="cmt"># 关键4：禁用gzip（压缩会导致缓冲）</span>
+    gzip off;
+}</pre>
+  </div>
+
+  <div class="warn">最坑的问题：Nginx默认proxy_buffering on，会把SSE流缓冲到完整响应才转发——前端看到的是等10秒后一次性出现全部文字，完全失去流式效果。proxy_buffering off 是SSE必须的配置。</div>
+
+  <div class="diagram">
+  <svg viewBox="0 0 700 250" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="ars" markerWidth="8" markerHeight="8" refX="6" refY="2" orient="auto">
+        <path d="M0,0 L6,2 L0,4 Z" fill="#1565c0"/>
+      </marker>
+    </defs>
+    <!-- 用户 -->
+    <rect x="20" y="100" width="80" height="40" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+    <text x="60" y="124" text-anchor="middle" font-size="12" fill="#1565c0">用户</text>
+    <line x1="100" y1="120" x2="140" y2="120" stroke="#1565c0" stroke-width="2" marker-end="url(#ars)"/>
+    <text x="120" y="112" text-anchor="middle" font-size="9" fill="#555">提问</text>
+    <!-- Nginx -->
+    <rect x="140" y="100" width="80" height="40" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+    <text x="180" y="124" text-anchor="middle" font-size="12" fill="#ff6f00">Nginx</text>
+    <line x1="220" y1="120" x2="260" y2="120" stroke="#1565c0" stroke-width="2" marker-end="url(#ars)"/>
+    <text x="240" y="112" text-anchor="middle" font-size="9" fill="#555">转发</text>
+    <!-- Spring Boot -->
+    <rect x="260" y="100" width="90" height="40" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+    <text x="305" y="118" text-anchor="middle" font-size="11" fill="#2e7d32">Spring Boot</text>
+    <text x="305" y="132" text-anchor="middle" font-size="9" fill="#555">SseEmitter</text>
+    <line x1="350" y1="120" x2="390" y2="120" stroke="#1565c0" stroke-width="2" marker-end="url(#ars)"/>
+    <text x="370" y="112" text-anchor="middle" font-size="9" fill="#555">流式调用</text>
+    <!-- langchain4j -->
+    <rect x="390" y="100" width="90" height="40" rx="6" fill="#f3e5f5" stroke="#7b1fa2"/>
+    <text x="435" y="118" text-anchor="middle" font-size="11" fill="#7b1fa2">langchain4j</text>
+    <text x="435" y="132" text-anchor="middle" font-size="9" fill="#555">StreamingModel</text>
+    <line x1="480" y1="120" x2="520" y2="120" stroke="#1565c0" stroke-width="2" marker-end="url(#ars)"/>
+    <text x="500" y="112" text-anchor="middle" font-size="9" fill="#555">SSE流</text>
+    <!-- LLM API -->
+    <rect x="520" y="100" width="90" height="40" rx="6" fill="#ffebee" stroke="#c62828"/>
+    <text x="565" y="118" text-anchor="middle" font-size="11" fill="#c62828">LLM API</text>
+    <text x="565" y="132" text-anchor="middle" font-size="9" fill="#555">逐token返回</text>
+    <!-- 回流箭头 -->
+    <path d="M 565 140 L 565 180 L 60 180 L 60 140" fill="none" stroke="#2e7d32" stroke-width="2" marker-end="url(#ars)"/>
+    <text x="312" y="200" text-anchor="middle" font-size="11" fill="#2e7d32">token逐个回流：LLM -> langchain4j -> Spring Boot -> Nginx(buffering off!) -> 前EventSource -> 用户</text>
+    <text x="312" y="220" text-anchor="middle" font-size="10" fill="#d32f2f">关键：Nginx必须 proxy_buffering off，否则流被缓冲</text>
+    <text x="312" y="238" text-anchor="middle" font-size="10" fill="#555">EventSource只支持GET，POST用fetch+ReadableStream</text>
+  </svg>
+  <div class="caption">图5-3 SSE完整链路：用户提问 -> Nginx -> Spring Boot -> langchain4j -> LLM API，token逐个回流到前端</div>
+  </div>
+
+  <h4>SSE常见问题排查</h4>
+
+  <table class="compare-table">
+    <tr><th>问题</th><th>原因</th><th>解决方案</th></tr>
+    <tr><td>前端等10秒后一次性出现</td><td>Nginx proxy_buffering没关</td><td>proxy_buffering off</td></tr>
+    <tr><td>30秒后断开</td><td>Nginx/网关超时</td><td>proxy_read_timeout 60s+</td></tr>
+    <tr><td>EventSource报错401</td><td>EventSource不支持自定义Header</td><td>用query param传token 或 用fetch+ReadableStream</td></tr>
+    <tr><td>CORS跨域</td><td>前后端不同域</td><td>后端加Access-Control-Allow-Origin</td></tr>
+    <tr><td>POST请求不行</td><td>EventSource只支持GET</td><td>改用fetch + ReadableStream手动解析</td></tr>
+    <tr><td>消息乱序</td><td>多线程并发推送</td><td>保证单连接内顺序推送，不要多线程写同一SseEmitter</td></tr>
+  </table>
+
+  <div class="interview-q">
+    <div class="question">你的Agent流式输出是怎么做的？为什么用SSE不用WebSocket？</div>
+    <div class="interview-answer">
+      <p>用SSE(Server-Sent Events)实现。后端Spring Boot用SseEmitter(或WebFlux的Flux&lt;ServerSentEvent&gt;)，langchain4j用StreamingChatLanguageModel逐token回调，每个token通过SseEmitter.send()推到前端。前端用浏览器原生EventSource API消费，逐token追加实现打字机效果。</p>
+      <p>用SSE不用WebSocket的原因：LLM流式输出是<strong>服务端->客户端的单向推送</strong>，SSE用标准HTTP协议，Nginx/CDN全兼容，浏览器原生支持自动重连，实现最简单。WebSocket的双向能力在这里是浪费，而且握手协议更复杂、部分代理不兼容。</p>
+      <p>关键配置是Nginx必须proxy_buffering off，否则流被缓冲成一次性返回。</p>
+    </div>
+    <div class="interview-tip">能说出"SSE是单向推送所以够用"和"Nginx buffering off"这两个关键点就够了。再提一句EventSource只支持GET、POST要用fetch+ReadableStream说明你真做过。</div>
+  </div>
+
+  <div class="interview-q">
+    <div class="question">SSE的EventSource不支持POST请求怎么办？</div>
+    <div class="interview-answer">
+      <p>EventSource API原生只支持GET。如果用户消息很长(超出URL限制)或需要POST，有两个方案：1）用fetch + ReadableStream手动解析——fetch发起POST请求，拿到response.body.getReader()，逐chunk读取并用TextDecoder解析text/event-stream格式；2）先用POST创建会话拿到session_id，再用EventSource GET流式获取结果。</p>
+      <p>实际项目里我用的方案2——POST发消息存数据库，返回session_id，前端用EventSource GET /chat/stream/{sessionId} 接收流式回复。这样既支持长消息，又复用EventSource的自动重连能力。</p>
+    </div>
+    <div class="interview-tip">"POST创建会话+GET流式接收"是生产环境最常用的方案，能说这个说明你有实战经验。</div>
+  </div>
+
+  <div class="interview-q">
+    <div class="question">SSE流式输出在Nginx层有什么坑？</div>
+    <div class="interview-answer">
+      <p>最大的坑是proxy_buffering。Nginx默认proxy_buffering on，会把后端响应缓冲到完整再转发给客户端——SSE流被缓冲后，前端等10秒看到一次性出现全部文字，完全失去流式效果。必须配置proxy_buffering off + proxy_cache off。</p>
+      <p>第二个坑是超时。LLM生成可能要10秒+，Nginx默认proxy_read_timeout 60秒通常够，但如果有网关层(WAF/SLB)也要调超时。第三是gzip必须关，压缩也会导致缓冲。</p>
+    </div>
+    <div class="interview-tip">能说出"proxy_buffering off"和"gzip off"说明你真配过。提"网关层也要调超时"说明考虑了全链路。</div>
+  </div>
+
+  <!-- ===== 3. @AiService注解 ===== -->
+  <h3>3. @AiService 注解：声明式Agent接口 <span class="difficulty">★★★★★ 必考</span></h3>
+
+  <p>这是LangChain4j最核心、也最有Java味道的特性。你只需定义一个Java接口，标注几个注解，框架就用<strong>动态代理</strong>生成实现类——把"调用LLM"这件事变成"调用本地方法"，业务代码完全感知不到LLM的存在。</p>
+
+  <p><strong>声明式开发的意义</strong>：传统做法是手动拼Prompt、手动调<code>model.generate()</code>、手动解析返回——LLM调用逻辑散落在业务代码里，难维护。@AiService把这些都收进框架：你在接口上声明<code>@SystemMessage</code>（角色设定）、<code>@UserMessage</code>（用户输入）、<code>@V</code>（模板变量），框架在方法被调用时自动拼装Prompt、调用模型、解析结果。业务代码只看到<code>analyzer.analyze("评论")</code>这样一个普通方法调用。</p>
+
+  <p><strong>结构化输出是关键能力</strong>：当方法返回类型是POJO（如<code>SentimentResult</code>）而非String时，框架会在Prompt里追加"请输出符合此JSON Schema的JSON"，LLM返回JSON文本后，框架用Jackson反序列化为目标类型。解析失败会自动重试（带修复提示）。这让LLM的输出能直接进入业务流程——查询结果、入库、传给下游Service，全链路类型安全。</p>
+
+  <div class="one-liner">@AiService就是"LLM版的@FeignClient"——你只写接口，框架生成实现，把Prompt调用变成方法调用。</div>
+
+  <div class="java-analogy">
+    <code>@AiService</code> 类似 Spring Cloud 的 <code>@FeignClient</code>——你定义一个Java接口，标注注解，框架用动态代理生成实现类。@FeignClient把HTTP调用变成方法调用，@AiService把LLM调用变成方法调用。底层是JDK动态代理 + Prompt模板拼装 + 结果解析。也类似MyBatis的<code>@Mapper</code>——接口即契约，实现由框架生成。
+  </div>
+
+  <div class="diagram">
+    <svg viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="ar_a" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+          <path d="M0,0 L6,4 L0,8 Z" fill="#555"/>
+        </marker>
+      </defs>
+      <text x="350" y="22" text-anchor="middle" font-size="14" fill="#1565c0" font-weight="bold">@AiService 动态代理原理</text>
+
+      <!-- 业务代码 -->
+      <rect x="20" y="50" width="140" height="60" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+      <text x="90" y="75" text-anchor="middle" font-size="12" fill="#1565c0" font-weight="bold">业务代码</text>
+      <text x="90" y="95" text-anchor="middle" font-size="10" fill="#555">analyzer.analyze(msg)</text>
+
+      <!-- 代理 -->
+      <rect x="200" y="50" width="160" height="60" rx="8" fill="#fff3e0" stroke="#ff6f00" stroke-width="2"/>
+      <text x="280" y="72" text-anchor="middle" font-size="12" fill="#ff6f00" font-weight="bold">JDK动态代理</text>
+      <text x="280" y="90" text-anchor="middle" font-size="10" fill="#555">Proxy.newProxyInstance</text>
+      <text x="280" y="104" text-anchor="middle" font-size="10" fill="#555">拦截方法调用</text>
+
+      <!-- Prompt拼装 -->
+      <rect x="400" y="50" width="140" height="60" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>
+      <text x="470" y="72" text-anchor="middle" font-size="12" fill="#2e7d32" font-weight="bold">Prompt拼装</text>
+      <text x="470" y="90" text-anchor="middle" font-size="10" fill="#555">@SystemMessage</text>
+      <text x="470" y="104" text-anchor="middle" font-size="10" fill="#555">@UserMessage + @V</text>
+
+      <!-- LLM -->
+      <rect x="580" y="50" width="100" height="60" rx="8" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2"/>
+      <text x="630" y="75" text-anchor="middle" font-size="12" fill="#7b1fa2" font-weight="bold">LLM</text>
+      <text x="630" y="95" text-anchor="middle" font-size="10" fill="#555">model.generate()</text>
+
+      <line x1="160" y1="80" x2="198" y2="80" stroke="#555" stroke-width="2" marker-end="url(#ar_a)"/>
+      <line x1="360" y1="80" x2="398" y2="80" stroke="#555" stroke-width="2" marker-end="url(#ar_a)"/>
+      <line x1="540" y1="80" x2="578" y2="80" stroke="#555" stroke-width="2" marker-end="url(#ar_a)"/>
+
+      <!-- 结果解析 -->
+      <rect x="400" y="160" width="140" height="60" rx="8" fill="#fce4ec" stroke="#c2185b" stroke-width="2"/>
+      <text x="470" y="182" text-anchor="middle" font-size="12" fill="#c2185b" font-weight="bold">结果解析</text>
+      <text x="470" y="200" text-anchor="middle" font-size="10" fill="#555">String -> 原文</text>
+      <text x="470" y="214" text-anchor="middle" font-size="10" fill="#555">POJO -> JSON反序列化</text>
+
+      <!-- 工具循环 -->
+      <rect x="580" y="160" width="100" height="60" rx="8" fill="#fffde7" stroke="#fbc02d" stroke-width="2"/>
+      <text x="630" y="182" text-anchor="middle" font-size="11" fill="#f57f17" font-weight="bold">工具循环?</text>
+      <text x="630" y="200" text-anchor="middle" font-size="9" fill="#555">是->执行Tool</text>
+      <text x="630" y="214" text-anchor="middle" font-size="9" fill="#555">->再次调LLM</text>
+
+      <line x1="630" y1="110" x2="630" y2="158" stroke="#555" stroke-width="2" marker-end="url(#ar_a)"/>
+      <line x1="580" y1="190" x2="542" y2="190" stroke="#555" stroke-width="2" marker-end="url(#ar_a)"/>
+
+      <!-- 返回 -->
+      <rect x="200" y="160" width="160" height="60" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+      <text x="280" y="182" text-anchor="middle" font-size="12" fill="#1565c0" font-weight="bold">返回业务代码</text>
+      <text x="280" y="200" text-anchor="middle" font-size="10" fill="#555">SentimentResult</text>
+      <text x="280" y="214" text-anchor="middle" font-size="10" fill="#555">或 Result&lt;T&gt;</text>
+
+      <line x1="400" y1="190" x2="362" y2="190" stroke="#555" stroke-width="2" marker-end="url(#ar_a)"/>
+      <path d="M 200 190 L 90 190 L 90 112" fill="none" stroke="#555" stroke-width="2" marker-end="url(#ar_a)"/>
+
+      <text x="350" y="270" text-anchor="middle" font-size="11" fill="#666">业务代码只调方法 -> 代理拦截 -> 拼Prompt -> 调LLM -> (可能循环Tool) -> 解析结果 -> 返回</text>
+      <text x="350" y="290" text-anchor="middle" font-size="10" fill="#999">类比：@FeignClient 代理HTTP调用，@AiService 代理LLM调用</text>
+    </svg>
+    <div class="caption">图5-4 @AiService底层原理：动态代理拦截方法 -> Prompt拼装 -> 调LLM -> (工具循环) -> 结果解析 -> 返回</div>
+  </div>
+
+  <div class="code-block">
+    <span class="lang">Java / langchain4j @AiService</span>
+<pre><span class="cmt">// 1. 定义返回POJO（结构化输出）</span>
+<span class="kw">public record</span> SentimentResult(
+    String sentiment,   <span class="cmt">// 正面/负面/中性</span>
+    <span class="kw">double</span> score,        <span class="cmt">// 置信度</span>
+    String reason        <span class="cmt">// 判断依据</span>
+) {}
+
+<span class="cmt">// 2. 声明式接口——只写接口，不写实现！</span>
+<span class="kw">public interface</span> SentimentAnalyzer {
+
+    @SystemMessage(<span class="str">"你是情感分析专家，分析用户评论的情感倾向"</span>)
+    SentimentResult analyze(@UserMessage String comment);
+
+    @SystemMessage(<span class="str">"你是情感分析专家，按 {{categories}} 分类"</span>)
+    String classify(
+        @UserMessage String comment,
+        @V(<span class="str">"categories"</span>) String categories
+    );
+}
+
+<span class="cmt">// 3. 创建实例（类似 @FeignClient + 配置）</span>
+SentimentAnalyzer analyzer = AiServices.builder(SentimentAnalyzer.class)
+        .chatLanguageModel(model)
+        .build();
+
+<span class="cmt">// 4. 像调用普通Java方法一样调用LLM</span>
+SentimentResult result = analyzer.analyze(<span class="str">"这个产品太棒了！"</span>);
+<span class="cmt">// -> SentimentResult[sentiment=正面, score=0.95, reason=包含"太棒了"]</span></pre>
+  </div>
+
+  <div class="concept-card">
+    <h4>@AiService 核心注解详解</h4>
+    <table class="compare-table">
+      <tr><th>注解</th><th>作用</th><th>类比</th></tr>
+      <tr><td><code>@SystemMessage</code></td><td>定义System Prompt（可带{{变量}}），设定角色/规则</td><td>类上的全局配置/拦截器预设</td></tr>
+      <tr><td><code>@UserMessage</code></td><td>标记哪个参数是用户输入（方法参数）</td><td>@RequestParam 参数绑定</td></tr>
+      <tr><td><code>@V</code></td><td>Prompt模板变量插值，把方法参数填入{{变量}}位置</td><td>SpEL表达式 / @PathVariable</td></tr>
+      <tr><td><code>@MemoryId</code></td><td>标记会话ID参数，用于多用户Memory隔离</td><td>HttpSession的sessionId</td></tr>
+      <tr><td>返回String</td><td>LLM原文返回，不解析</td><td>—</td></tr>
+      <tr><td>返回POJO</td><td>结构化输出：框架追加JSON Schema要求，Jackson反序列化</td><td>@ResponseBody + Jackson</td></tr>
+      <tr><td>返回<code>Result&lt;T&gt;</code></td><td>带元数据（Token用量、FinishReason等）</td><td>ResponseEntity&lt;T&gt;</td></tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>结构化输出原理</strong>：当返回类型是POJO时，AiService在Prompt中追加"请输出符合此JSON Schema的JSON"，调用LLM后将返回的JSON文本用Jackson反序列化为目标类型。解析失败时自动重试（带修复提示）。这是@AiService最有价值的能力——让LLM输出直接成为类型安全的业务对象。
+  </div>
+
+  <!-- ===== 4. Tools工具调用 ===== -->
+  <h3>4. Tools（工具调用） <span class="difficulty">★★★★★ 必考</span></h3>
+
+  <p>Tools是Agent的核心能力——让LLM能调用外部函数（查数据库、调API、发邮件），突破LLM"只会说话"的限制。没有Tools，Agent就退化成Chatbot。</p>
+
+  <p><strong>Tool执行机制（核心原理）</strong>：LLM本身不能执行任何代码，它只能输出文本。所谓"工具调用"是一个<strong>协议约定</strong>——你在Java方法上加<code>@Tool</code>注解写好描述，框架把方法名、描述、参数Schema转成JSON发给LLM；LLM分析用户问题后，如果决定用工具，就返回一个<code>ToolExecutionRequest</code>（包含工具名+参数JSON）；框架收到后用<strong>反射</strong>调用对应的Java方法，拿到返回值；把返回值作为<code>ToolExecutionResultMessage</code>加入对话历史，再次调用LLM；LLM基于工具结果生成最终自然语言回答。整个过程可能循环多次（LLM连续调用多个工具）。</p>
+
+  <p><strong>description是LLM选工具的唯一依据</strong>。LLM看不到你的Java代码，它只读每个工具的<code>@Tool</code>描述字符串和<code>@P</code>参数描述，根据用户问题的语义匹配最合适的工具。描述写得模糊，LLM就会选错或漏选——这是Tool调用不准的头号原因。好的description要写清<strong>功能 + 输入参数含义 + 触发场景</strong>。</p>
+
+  <div class="one-liner">Tools就是给LLM"长手"——LLM决定调什么工具、传什么参数，你的Java代码执行后把结果还给它。</div>
+
+  <div class="java-analogy">
+    Tools机制 ≈ Spring MVC的<code>@RequestMapping</code>路由 + 反射调用。LLM输出的<code>ToolExecutionRequest</code>就像一个HTTP请求（工具名=URL，参数=RequestBody），框架像DispatcherServlet一样根据工具名找到对应的<code>@Tool</code>方法，反射调用执行，把返回值作为响应回传。区别：传统路由是字符串匹配，Tool路由是LLM语义匹配。
+  </div>
+
+  <div class="diagram">
+    <svg viewBox="0 0 620 340" xmlns="http://www.w3.org/2000/svg">
+      <text x="310" y="22" font-size="14" fill="#1565c0" font-weight="bold" text-anchor="middle">Tool调用完整流程</text>
+
+      <!-- Step 1 -->
+      <rect x="20" y="40" width="160" height="55" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+      <text x="100" y="62" font-size="12" fill="#1565c0" font-weight="bold" text-anchor="middle">① 用户提问</text>
+      <text x="100" y="80" font-size="10" fill="#555" text-anchor="middle">"查下北京天气"</text>
+
+      <!-- Step 2 -->
+      <rect x="220" y="40" width="180" height="55" rx="8" fill="#fff3e0" stroke="#ff6f00" stroke-width="2"/>
+      <text x="310" y="62" font-size="12" fill="#ff6f00" font-weight="bold" text-anchor="middle">② LLM决策调用Tool</text>
+      <text x="310" y="80" font-size="10" fill="#555" text-anchor="middle">返回 ToolExecutionRequest</text>
+      <text x="310" y="92" font-size="9" fill="#555" text-anchor="middle">{name:"getWeather", args:{city:"北京"}}</text>
+
+      <!-- Step 3 -->
+      <rect x="440" y="40" width="160" height="55" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>
+      <text x="520" y="62" font-size="12" fill="#2e7d32" font-weight="bold" text-anchor="middle">③ 框架反射执行</text>
+      <text x="520" y="80" font-size="10" fill="#555" text-anchor="middle">调用Java方法</text>
+      <text x="520" y="92" font-size="9" fill="#555" text-anchor="middle">weatherApi.query("北京")</text>
+
+      <!-- Step 4 -->
+      <rect x="440" y="130" width="160" height="55" rx="8" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2"/>
+      <text x="520" y="152" font-size="12" fill="#7b1fa2" font-weight="bold" text-anchor="middle">④ 结果回传LLM</text>
+      <text x="520" y="170" font-size="10" fill="#555" text-anchor="middle">ToolExecutionResult</text>
+      <text x="520" y="182" font-size="9" fill="#555" text-anchor="middle">"北京 28°C 晴"</text>
+
+      <!-- Step 5 -->
+      <rect x="220" y="130" width="180" height="55" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+      <text x="310" y="152" font-size="12" fill="#1565c0" font-weight="bold" text-anchor="middle">⑤ LLM整合生成回答</text>
+      <text x="310" y="170" font-size="10" fill="#555" text-anchor="middle">基于工具结果</text>
+      <text x="310" y="182" font-size="9" fill="#555" text-anchor="middle">"北京今天28度，晴天"</text>
+
+      <!-- Step 6 -->
+      <rect x="20" y="130" width="160" height="55" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>
+      <text x="100" y="152" font-size="12" fill="#2e7d32" font-weight="bold" text-anchor="middle">⑥ 返回用户</text>
+      <text x="100" y="170" font-size="10" fill="#555" text-anchor="middle">用户收到最终回答</text>
+
+      <!-- 箭头 -->
+      <line x1="180" y1="67" x2="218" y2="67" stroke="#999" stroke-width="2" marker-end="url(#ar2)"/>
+      <line x1="400" y1="67" x2="438" y2="67" stroke="#999" stroke-width="2" marker-end="url(#ar2)"/>
+      <path d="M520 95 L520 128" stroke="#999" stroke-width="2" fill="none" marker-end="url(#ar2)"/>
+      <line x1="438" y1="157" x2="402" y2="157" stroke="#999" stroke-width="2" marker-end="url(#ar2)"/>
+      <line x1="218" y1="157" x2="182" y2="157" stroke="#999" stroke-width="2" marker-end="url(#ar2)"/>
+
+      <!-- 底部说明 -->
+      <rect x="20" y="220" width="580" height="100" rx="8" fill="#fffde7" stroke="#fbc02d" stroke-width="1"/>
+      <text x="40" y="245" font-size="12" fill="#f57f17" font-weight="bold">关键机制（循环）</text>
+      <text x="40" y="265" font-size="11" fill="#555">1. LLM通过Function Calling协议决定调用哪个Tool、传什么参数</text>
+      <text x="40" y="283" font-size="11" fill="#555">2. 框架解析ToolExecutionRequest -> 反射调用Java方法 -> 结果转ToolExecutionResult</text>
+      <text x="40" y="301" font-size="11" fill="#555">3. 结果加入对话历史 -> 再次调LLM -> LLM可能继续调Tool（循环）或生成最终回答</text>
+      <text x="40" y="319" font-size="11" fill="#d32f2f">⚠ 多工具可循环调用，需设maxIterations防死循环</text>
+
+      <defs>
+        <marker id="ar2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#999"/>
+        </marker>
+      </defs>
+    </svg>
+    <div class="caption">图5-5 Tool调用全流程：提问 -> LLM决策 -> 反射执行 -> 结果回传 -> (循环) -> 生成回答</div>
+  </div>
+
+  <div class="code-block">
+    <span class="lang">Java / langchain4j Tools</span>
+<pre><span class="cmt">// 1. 用 @Tool 定义工具方法</span>
+<span class="kw">public class</span> WeatherTools {
+
+    @Tool(<span class="str">"查询指定城市的天气信息"</span>)  <span class="cmt">// 工具描述，LLM靠它理解用途</span>
+    <span class="kw">public</span> String getWeather(
+        @P(<span class="str">"城市名称，如北京、上海"</span>) String city   <span class="cmt">// 参数描述</span>
+    ) {
+        <span class="cmt">// 实际调用天气API</span>
+        <span class="kw">return</span> weatherApi.query(city);
+    }
+
+    @Tool(<span class="str">"查询指定城市的空气质量指数"</span>)
+    <span class="kw">public</span> String getAirQuality(@P(<span class="str">"城市名称"</span>) String city) {
+        <span class="kw">return</span> airApi.queryAQI(city);
+    }
+}
+
+<span class="cmt">// 2. 把工具注册到AiService</span>
+CustomerService service = AiServices.builder(CustomerService.class)
+        .chatLanguageModel(model)
+        .tools(<span class="kw">new</span> WeatherTools())  <span class="cmt">// 注册工具</span>
+        .build();
+
+<span class="cmt">// 3. 用户提问 -> LLM自动决定是否调用Tool</span>
+String answer = service.chat(<span class="str">"北京今天天气怎么样？空气质量呢？"</span>);
+<span class="cmt">// -> LLM自动调用 getWeather("北京") 和 getAirQuality("北京")</span>
+<span class="cmt">// -> 拿到结果后整合成自然语言回答</span></pre>
+  </div>
+
+  <div class="concept-card">
+    <h4>好的 description vs 差的 description</h4>
+    <div class="code-block">
+<pre><span class="cmt">// ❌ 差的description——LLM容易选错或漏选</span>
+@Tool(<span class="str">"查询订单"</span>)
+<span class="kw">public</span> String queryOrder(String orderId) { ... }
+
+<span class="cmt">// ✅ 好的description——功能+输入+输出+触发场景都讲清楚</span>
+@Tool(<span class="str">"根据订单号查询订单状态，返回订单当前环节（待付款/已发货/已签收）"</span>
+    + <span class="str">"和预计送达时间。当用户询问'我的订单到哪了'、'订单状态'时使用。"</span>)
+<span class="kw">public</span> String queryOrder(@P(<span class="str">"订单号，纯数字，如20230801"</span>) String orderId) { ... }</pre>
+    </div>
+    <p>差描述只说"查询订单"，LLM无法区分这是查状态、查物流还是查详情；好描述说清了"输入什么、输出什么、什么场景该用"，LLM选工具准确率大幅提升。</p>
+  </div>
+
+  <div class="note">
+    <strong>ToolExecutionRequest机制</strong>：LLM不是直接执行Java方法。流程是：①LLM返回一个JSON（ToolName + 参数）-> ②框架解析为ToolExecutionRequest -> ③反射调用对应Java方法 -> ④结果转成ToolExecutionResult -> ⑤作为新消息加入对话 -> ⑥LLM再生成最终回答。整个过程对业务代码透明——你只调<code>service.chat()</code>，工具循环在框架内部完成。
+  </div>
+
+  <!-- ===== 5. Memory对话记忆 ===== -->
+  <h3>5. Memory（对话记忆） <span class="difficulty">★★★★☆</span></h3>
+
+  <p>LLM本身是<strong>无状态</strong>的——每次API调用都是全新的，模型不记得上一轮说了什么。ChatMemory的作用就是在应用层维护对话历史，每次调用LLM时把历史消息一起带上，让多轮对话成为可能。</p>
+
+  <p><strong>为什么需要Memory</strong>：用户说"我叫张三"，下一句"我叫什么"，LLM单独看第二句根本无法回答。ChatMemory把第一轮的"我叫张三"存下来，第二轮调用时把[用户:我叫张三, AI:好的] + [用户:我叫什么]一起发给LLM，LLM才能回答"张三"。本质上Memory就是在每次请求里<strong>拼接历史上下文</strong>。</p>
+
+  <p><strong>Token预算是核心约束</strong>。历史消息会占用模型的上下文窗口（如GPT-4是128K，但实际可用要留给System Prompt和当前问题）。如果对话很长，历史消息可能把窗口占满，导致LLM"忘记"当前任务。所以ChatMemory必须有<strong>裁剪策略</strong>——LangChain4j提供两种：按消息条数裁剪和按Token预算裁剪。</p>
+
+  <div class="one-liner">ChatMemory就是"LLM的短期记忆"——保存最近几轮对话，让LLM能"接着上次说"。</div>
+
+  <div class="java-analogy">
+    ChatMemory 类似 Java Web 的 <code>HttpSession</code>——按会话ID隔离，存储对话上下文。但有关键区别：HttpSession无大小限制（存服务端内存），ChatMemory有<strong>Token预算限制</strong>——历史消息太长会超出模型上下文窗口，必须裁剪。可以理解为"有容量上限的HttpSession"。
+  </div>
+
+  <div class="concept-card">
+    <h4>两种ChatMemory策略</h4>
+    <table class="compare-table">
+      <tr><th>类型</th><th>裁剪策略</th><th>原理</th><th>优点</th><th>缺点</th></tr>
+      <tr><td><strong>MessageWindowChatMemory</strong></td><td>按消息条数（保留最近N条）</td><td>FIFO队列，超过N条丢最早的</td><td>简单可控，无需Tokenizer</td><td>可能Token超限（一条长消息就占满）</td></tr>
+      <tr><td><strong>TokenWindowChatMemory</strong></td><td>按Token数（不超预算）</td><td>用Tokenizer算每条消息Token，累计不超maxTokens</td><td>Token精确，不超窗口</td><td>需要模型对应Tokenizer</td></tr>
+    </table>
+  </div>
+
+  <div class="code-block">
+    <span class="lang">Java / langchain4j Memory</span>
+<pre><span class="cmt">// 1. MessageWindowChatMemory —— 按消息条数</span>
+ChatMemory memory1 = MessageWindowChatMemory.builder()
+        .maxMessages(20)   <span class="cmt">// 保留最近20条消息</span>
+        .id(<span class="str">"user-001"</span>)  <span class="cmt">// 会话隔离</span>
+        .build();
+
+<span class="cmt">// 2. TokenWindowChatMemory —— 按Token预算</span>
+ChatMemory memory2 = TokenWindowChatMemory.builder()
+        .maxTokens(1000, tokenizer)  <span class="cmt">// 不超过1000 tokens</span>
+        .id(<span class="str">"user-001"</span>)
+        .build();
+
+<span class="cmt">// 3. 注入到AiService</span>
+CustomerService service = AiServices.builder(CustomerService.class)
+        .chatLanguageModel(model)
+        .chatMemory(memory1)  <span class="cmt">// 带记忆的Agent</span>
+        .build();
+
+<span class="cmt">// 4. 多轮对话效果</span>
+service.chat(<span class="str">"我叫张三"</span>);
+<span class="cmt">// -> "好的，张三先生，有什么可以帮您？"</span>
+service.chat(<span class="str">"我叫什么名字？"</span>);
+<span class="cmt">// -> "您叫张三"  ← 因为上一轮对话在Memory中</span></pre>
+  </div>
+
+  <div class="warn">
+    Token预算管理是面试重点：Memory中的历史消息会<strong>挤占</strong>模型上下文窗口。如果窗口是4096 Token，Memory占1000，那留给System Prompt + 当前问题的空间就只剩3096。必须合理设置上限，避免"上下文溢出导致LLM丢失当前任务"。生产经验：Memory通常占总窗口的30-50%。进阶方案是用<strong>摘要压缩</strong>——把早期对话用LLM总结成一段摘要存入Memory，释放Token空间。
+  </div>
+
+  <!-- ===== 6. RAG支持 ===== -->
+  <h3>6. RAG支持 <span class="difficulty">★★★★☆</span></h3>
+
+  <p>LangChain4j内置完整的RAG（检索增强生成）链路——从文档加载到向量检索到注入Prompt，开发者只需配置几个组件即可实现"开卷考试"式问答。</p>
+
+  <p><strong>朴素RAG的原理</strong>：LLM的知识有截止日期，也不知道你的私有数据。RAG的思路是——先从知识库检索与问题相关的内容，把检索到的内容拼进Prompt，让LLM基于这些内容回答，避免幻觉。完整流程是：<strong>离线阶段</strong>加载文档→切片→用EmbeddingModel向量化→存入EmbeddingStore；<strong>在线阶段</strong>用户提问→问题向量化→在EmbeddingStore做相似度检索取Top-K→把检索片段拼入Prompt→LLM基于片段回答。</p>
+
+  <p><strong>LangChain4j的RAG抽象</strong>：核心是<code>ContentRetriever</code>接口——它定义了"给定用户消息，返回相关内容片段"的契约。<code>EmbeddingStoreContentRetriever</code>是其默认实现，封装了"问题向量化→向量检索→过滤"的完整流程。把它注入AiService后，每次用户提问框架会自动先检索、再把结果注入Prompt，业务代码完全无感。</p>
+
+  <div class="one-liner">RAG就是"开卷考试"——先从知识库检索相关内容，再让LLM基于检索结果回答，避免幻觉。</div>
+
+  <div class="diagram">
+    <svg viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="ar_r" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+          <path d="M0,0 L6,4 L0,8 Z" fill="#555"/>
+        </marker>
+      </defs>
+      <text x="350" y="22" text-anchor="middle" font-size="14" fill="#1565c0" font-weight="bold">RAG 朴素流程</text>
+
+      <!-- 离线阶段 -->
+      <text x="120" y="50" text-anchor="middle" font-size="12" fill="#ff6f00" font-weight="bold">离线阶段（建索引）</text>
+      <rect x="20" y="60" width="80" height="40" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+      <text x="60" y="85" text-anchor="middle" font-size="10" fill="#ff6f00">文档加载</text>
+      <rect x="115" y="60" width="80" height="40" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+      <text x="155" y="85" text-anchor="middle" font-size="10" fill="#ff6f00">切片Chunking</text>
+      <rect x="210" y="60" width="80" height="40" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+      <text x="250" y="82" text-anchor="middle" font-size="10" fill="#ff6f00">Embedding</text>
+      <text x="250" y="94" text-anchor="middle" font-size="9" fill="#555">向量化</text>
+      <rect x="305" y="60" width="80" height="40" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+      <text x="345" y="85" text-anchor="middle" font-size="10" fill="#ff6f00">存入VectorStore</text>
+      <line x1="100" y1="80" x2="113" y2="80" stroke="#555" stroke-width="2" marker-end="url(#ar_r)"/>
+      <line x1="195" y1="80" x2="208" y2="80" stroke="#555" stroke-width="2" marker-end="url(#ar_r)"/>
+      <line x1="290" y1="80" x2="303" y2="80" stroke="#555" stroke-width="2" marker-end="url(#ar_r)"/>
+
+      <!-- 在线阶段 -->
+      <text x="430" y="50" text-anchor="middle" font-size="12" fill="#1565c0" font-weight="bold">在线阶段（检索+生成）</text>
+      <rect x="20" y="130" width="80" height="40" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+      <text x="60" y="155" text-anchor="middle" font-size="10" fill="#1565c0">用户提问</text>
+      <rect x="115" y="130" width="80" height="40" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+      <text x="155" y="152" text-anchor="middle" font-size="10" fill="#1565c0">问题向量化</text>
+      <text x="155" y="164" text-anchor="middle" font-size="9" fill="#555">Embedding</text>
+      <rect x="210" y="130" width="80" height="40" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+      <text x="250" y="152" text-anchor="middle" font-size="10" fill="#2e7d32">向量检索</text>
+      <text x="250" y="164" text-anchor="middle" font-size="9" fill="#555">Top-K片段</text>
+      <rect x="305" y="130" width="80" height="40" rx="6" fill="#f3e5f5" stroke="#7b1fa2"/>
+      <text x="345" y="152" text-anchor="middle" font-size="10" fill="#7b1fa2">拼入Prompt</text>
+      <text x="345" y="164" text-anchor="middle" font-size="9" fill="#555">context+问题</text>
+      <rect x="400" y="130" width="80" height="40" rx="6" fill="#fce4ec" stroke="#c2185b"/>
+      <text x="440" y="155" text-anchor="middle" font-size="10" fill="#c2185b">LLM生成</text>
+      <rect x="495" y="130" width="80" height="40" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+      <text x="535" y="155" text-anchor="middle" font-size="10" fill="#1565c0">返回答案</text>
+      <line x1="100" y1="150" x2="113" y2="150" stroke="#555" stroke-width="2" marker-end="url(#ar_r)"/>
+      <line x1="195" y1="150" x2="208" y2="150" stroke="#555" stroke-width="2" marker-end="url(#ar_r)"/>
+      <line x1="290" y1="150" x2="303" y2="150" stroke="#555" stroke-width="2" marker-end="url(#ar_r)"/>
+      <line x1="385" y1="150" x2="398" y2="150" stroke="#555" stroke-width="2" marker-end="url(#ar_r)"/>
+      <line x1="480" y1="150" x2="493" y2="150" stroke="#555" stroke-width="2" marker-end="url(#ar_r)"/>
+
+      <text x="350" y="210" text-anchor="middle" font-size="11" fill="#666">ContentRetriever封装了"问题向量化→检索→过滤"，注入AiService后自动执行</text>
+      <text x="350" y="230" text-anchor="middle" font-size="10" fill="#999">业务代码只调 assistant.chat(question)，检索+拼接在框架内完成</text>
+      <text x="350" y="255" text-anchor="middle" font-size="10" fill="#d32f2f">⚠ 切片大小、Top-K、相似度阈值是调参重点</text>
+    </svg>
+    <div class="caption">图5-6 RAG完整流程：离线建索引 + 在线检索生成</div>
+  </div>
+
+  <div class="code-block">
+    <span class="lang">Java / langchain4j RAG</span>
+<pre><span class="cmt">// 1. 准备 EmbeddingModel + EmbeddingStore</span>
+EmbeddingModel embeddingModel = OpenAiEmbeddingModel.builder()
+        .apiKey(System.getenv(<span class="str">"OPENAI_API_KEY"</span>))
+        .build();
+
+EmbeddingStore&lt;TextSegment&gt; store = InMemoryEmbeddingStore.create();
+
+<span class="cmt">// 2. 加载文档 -> 切片 -> 向量化 -> 存入向量库</span>
+Document doc = FileSystemDocumentLoader.load(<span class="str">"product-faq.pdf"</span>);
+List&lt;TextSegment&gt; segments = DocumentSplitters
+        .recursive(300, 50)  <span class="cmt">// 每段300字，重叠50字</span>
+        .split(doc);
+
+EmbeddingStoreIngestor.ingest(doc, embeddingModel, store);
+
+<span class="cmt">// 3. 创建ContentRetriever —— 检索器</span>
+ContentRetriever retriever = EmbeddingStoreContentRetriever.builder()
+        .embeddingStore(store)
+        .embeddingModel(embeddingModel)
+        .maxResults(5)          <span class="cmt">// 返回top-5相关片段</span>
+        .minScore(0.7)          <span class="cmt">// 相似度阈值</span>
+        .build();
+
+<span class="cmt">// 4. 组装带RAG的AiService</span>
+FaqAssistant assistant = AiServices.builder(FaqAssistant.class)
+        .chatLanguageModel(model)
+        .contentRetriever(retriever)  <span class="cmt">// 注入检索器</span>
+        .build();
+
+<span class="cmt">// 5. 用户提问 -> 自动检索 -> 注入Prompt -> LLM基于知识回答</span>
+String answer = assistant.chat(<span class="str">"你们的退货政策是什么？"</span>);
+<span class="cmt">// -> 框架自动：问题向量化 -> 检索Top5片段 -> 拼入Prompt -> LLM回答</span></pre>
+  </div>
+
+  <div class="concept-card">
+    <h4>朴素RAG vs Advanced RAG</h4>
+    <table class="compare-table">
+      <tr><th>维度</th><th>朴素RAG</th><th>Advanced RAG</th></tr>
+      <tr><td>检索前</td><td>固定切片</td><td>语义切片 + 查询改写 + 查询扩展</td></tr>
+      <tr><td>检索中</td><td>单次向量检索</td><td>混合检索（向量+关键词）+ 重排序</td></tr>
+      <tr><td>检索后</td><td>直接拼接</td><td>去重 + 压缩 + 相关性过滤</td></tr>
+      <tr><td>效果</td><td>基础可用</td><td>召回率和精度显著提升</td></tr>
+    </table>
+  </div>
+
+  <!-- ===== 7. 高级特性 ===== -->
+  <h3>7. 高级特性 <span class="difficulty">★★★☆☆</span></h3>
+
+  <p>除了基础能力，LangChain4j的<code>AiServices</code> Builder还提供一系列高级配置，覆盖生产环境的常见需求。</p>
+
+  <p><strong>AiServices Builder链式构建</strong>：所有能力（模型、记忆、工具、检索器）都通过Builder链式注入，组合即用。这种设计让"一个Agent同时具备记忆+工具+RAG"变得简单——四行Builder代码搞定。Builder本身是不可变配置，build()后生成的Agent实例是线程安全的，可以作为Spring单例Bean注入。</p>
+
+  <p><strong>多模型切换</strong>：同一个接口（如<code>CustomerService</code>）可以绑不同模型——生产用GPT-4保质量，测试用GPT-3.5省钱，本地用Ollama保隐私。因为核心层是接口，切换只需换Builder的<code>.chatLanguageModel()</code>参数，业务代码零改动。这是三层架构带来的直接红利。</p>
+
+  <p><strong>动态SystemMessage</strong>：默认<code>@SystemMessage</code>是静态的（编译期写死）。但有些场景需要运行时切换角色——比如客服系统根据用户VIP等级给不同人设。这时用<code>systemMessageProvider</code>，传入一个<code>Function&lt;Object, SystemMessage&gt;</code>，每次调用时根据sessionId动态生成SystemMessage。类比Spring的<code>RequestScope</code> Bean——同一个接口，不同请求上下文返回不同实例。</p>
+
+  <div class="concept-card">
+    <h4>AiServices Builder 链式构建</h4>
+  </div>
+
+  <div class="code-block">
+    <span class="lang">Java / langchain4j 完整配置</span>
+<pre><span class="cmt">// 链式Builder——组合所有能力</span>
+CustomerService service = AiServices.builder(CustomerService.class)
+        .chatLanguageModel(model)            <span class="cmt">// LLM</span>
+        .chatMemory(memory)                  <span class="cmt">// 对话记忆</span>
+        .tools(<span class="kw">new</span> WeatherTools(),
+               <span class="kw">new</span> OrderTools())        <span class="cmt">// 工具集</span>
+        .contentRetriever(retriever)         <span class="cmt">// RAG检索</span>
+        .build();
+
+<span class="cmt">// 多模型切换——同一个接口，不同模型</span>
+CustomerService gptService = AiServices.builder(CustomerService.class)
+        .chatLanguageModel(openAiModel)  <span class="cmt">// GPT-4</span>
+        .build();
+
+CustomerService localService = AiServices.builder(CustomerService.class)
+        .chatLanguageModel(ollamaModel)  <span class="cmt">// 本地Ollama</span>
+        .build();
+
+<span class="cmt">// 动态SystemMessage——运行时切换角色</span>
+<span class="kw">interface</span> DynamicAgent {
+
+    @SystemMessage  <span class="cmt">// 不写死，运行时传入</span>
+    String chat(@UserMessage String message, @MemoryId Object sessionId);
+}
+
+<span class="cmt">// 用SystemMessageProvider动态生成</span>
+CustomerService dynamicService = AiServices.builder(CustomerService.class)
+        .chatLanguageModel(model)
+        .systemMessageProvider(sessionId -&gt; {
+            String role = roleService.getRole(sessionId);
+            <span class="kw">return</span> SystemMessage.from(role);
+        })
+        .build();</pre>
+  </div>
+
+  <div class="java-analogy">
+    <code>systemMessageProvider</code> ≈ Spring的<code>FactoryBean</code>或<code>@Scope("request")</code>——返回值随上下文变化。普通<code>@SystemMessage</code>是单例（所有请求同一个Prompt），Provider是原型（每次请求按sessionId生成不同Prompt）。这在多租户、多角色场景下必备。
+  </div>
+
+  <!-- ===== 面试场景 ===== -->
+  <h3>面试场景演练</h3>
+
+  <div class="interview-q">
+    <div class="question">"LangChain4j和Python LangChain有什么区别？"</div>
+    <div class="interview-answer">
+      <p>核心区别在于<strong>设计哲学和语言生态</strong>：</p>
+      <p>1. <strong>设计风格</strong>：LangChain4j更贴合Java/Spring习惯——强类型、接口驱动、注解声明式。Python LangChain更灵活、链式调用、动态类型。</p>
+      <p>2. <strong>@AiService</strong>：LangChain4j独有，类似@FeignClient的声明式Agent接口，把LLM调用变成方法调用，返回POJO。Python版本没有这么自然的接口抽象。</p>
+      <p>3. <strong>类型安全</strong>：LangChain4j的结构化输出利用Java泛型和record，编译期就能发现类型错误。</p>
+      <p>4. <strong>并发模型</strong>：Java无GIL，多线程真正并行；Python受GIL限制，IO并行靠asyncio。在多用户并发Agent场景下Java有优势。</p>
+      <p>5. <strong>生态</strong>：Python LangChain起步早、社区大、组件多；LangChain4j起步晚但跟Spring Boot集成更自然，有官方starter。</p>
+    </div>
+    <div class="interview-tip">强调"Java生态友好"+"声明式接口"+"无GIL并发优势"是核心。结合项目说"在客服助手中用@AiService把LLM调用写得像写Service层一样"。</div>
+  </div>
+
+  <div class="interview-q">
+    <div class="question">"@AiService的底层原理是什么？"</div>
+    <div class="interview-answer">
+      <p>本质是<strong>JDK动态代理 + Prompt模板拼装 + 结果解析</strong>三步：</p>
+      <p>1. <strong>动态代理</strong>：AiServices.builder()用Proxy.newProxyInstance生成接口的实现类，拦截所有方法调用。</p>
+      <p>2. <strong>Prompt拼装</strong>：拦截到方法调用后，读取@SystemMessage/@UserMessage/@V注解，用模板引擎填充变量，组装成完整的消息列表（System + Memory历史 + User）。</p>
+      <p>3. <strong>结果解析</strong>：调用ChatLanguageModel.generate()，拿到返回文本后，根据返回类型决定解析方式——String直接返回，POJO则解析JSON并反序列化，Result&lt;T&gt;还会带上Token用量等元数据。</p>
+      <p>4. <strong>工具循环</strong>：如果配置了Tools且LLM返回了ToolExecutionRequest，会先执行工具、把结果加入对话、再次调用LLM，直到LLM不再请求工具。</p>
+    </div>
+    <div class="interview-tip">提"动态代理"立刻和Spring联系起来。补充"Tool调用是个循环"体现你理解了Agent的ReAct模式。</div>
+  </div>
+
+  <div class="interview-q">
+    <div class="question">"Tools是怎么工作的？LLM怎么知道该调哪个工具？"</div>
+    <div class="interview-answer">
+      <p>Tools依赖LLM的<strong>Function Calling能力</strong>，整个流程是一个循环：</p>
+      <p>1. <strong>注册</strong>：Builder注册工具时，框架把@Tool方法的名称、description、参数Schema转成JSON，作为tools参数传给LLM。</p>
+      <p>2. <strong>决策</strong>：LLM分析用户问题，<strong>靠description语义匹配</strong>决定是否需要调用工具、调哪个、传什么参数，返回一个ToolExecutionRequest（含工具名+参数JSON）。</p>
+      <p>3. <strong>执行</strong>：框架用反射调用对应的Java方法，拿到返回值。</p>
+      <p>4. <strong>回传</strong>：结果作为ToolExecutionResultMessage加入对话历史，再次调用LLM。</p>
+      <p>5. <strong>循环</strong>：LLM可能连续调用多个工具（如先查天气再查空气质量），直到不再请求工具，生成最终自然语言回答。</p>
+      <p>关键：<strong>description是LLM选工具的唯一依据</strong>，写不好就选错。要写清功能+输入+触发场景。</p>
+    </div>
+    <div class="interview-tip">强调"@Tool的描述是给LLM看的"——LLM靠描述决定用不用这个工具。说"多工具可循环调用"展示你理解ReAct/Agent循环。</div>
+  </div>
+
+  <div class="interview-q">
+    <div class="question">"ChatMemory怎么管理Token？两种策略怎么选？"</div>
+    <div class="interview-answer">
+      <p>核心是<strong>在上下文窗口预算内做裁剪</strong>，两种策略：</p>
+      <p>1. <strong>MessageWindowChatMemory</strong>：按消息条数裁剪。比如maxMessages=20，超过20条就丢弃最早的。简单但不够精确——一条长消息可能就占满Token。</p>
+      <p>2. <strong>TokenWindowChatMemory</strong>：按Token数裁剪。用Tokenizer计算每条消息的Token数，保留不超过maxTokens的最新消息。更精确，但需要模型对应的Tokenizer。</p>
+      <p>关键原则：<strong>System Prompt + Memory + 当前问题 + 输出空间 ≤ 模型上下文窗口</strong>。Memory占用越多，留给当前任务的空间越少。生产中要动态平衡——通常Memory占总窗口的30-50%。</p>
+      <p>进阶：长对话可以用<strong>摘要压缩</strong>——把早期对话用LLM总结成一段摘要存入Memory，释放Token空间。</p>
+    </div>
+    <div class="interview-tip">提"Token预算分配公式"和"摘要压缩"非常加分，说明你做过生产环境的长对话优化。</div>
+  </div>
+
+  <div class="interview-q">
+    <div class="question">"你的Agent流式输出是怎么做的？为什么用SSE不用WebSocket？"</div>
+    <div class="interview-answer">
+      <p>用SSE(Server-Sent Events)实现。后端Spring Boot用SseEmitter(或WebFlux的Flux&lt;ServerSentEvent&gt;)，langchain4j用StreamingChatLanguageModel逐token回调，每个token通过SseEmitter.send()推到前端。前端用浏览器原生EventSource API消费，逐token追加实现打字机效果。</p>
+      <p>用SSE不用WebSocket的原因：LLM流式输出是<strong>服务端->客户端的单向推送</strong>，SSE用标准HTTP协议，Nginx/CDN全兼容，浏览器原生支持自动重连，实现最简单。WebSocket的双向能力在这里是浪费，而且握手协议更复杂、部分代理不兼容。</p>
+      <p>关键配置是Nginx必须proxy_buffering off，否则流被缓冲成一次性返回。</p>
+    </div>
+    <div class="interview-tip">能说出"SSE是单向推送所以够用"和"Nginx buffering off"这两个关键点就够了。再提一句EventSource只支持GET、POST要用fetch+ReadableStream说明你真做过。</div>
+  </div>
+
+  <div class="interview-q">
+    <div class="question">"LangChain4j的RAG是怎么实现的？ContentRetriever起什么作用？"</div>
+    <div class="interview-answer">
+      <p>LangChain4j的RAG分两阶段：<strong>离线</strong>用EmbeddingStoreIngestor加载文档→切片→EmbeddingModel向量化→存入EmbeddingStore；<strong>在线</strong>用ContentRetriever检索。</p>
+      <p>ContentRetriever是核心接口，定义"给定用户消息返回相关内容片段"的契约。默认实现EmbeddingStoreContentRetriever封装了"问题向量化→向量检索Top-K→minScore过滤"。把它注入AiService后，每次用户提问框架自动先检索、把结果作为context拼入Prompt，业务代码只调<code>assistant.chat(question)</code>，完全无感。</p>
+      <p>调参重点：切片大小（300字+50重叠常用）、maxResults（Top-K，通常3-5）、minScore（相似度阈值，0.7左右）。</p>
+    </div>
+    <div class="interview-tip">能说出"ContentRetriever是接口契约，注入后框架自动检索+拼接"体现你理解了框架设计。提调参三件套说明有实战。</div>
+  </div>
+
+  <!-- ===== 重点回顾 ===== -->
+  <div class="review-card">
+    <ul>
+      <li>LangChain4j三层架构：应用层（@AiService）-> 核心层（接口契约，无厂商依赖）-> 集成层（模型/存储/加载器）。换模型只换集成层，业务代码不动</li>
+      <li>和Python LangChain区别：Java强类型+注解声明式+无GIL并发优势+Spring集成；@AiService是独有声明式Agent抽象</li>
+      <li>同步ChatLanguageModel阻塞返回（首字延迟高），流式StreamingChatLanguageModel逐Token回调（onPartialResponse/onComplete/onError）</li>
+      <li>SSE流式输出：SseEmitter/WebFlux Flux推送，前端EventSource消费。Nginx必须proxy_buffering off！EventSource只支持GET，POST用fetch+ReadableStream</li>
+      <li>@AiService = LLM版@FeignClient：JDK动态代理+Prompt模板拼装+结果解析。返回POJO=结构化输出（框架追加JSON Schema要求+Jackson反序列化）</li>
+      <li>Tools机制：@Tool描述→LLM输出ToolExecutionRequest→框架反射执行Java方法→结果回传→LLM整合回答（可循环）。description是选工具唯一依据，要写清功能+输入+触发场景</li>
+      <li>ChatMemory：MessageWindow按条数裁剪（简单），TokenWindow按Token预算裁剪（精确）。Token预算公式：System+Memory+问题+输出 ≤ 窗口，Memory占30-50%</li>
+      <li>RAG链路：离线（加载→切片→向量化→存储）+ 在线（ContentRetriever检索→拼Prompt→LLM回答）。注入AiService后业务无感</li>
+      <li>高级特性：Builder链式构建（组合模型+记忆+工具+RAG）、多模型切换（换Builder参数）、systemMessageProvider动态角色（按sessionId切换Prompt）</li>
+    </ul>
+  </div>
+
+  <!-- ===== 章节导航 ===== -->
+  <div class="chapter-nav">
+    <a href="04-prompt-engineering.html" class="prev">← 上一章：Prompt工程</a>
+    <a href="06-agent-core.html" class="next">下一章：Agent核心概念 -></a>
+  </div>
+
+</main>
+<script>
+(function(){
+  var btn = document.getElementById("sidebarToggle");
+  var body = document.body;
+  try { if(localStorage.getItem("sb")==="0") body.classList.add("sidebar-collapsed"); } catch(e){}
+  function update(){ btn.textContent = body.classList.contains("sidebar-collapsed") ? "▶" : "◀"; }
+  btn.addEventListener("click", function(){
+    body.classList.toggle("sidebar-collapsed");
+    try { localStorage.setItem("sb", body.classList.contains("sidebar-collapsed")?"0":"1"); } catch(e){}
+    update();
+  });
+  update();
+})();
+</script>
+</body>

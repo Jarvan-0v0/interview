@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>常用中间件 — Agent面试宝典</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="sidebarToggle" class="sidebar-toggle" title="收起/展开菜单">◀</button>
+
+<!-- ===== 侧边栏 ===== -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <h1>Agent面试宝典</h1>
+    <p>Java后端 → AI Agent 转型指南</p>
+  </div>
+  <nav>
+      <a href="index.html"><span class="num">00</span>首页</a>
+      <a href="01-java-foundation.html"><span class="num">01</span>Java后端核心复习</a>
+      <a href="02-middleware.html" class="active"><span class="num">02</span>常用中间件</a>
+      <a href="03-llm-foundation.html"><span class="num">03</span>LLM大模型基础</a>
+      <a href="04-prompt-engineering.html"><span class="num">04</span>Prompt工程</a>
+      <a href="05-langchain4j.html"><span class="num">05</span>LangChain4j框架详解</a>
+      <a href="06-agent-core.html"><span class="num">06</span>Agent核心概念</a>
+      <a href="07-rag.html"><span class="num">07</span>RAG检索增强生成</a>
+      <a href="08-vector-db.html"><span class="num">08</span>向量数据库与Embedding</a>
+      <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
+      <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
+      <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
+      <a href="12-project-packaging.html"><span class="num">12</span>项目经验包装与表达</a>
+      <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
+      <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
+      <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
+      <a href="16-spring-ai.html"><span class="num">16</span>Spring AI对比</a>
+      <a href="17-agent-security.html"><span class="num">17</span>Agent安全</a>
+  </nav>
+</aside>
+
+<!-- ===== 主内容 ===== -->
+<main class="main">
+
+<div class="chapter-header">
+  <span class="chapter-num">第02章</span>
+  <h2>常用中间件</h2>
+  <div class="goal"><strong>学习目标：</strong>掌握4年后端开发常用的中间件核心原理和面试高频考点——Redis、消息队列(Kafka/RabbitMQ)、搜索引擎(Elasticsearch)、注册中心/配置中心(Nacos)、分布式协调(Zookeeper)。这些是Java后端的基本盘，面试官会用来验证你的工程深度。</div>
+</div>
+
+<!-- ==================== 1. Redis ==================== -->
+<h3>一、Redis <span class="difficulty">⭐⭐⭐ 必考</span></h3>
+
+<p>Redis是面试中出场率最高的中间件，没有之一。几乎每个Java后端面试都会深入问Redis。</p>
+
+<div class="one-liner">Redis = 内存数据库 + 单线程 + IO多路复用，快不是因为单线程，而是因为纯内存操作+避免锁竞争+epoll。</div>
+
+<h4>1.1 数据类型与底层结构</h4>
+
+<table class="compare-table">
+<tr><th>类型</th><th>底层结构</th><th>典型场景</th><th>面试考点</th></tr>
+<tr><td>String</td><td>SDS (简单动态字符串)</td><td>缓存、计数器、分布式锁</td><td>预分配策略、二进制安全</td></tr>
+<tr><td>List</td><td>quicklist (ziplist + linkedlist)</td><td>消息队列、最新列表</td><td>LPUSH/RPOP vs RPOPLPUSH</td></tr>
+<tr><td>Hash</td><td>ziplist / hashtable</td><td>对象存储(用户信息)</td><td>field数少用ziplist省内存</td></tr>
+<tr><td>Set</td><td>intset / hashtable</td><td>去重、标签、共同好友</td><td>SINTER求交集O(N)</td></tr>
+<tr><td>ZSet</td><td>ziplist / skiplist+hashtable</td><td>排行榜、延时队列</td><td>跳表原理(多层链表)</td></tr>
+<tr><td>Stream</td><td>radix tree</td><td>消息队列(5.0+)</td><td>消费者组、ACK机制</td></tr>
+</table>
+
+<h4>1.2 缓存三大问题</h4>
+
+<div class="diagram">
+<svg viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#1565c0"/>
+    </marker>
+  </defs>
+  <!-- 正常流程 -->
+  <text x="350" y="20" text-anchor="middle" font-size="13" fill="#2e7d32" font-weight="bold">正常流程</text>
+  <rect x="20" y="30" width="80" height="36" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="60" y="52" text-anchor="middle" font-size="11" fill="#2e7d32">请求</text>
+  <line x1="100" y1="48" x2="140" y2="48" stroke="#2e7d32" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="140" y="30" width="80" height="36" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="180" y="52" text-anchor="middle" font-size="11" fill="#2e7d32">查Redis</text>
+  <line x1="220" y1="48" x2="260" y2="48" stroke="#2e7d32" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="260" y="30" width="80" height="36" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="300" y="52" text-anchor="middle" font-size="11" fill="#1565c0">命中?</text>
+  <line x1="340" y1="48" x2="380" y2="48" stroke="#2e7d32" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="370" y="42" font-size="10" fill="#2e7d32">是</text>
+  <rect x="380" y="30" width="100" height="36" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="430" y="52" text-anchor="middle" font-size="11" fill="#2e7d32">返回数据</text>
+
+  <!-- 缓存穿透 -->
+  <text x="350" y="100" text-anchor="middle" font-size="13" fill="#d32f2f" font-weight="bold">缓存穿透：查一个根本不存在的key</text>
+  <rect x="140" y="110" width="80" height="36" rx="6" fill="#ffebee" stroke="#d32f2f"/>
+  <text x="180" y="132" text-anchor="middle" font-size="10" fill="#d32f2f">Redis未命中</text>
+  <line x1="220" y1="128" x2="260" y2="128" stroke="#d32f2f" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="260" y="110" width="80" height="36" rx="6" fill="#ffebee" stroke="#d32f2f"/>
+  <text x="300" y="132" text-anchor="middle" font-size="10" fill="#d32f2f">查DB</text>
+  <line x1="340" y1="128" x2="380" y2="128" stroke="#d32f2f" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="380" y="110" width="100" height="36" rx="6" fill="#ffebee" stroke="#d32f2f"/>
+  <text x="430" y="128" text-anchor="middle" font-size="10" fill="#d32f2f">DB也没有</text>
+  <text x="430" y="140" text-anchor="middle" font-size="10" fill="#d32f2f">→穿透到DB</text>
+
+  <!-- 缓存击穿 -->
+  <text x="350" y="175" text-anchor="middle" font-size="13" fill="#ff6f00" font-weight="bold">缓存击穿：热点key过期瞬间，大量请求打到DB</text>
+  <rect x="140" y="185" width="80" height="36" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+  <text x="180" y="207" text-anchor="middle" font-size="10" fill="#ff6f00">热点key过期</text>
+  <line x1="220" y1="203" x2="260" y2="203" stroke="#ff6f00" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="260" y="185" width="80" height="36" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+  <text x="300" y="207" text-anchor="middle" font-size="10" fill="#ff6f00">大量请求</text>
+  <line x1="340" y1="203" x2="380" y2="203" stroke="#ff6f00" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="380" y="185" width="100" height="36" rx="6" fill="#ffebee" stroke="#d32f2f"/>
+  <text x="430" y="207" text-anchor="middle" font-size="10" fill="#d32f2f">全打到DB</text>
+
+  <!-- 缓存雪崩 -->
+  <text x="350" y="250" text-anchor="middle" font-size="13" fill="#7b1fa2" font-weight="bold">缓存雪崩：大量key同时过期 / Redis宕机</text>
+  <text x="350" y="268" text-anchor="middle" font-size="11" fill="#7b1fa2">→ 解决：过期时间加随机数、多级缓存、熔断限流</text>
+</svg>
+<div class="caption">缓存三大问题：穿透(查不存在的)、击穿(热点过期)、雪崩(批量过期/宕机)</div>
+</div>
+
+<table class="compare-table">
+<tr><th>问题</th><th>原因</th><th>解决方案</th></tr>
+<tr><td>缓存穿透</td><td>查询不存在的key，每次都打到DB</td><td>① 布隆过滤器拦截 ② 缓存空值(null)设短TTL ③ 接口层参数校验</td></tr>
+<tr><td>缓存击穿</td><td>热点key过期瞬间，大量并发请求打到DB</td><td>① 互斥锁(SETNX)只让一个线程查DB ② 热点key永不过期(逻辑过期) ③ 提前刷新</td></tr>
+<tr><td>缓存雪崩</td><td>大量key同时过期 / Redis宕机</td><td>① 过期时间加随机值 ② 多级缓存(本地+Redis) ③ 熔断限流降级 ④ Redis集群高可用</td></tr>
+</table>
+
+<h4>1.3 持久化机制</h4>
+
+<table class="compare-table">
+<tr><th>对比</th><th>RDB (快照)</th><th>AOF (日志)</th></tr>
+<tr><td>原理</td><td>定期全量快照，fork子进程生成dump.rdb</td><td>追加每条写命令到appendonly.aof</td></tr>
+<tr><td>恢复速度</td><td>快(直接加载二进制)</td><td>慢(重放命令)</td></tr>
+<tr><td>数据安全</td><td>可能丢最后一次快照后的数据</td><td>最多丢1秒(everysec策略)</td></tr>
+<tr><td>文件大小</td><td>小(压缩二进制)</td><td>大(命令日志，需rewrite压缩)</td></tr>
+<tr><td>适用场景</td><td>备份、灾难恢复</td><td>数据安全性要求高</td></tr>
+</table>
+
+<div class="note">生产环境通常RDB+AOF混用(Redis 4.0+)。RDB做全量备份，AOF做增量。故障恢复时先加载RDB再重放AOF。</div>
+
+<h4>1.4 分布式锁</h4>
+
+<div class="code-block">
+<span class="lang">Java (Redisson实现分布式锁)</span>
+<pre><span class="cmt">// SET key value NX PX 30000 — 原子性加锁+设置过期</span>
+RLock lock = redissonClient.getLock("order:lock:" + orderId);
+<span class="kw">try</span> {
+    <span class="cmt">// 尝试加锁，等待5秒，锁30秒自动释放</span>
+    <span class="kw">boolean</span> locked = lock.tryLock(5, 30, TimeUnit.SECONDS);
+    <span class="kw">if</span> (!locked) {
+        <span class="kw">throw new</span> RuntimeException(<span class="str">"获取锁失败"</span>);
+    }
+    <span class="cmt">// 业务逻辑</span>
+    doBusiness();
+} <span class="kw">finally</span> {
+    <span class="cmt">// Redisson会检查是否是自己加的锁再释放(防误删)</span>
+    lock.unlock();
+}</pre>
+</div>
+
+<p>Redisson分布式锁的几个关键设计：</p>
+<ul>
+  <li><strong>加锁原子性</strong>：SET key value NX PX 30000，一步完成加锁+设过期</li>
+  <li><strong>防误删</strong>：value存唯一UUID，释放锁时先检查是不是自己的锁</li>
+  <li><strong>锁续期(看门狗)</strong>：如果业务执行超过30秒，看门狗线程每10秒续期</li>
+  <li><strong>可重入</strong>：用Hash结构记录重入次数，同一线程可多次获取</li>
+</ul>
+
+<div class="warn">SETNX + EXPIRE 两步操作不是原子的！如果SETNX成功后EXPIRE前宕机，锁就永远不释放了。必须用SET key value NX PX 30000一步到位，或用Lua脚本。</div>
+
+<h4>1.5 内存淘汰策略</h4>
+
+<table class="compare-table">
+<tr><th>策略</th><th>说明</th><th>推荐场景</th></tr>
+<tr><td>noeviction</td><td>不淘汰，写操作报错(默认)</td><td>数据不能丢</td></tr>
+<tr><td>allkeys-lru</td><td>所有key中淘汰最近最少使用</td><td>⭐ 最常用缓存场景</td></tr>
+<tr><td>allkeys-lfu</td><td>所有key中淘汰最少使用频率(4.0+)</td><td>访问频率差异大</td></tr>
+<tr><td>volatile-lru</td><td>只在设了过期的key中LRU淘汰</td><td>混合持久化+缓存</td></tr>
+<tr><td>volatile-ttl</td><td>优先淘汰快过期的key</td><td>TTL差异明显</td></tr>
+</table>
+
+<!-- ==================== 2. 消息队列 ==================== -->
+<h3>二、消息队列 (Kafka / RabbitMQ) <span class="difficulty">⭐⭐⭐ 必考</span></h3>
+
+<p>消息队列是后端系统解耦、异步、削峰的核心中间件。Kafka和RabbitMQ的选型是面试高频题。</p>
+
+<div class="one-liner">Kafka = 日志系统(高吞吐、顺序、流式)，RabbitMQ = 消息代理(灵活路由、可靠投递)。</div>
+
+<h4>2.1 Kafka vs RabbitMQ 选型</h4>
+
+<table class="compare-table">
+<tr><th>对比维度</th><th>Kafka</th><th>RabbitMQ</th></tr>
+<tr><td>定位</td><td>分布式流处理平台(日志/事件)</td><td>传统消息代理(AMQP协议)</td></tr>
+<tr><td>吞吐量</td><td>⭐ 百万级TPS，顺序写磁盘+零拷贝</td><td>万级TPS</td></tr>
+<tr><td>延迟</td><td>毫秒级</td><td>微秒级(更低)</td></tr>
+<tr><td>路由</td><td>弱(Topic/Partition)</td><td>⭐ 强(Exchange+Routing Key多种模式)</td></tr>
+<tr><td>消息可靠</td><td>ack+副本，可能重复</td><td>⭐ 更强(ACK机制+事务消息)</td></tr>
+<tr><td>消息顺序</td><td>⭐ Partition内有序</td><td>单队列有序</td></tr>
+<tr><td>消费模式</td><td>拉取(Pull)</td><td>推(Push)/拉(Pull)</td></tr>
+<tr><td>适用场景</td><td>日志收集、大数据流、事件溯源</td><td>业务消息、任务分发、RPC</td></tr>
+</table>
+
+<h4>2.2 Kafka核心架构</h4>
+
+<div class="diagram">
+<svg viewBox="0 0 700 250" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#1565c0"/>
+    </marker>
+  </defs>
+  <!-- Producer -->
+  <rect x="20" y="100" width="90" height="40" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="65" y="124" text-anchor="middle" font-size="12" fill="#1565c0">Producer</text>
+  <line x1="110" y1="120" x2="150" y2="120" stroke="#1565c0" stroke-width="2" marker-end="url(#arr2)"/>
+  
+  <!-- Topic (3 Partitions) -->
+  <rect x="150" y="40" width="200" height="160" rx="8" fill="#f8f9fa" stroke="#999" stroke-dasharray="4"/>
+  <text x="250" y="30" text-anchor="middle" font-size="12" fill="#555" font-weight="bold">Topic: order-events</text>
+  
+  <rect x="165" y="50" width="170" height="30" rx="4" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="180" y="70" font-size="11" fill="#2e7d32">P0: [msg1][msg2][msg3]→</text>
+  
+  <rect x="165" y="90" width="170" height="30" rx="4" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="180" y="110" font-size="11" fill="#2e7d32">P1: [msg4][msg5]→</text>
+  
+  <rect x="165" y="130" width="170" height="30" rx="4" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="180" y="150" font-size="11" fill="#2e7d32">P2: [msg6][msg7][msg8]→</text>
+  
+  <text x="250" y="180" text-anchor="middle" font-size="10" fill="#999">每个Partition一个副本组(Leader+Follower)</text>
+  
+  <line x1="350" y1="65" x2="420" y2="65" stroke="#1565c0" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <line x1="350" y1="105" x2="420" y2="105" stroke="#1565c0" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <line x1="350" y1="145" x2="420" y2="145" stroke="#1565c0" stroke-width="1.5" marker-end="url(#arr2)"/>
+  
+  <!-- Consumer Group -->
+  <rect x="420" y="40" width="120" height="160" rx="8" fill="#fff3e0" stroke="#ff6f00" stroke-dasharray="4"/>
+  <text x="480" y="30" text-anchor="middle" font-size="12" fill="#ff6f00" font-weight="bold">Consumer Group</text>
+  
+  <rect x="435" y="50" width="90" height="24" rx="4" fill="#fff3e0" stroke="#ff6f00"/>
+  <text x="480" y="67" text-anchor="middle" font-size="10" fill="#ff6f00">Consumer-0 ←P0</text>
+  
+  <rect x="435" y="90" width="90" height="24" rx="4" fill="#fff3e0" stroke="#ff6f00"/>
+  <text x="480" y="107" text-anchor="middle" font-size="10" fill="#ff6f00">Consumer-1 ←P1</text>
+  
+  <rect x="435" y="130" width="90" height="24" rx="4" fill="#fff3e0" stroke="#ff6f00"/>
+  <text x="480" y="147" text-anchor="middle" font-size="10" fill="#ff6f00">Consumer-2 ←P2</text>
+  
+  <text x="480" y="180" text-anchor="middle" font-size="10" fill="#999">同组内每个Consumer消费不同Partition</text>
+  
+  <!-- ZooKeeper -->
+  <rect x="580" y="100" width="100" height="40" rx="6" fill="#f3e5f5" stroke="#7b1fa2"/>
+  <text x="630" y="118" text-anchor="middle" font-size="11" fill="#7b1fa2">ZooKeeper /</text>
+  <text x="630" y="132" text-anchor="middle" font-size="11" fill="#7b1fa2">KRaft</text>
+  <line x1="580" y1="120" x2="540" y2="120" stroke="#7b1fa2" stroke-width="1" stroke-dasharray="3" marker-end="url(#arr2)"/>
+  <text x="560" y="115" font-size="9" fill="#7b1fa2">协调</text>
+</svg>
+<div class="caption">Kafka架构：Producer → Topic(多Partition) → Consumer Group并行消费，ZK/KRaft协调</div>
+</div>
+
+<h4>2.3 Kafka关键机制</h4>
+
+<ul>
+  <li><strong>Partition(分区)</strong>：Topic分成多个Partition，实现水平扩展。Partition内消息有序，跨Partition无序</li>
+  <li><strong>Offset(偏移量)</strong>：Consumer记录自己消费到哪个位置，支持断点续消费</li>
+  <li><strong>Consumer Group</strong>：同组内每个Consumer消费不同Partition（实现并行），不同组各自独立消费全量</li>
+  <li><strong>副本机制</strong>：每个Partition有Leader+Follower副本。Leader处理读写，Follower同步。Leader挂了选新Leader</li>
+  <li><strong>ISR (In-Sync Replicas)</strong>：和Leader保持同步的副本集合。只有ISR中的副本才有资格被选为新Leader</li>
+  <li><strong>acks参数</strong>：acks=0不等确认 / acks=1 Leader确认(默认) / acks=all 所有ISR确认(最安全)</li>
+</ul>
+
+<h4>2.4 消息可靠性三保证</h4>
+
+<table class="compare-table">
+<tr><th>环节</th><th>可能丢失</th><th>保证措施</th></tr>
+<tr><td>生产端</td><td>网络中断、Leader切换</td><td>acks=all + 重试 + 幂等生产</td></tr>
+<tr><td>Broker端</td><td>磁盘损坏、Broker宕机</td><td>副本机制(多副本) + ISR + min.insync.replicas≥2</td></tr>
+<tr><td>消费端</td><td>提交了offset但没处理完</td><td>手动提交offset(处理完再提交)</td></tr>
+</table>
+
+<div class="java-analogy">Kafka消息可靠性 ≈ Java事务的ACID：acks=all ≈ WAL日志持久化，副本机制 ≈ 主从同步，手动提交offset ≈ 手动提交事务(而非自动提交)。</div>
+
+<!-- ==================== 3. Elasticsearch ==================== -->
+<h3>三、Elasticsearch <span class="difficulty">⭐⭐ 中高频</span></h3>
+
+<p>Elasticsearch(ES)是分布式搜索引擎，在日志分析、全文检索场景面试常问。和RAG的向量检索有对比价值。</p>
+
+<div class="one-liner">ES = 倒排索引 + 分布式 + 近实时，核心是把"找包含某个词的文档"从O(N)降到O(1)。</div>
+
+<h4>3.1 倒排索引</h4>
+
+<p>传统正排索引：文档 → 包含哪些词。倒排索引反过来：词 → 出现在哪些文档。</p>
+
+<table class="compare-table">
+<tr><th>词项(Term)</th><th>文档列表(Posting List)</th><th>词频(TF)</th></tr>
+<tr><td>AI</td><td>[doc1, doc3, doc5]</td><td>doc1:3次, doc3:1次, doc5:2次</td></tr>
+<tr><td>Agent</td><td>[doc1, doc2]</td><td>doc1:2次, doc2:1次</td></tr>
+<tr><td>Java</td><td>[doc2, doc3, doc5]</td><td>doc2:3次, doc3:1次, doc5:5次</td></tr>
+</table>
+
+<p>搜索"AI Agent"时：先从倒排索引找到"AI"和"Agent"各自的文档列表，求交集[doc1]，按相关度打分排序返回。</p>
+
+<h4>3.2 ES核心概念</h4>
+
+<ul>
+  <li><strong>Index(索引)</strong> ≈ MySQL的数据库，存储相关文档的集合</li>
+  <li><strong>Document(文档)</strong> ≈ MySQL的一行记录，JSON格式</li>
+  <li><strong>Mapping(映射)</strong> ≈ MySQL的表结构，定义字段类型和分析器</li>
+  <li><strong>Shard(分片)</strong>：索引分成多个分片分布在不同节点，实现水平扩展</li>
+  <li><strong>Replica(副本)</strong>：每个分片有副本，保证高可用</li>
+</ul>
+
+<h4>3.3 ES vs MySQL vs 向量检索</h4>
+
+<table class="compare-table">
+<tr><th>对比</th><th>MySQL</th><th>Elasticsearch</th><th>向量检索(Milvus)</th></tr>
+<tr><td>索引结构</td><td>B+树</td><td>倒排索引</td><td>HNSW/IVF</td></tr>
+<tr><td>检索方式</td><td>精确匹配/范围</td><td>全文检索(关键词)</td><td>语义相似(向量近邻)</td></tr>
+<tr><td>擅长</td><td>结构化查询</td><td>"包含某个词的文档"</td><td>"语义相近的文档"</td></tr>
+<tr><td>搜索"苹果手机"</td><td>LIKE '%苹果手机%'(差)</td><td>分词匹配"苹果"+"手机"(好)</td><td>理解语义(最好)</td></tr>
+<tr><td>实时性</td><td>强实时</td><td>近实时(1秒刷新)</td><td>近实时</td></tr>
+</table>
+
+<div class="note">ES做的是"关键词匹配"，向量检索做的是"语义匹配"。RAG场景用向量检索更好，但ES的BM25可以和向量检索混合使用，效果更佳——这就是混合检索。</div>
+
+<!-- ==================== 4. Nacos ==================== -->
+<h3>四、Nacos (注册中心+配置中心) <span class="difficulty">⭐⭐ 中频</span></h3>
+
+<p>Nacos = Naming and Configuration Service，阿里开源，微服务架构标配。</p>
+
+<h4>4.1 注册中心</h4>
+
+<ul>
+  <li>服务提供者启动时注册到Nacos，消费者从Nacos获取服务列表</li>
+  <li>心跳检测：5秒上报，15秒标记不健康，30秒摘除</li>
+  <li>两种模式：AP(默认，临时实例) vs CP(持久实例，需Raft共识)</li>
+</ul>
+
+<div class="java-analogy">注册中心 ≈ Java的ServiceLoader SPI机制，但加了网络通信、心跳健康检查、服务发现动态更新。</div>
+
+<h4>4.2 配置中心</h4>
+
+<ul>
+  <li>集中管理所有微服务的配置，支持热更新(@RefreshScope)</li>
+  <li>配置变更后推送通知，服务自动拉取新配置</li>
+  <li>命名空间(Namespace) + Group + DataId 三级隔离</li>
+</ul>
+
+<div class="interview-q">
+  <div class="question">Nacos的AP和CP模式有什么区别？什么时候用哪个？</div>
+  <div class="interview-answer">
+    <p>AP模式(默认)：服务挂了立即从列表摘除，保证可用性但可能短暂不一致。适合临时实例(如SpringCloud服务)，因为服务本来就需要心跳维持。</p>
+    <p>CP模式：服务挂了不立即摘除，需Raft共识。适合持久实例(如Kafka Broker、数据库)，这些服务挂了不应该自动删除注册信息。</p>
+    <p>选择原则：需要高可用选AP(大部分微服务)，需要强一致选CP(有状态服务)。</p>
+  </div>
+  <div class="interview-tip">提到CAP理论，说明你知道分布式系统的本质权衡。再提一句"大部分微服务用AP就够了"展示工程判断。</div>
+</div>
+
+<!-- ==================== 5. Zookeeper ==================== -->
+<h3>五、ZooKeeper <span class="difficulty">⭐⭐ 中频</span></h3>
+
+<p>ZooKeeper是分布式协调服务，Kafka(旧版)、Dubbo注册中心、分布式锁都用它。</p>
+
+<h4>5.1 核心概念</h4>
+
+<ul>
+  <li><strong>ZNode</strong>：树状结构的数据节点，类似文件系统路径</li>
+  <li><strong>持久节点 vs 临时节点</strong>：临时节点在会话断开后自动删除(用于服务注册)</li>
+  <li><strong>顺序节点</strong>：节点名自动加序号(用于分布式锁公平排队)</li>
+  <li><strong>Watcher监听</strong>：节点变化时通知客户端(服务上下线感知)</li>
+</ul>
+
+<h4>5.2 典型应用</h4>
+
+<ul>
+  <li><strong>分布式锁</strong>：创建临时顺序节点，序号最小的获取锁，后面的监听前一个节点</li>
+  <li><strong>服务注册发现</strong>：服务启动创建临时节点，消费者监听节点变化</li>
+  <li><strong>Leader选举</strong>：多个节点创建同一节点，创建成功的为Leader</li>
+  <li><strong>配置管理</strong>：配置存在ZNode上，监听变化通知更新</li>
+</ul>
+
+<div class="warn">ZooKeeper的ZAB协议不是Raft！虽然都是共识算法，但ZAB是原子广播(Primary-Backup)，Raft是日志复制。面试别说混。</div>
+
+<!-- ==================== 6. 面试问答 ==================== -->
+<h3>🎤 面试实战</h3>
+
+<div class="interview-q">
+  <div class="question">Redis为什么快？单线程为什么也快？</div>
+  <div class="interview-answer">
+    <p>Redis快的原因：1）<strong>纯内存操作</strong>，数据在内存中读写，没有磁盘IO；2）<strong>单线程+IO多路复用</strong>，epoll实现一个线程处理大量连接，避免多线程的锁竞争和上下文切换；3）<strong>数据结构高度优化</strong>，如SDS预分配、ziplist压缩、跳表等。</p>
+    <p>单线程也快是因为：瓶颈不在CPU计算，而在IO。单线程+epoll = 没有锁开销 + 高效IO，反而比多线程更快。而且Redis 6.0引入多线程处理IO，命令执行仍单线程。</p>
+  </div>
+  <div class="interview-tip">提到Redis 6.0多线程IO是加分项。能说"瓶颈不在CPU"说明理解了本质。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">缓存穿透怎么解决？布隆过滤器原理是什么？</div>
+  <div class="interview-answer">
+    <p>缓存穿透就是查询一个数据库里根本不存在的key，Redis查不到就去查DB，DB也没有，大量这样的请求会压垮DB。</p>
+    <p>解决方案：1）缓存空值——查不到也缓存null并设短TTL；2）布隆过滤器——在Redis前面加一层过滤，判断key"可能存在"还是"一定不存在"。</p>
+    <p>布隆过滤器原理：用多个哈希函数把存在的key映射到bit数组的多个位置(置1)。查询时，如果所有哈希位置都是1，则"可能存在"；如果有任何一个位置是0，则"一定不存在"。它有误判率(假阳性)，但不能漏判。</p>
+  </div>
+  <div class="interview-tip">能说出"可能存在"和"一定不存在"这个特性，就说明理解了布隆过滤器的核心。提到误判率可调(数组大小+哈希函数数量)更佳。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Redisson分布式锁是怎么实现的？有什么问题？</div>
+  <div class="interview-answer">
+    <p>Redisson分布式锁用Lua脚本实现原子操作：SET key value NX PX 30000，value存唯一UUID防误删。核心机制：1）看门狗定时续期防止业务没执行完锁就过期；2）用Hash结构记录线程ID和重入次数实现可重入；3）释放锁用Lua脚本判断UUID+删除。</p>
+    <p>问题：1）时钟漂移——如果某台Redis服务器时间跳变，锁可能提前或延后过期；2）主从切换丢锁——master加锁后还没同步到slave就宕机，新master没有锁信息。</p>
+    <p>要彻底解决用RedLock算法(Redlock)，或者用ZooKeeper实现(CP保证一致性)。</p>
+  </div>
+  <div class="interview-tip">提到"主从切换丢锁"和"RedLock"说明你对Redis分布式锁的局限有深入理解。但要补一句"实际生产中Redisson够用了，不用过度设计"。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Kafka为什么吞吐量这么高？</div>
+  <div class="interview-answer">
+    <p>Kafka高吞吐的原因：1）<strong>顺序写磁盘</strong>——消息追加到Partition末尾，磁盘顺序写速度接近内存写；2）<strong>零拷贝(Zero Copy)</strong>——用sendfile直接从页缓存到网卡，不经过用户态；3）<strong>批量处理</strong>——生产者批量发送+压缩，消费者批量拉取；4）<strong>Partition分区并行</strong>——多Partition分散到多个Broker，水平扩展。</p>
+    <p>核心就是：把磁盘当顺序日志用 + 绕过用户态拷贝 + 批量+分区并行。</p>
+  </div>
+  <div class="interview-tip">"顺序写磁盘接近内存速度"这个知识点是Kafka面试的金牌答案。再提零拷贝(sendfile)说明你理解OS层面优化。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">如何保证Kafka消息不丢？</div>
+  <div class="interview-answer">
+    <p>三个环节都要保证：1）<strong>生产端</strong>——acks=all + retries重试 + 幂等生产，确保消息到Broker；2）<strong>Broker端</strong>——副本机制(min.insync.replicas≥2) + ISR机制，确保即使Leader宕机消息也不丢；3）<strong>消费端</strong>——关闭自动提交offset，业务处理完再手动提交。</p>
+    <p>注意acks=all会降低吞吐量，需要根据业务权衡可靠性和性能。</p>
+  </div>
+  <div class="interview-tip">分三端回答是最清晰的框架。提到"手动提交offset而非自动"说明你踩过坑。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">ES的倒排索引和MySQL的B+树有什么区别？和向量检索呢？</div>
+  <div class="interview-answer">
+    <p>B+树是正排索引——从主键找记录，擅长精确匹配和范围查询。倒排索引反过来——从词找文档列表，擅长全文检索。搜索"AI Agent"，ES分词后找"AI"和"Agent"各自的倒排表求交集，O(1)级别。MySQL只能LIKE '%AI Agent%'做全表扫描O(N)。</p>
+    <p>但ES做的是关键词匹配，不理解语义。向量检索(如Milvus)把文本变成向量，找语义最相近的。搜"人工智能代理"也能匹配到"AI Agent"的内容，因为语义相近。RAG场景用向量检索更好，但BM25(ES)和向量混合检索效果最佳。</p>
+  </div>
+  <div class="interview-tip">能对比三种索引(B+树/倒排/HNSW)是高级表现。提到"混合检索"直接联系到RAG场景，展示你能把中间件知识和Agent开发关联起来。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Kafka和RabbitMQ怎么选？</div>
+  <div class="interview-answer">
+    <p>看场景：要高吞吐、大数据流处理、日志收集、事件溯源——选Kafka，百万级TPS不是RabbitMQ能比的。要灵活路由、消息可靠投递、任务分发、小规模系统——选RabbitMQ，它的Exchange(4种路由模式)更灵活，延迟更低。</p>
+    <p>简单记忆：大数据场景Kafka，业务消息场景RabbitMQ。如果不确定，Kafka更通用但运维更复杂，RabbitMQ更简单但吞吐有上限。</p>
+  </div>
+  <div class="interview-tip">不要只说一个好。能说出"看场景"和具体对比维度(吞吐/路由/延迟/可靠)展示工程思维。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Nacos的AP和CP模式什么时候用哪个？</div>
+  <div class="interview-answer">
+    <p>AP模式(默认)：服务实例下线后立即从列表摘除，保证可用性，适合临时实例(如SpringCloud服务)——这些服务本来就需要心跳维持，挂了就该摘除。</p>
+    <p>CP模式：不立即摘除，需Raft共识，适合持久实例(如Kafka Broker、MySQL)——这些服务挂了不应该删除注册信息，因为它们是有状态的，重启后还在。</p>
+    <p>选择原则：大部分微服务用AP，有状态服务用CP。</p>
+  </div>
+  <div class="interview-tip">用CAP理论框架回答，展示你对分布式系统的理解。提到"有状态vs无状态"是判断依据，说明你不是死记答案。</div>
+</div>
+
+<!-- ==================== 6. MySQL ==================== -->
+<h3>六、MySQL <span class="difficulty">⭐⭐⭐ 必考</span></h3>
+
+<p>MySQL是Java后端最常用的关系型数据库，面试出场率仅次于Redis。虽然第01章已有数据库核心复习，这里从中间件视角补充索引优化、主从架构、分库分表等工程化考点。</p>
+
+<div class="one-liner">MySQL面试三板斧：索引怎么建怎么走、事务怎么隔离怎么用、大表怎么分怎么拆。</div>
+
+<h4>6.1 B+树索引深度</h4>
+
+<p>MySQL索引底层是<strong>B+树</strong>，理解B+树是回答所有索引问题的基础。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 650 260" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr4" markerWidth="8" markerHeight="8" refX="6" refY="2" orient="auto">
+      <path d="M0,0 L6,2 L0,4 Z" fill="#1565c0"/>
+    </marker>
+  </defs>
+  <!-- 根节点 -->
+  <rect x="280" y="10" width="80" height="30" rx="4" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="320" y="30" text-anchor="middle" font-size="11" fill="#1565c0">[10|30|50]</text>
+  <line x1="300" y1="40" x2="220" y2="65" stroke="#999" stroke-width="1" marker-end="url(#arr4)"/>
+  <line x1="320" y1="40" x2="320" y2="65" stroke="#999" stroke-width="1" marker-end="url(#arr4)"/>
+  <line x1="340" y1="40" x2="420" y2="65" stroke="#999" stroke-width="1" marker-end="url(#arr4)"/>
+  <!-- 第二层 -->
+  <rect x="180" y="65" width="80" height="30" rx="4" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="220" y="85" text-anchor="middle" font-size="11" fill="#1565c0">[5|8]</text>
+  <rect x="280" y="65" width="80" height="30" rx="4" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="320" y="85" text-anchor="middle" font-size="11" fill="#1565c0">[20|25]</text>
+  <rect x="380" y="65" width="80" height="30" rx="4" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="420" y="85" text-anchor="middle" font-size="11" fill="#1565c0">[40|45]</text>
+  <!-- 叶子节点(带数据指针，双向链表) -->
+  <rect x="40" y="130" width="80" height="40" rx="4" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="80" y="148" text-anchor="middle" font-size="10" fill="#2e7d32">[3,5,8]</text>
+  <text x="80" y="162" text-anchor="middle" font-size="9" fill="#999">→数据行</text>
+  <rect x="140" y="130" width="80" height="40" rx="4" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="180" y="148" text-anchor="middle" font-size="10" fill="#2e7d32">[10,15,20]</text>
+  <text x="180" y="162" text-anchor="middle" font-size="9" fill="#999">→数据行</text>
+  <rect x="240" y="130" width="80" height="40" rx="4" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="280" y="148" text-anchor="middle" font-size="10" fill="#2e7d32">[25,28,30]</text>
+  <text x="280" y="162" text-anchor="middle" font-size="9" fill="#999">→数据行</text>
+  <rect x="340" y="130" width="80" height="40" rx="4" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="380" y="148" text-anchor="middle" font-size="10" fill="#2e7d32">[35,40,45]</text>
+  <text x="380" y="162" text-anchor="middle" font-size="9" fill="#999">→数据行</text>
+  <rect x="440" y="130" width="80" height="40" rx="4" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="480" y="148" text-anchor="middle" font-size="10" fill="#2e7d32">[50,55,60]</text>
+  <text x="480" y="162" text-anchor="middle" font-size="9" fill="#999">→数据行</text>
+  <!-- 双向链表箭头 -->
+  <line x1="120" y1="150" x2="140" y2="150" stroke="#ff6f00" stroke-width="1.5" marker-end="url(#arr4)"/>
+  <line x1="220" y1="150" x2="240" y2="150" stroke="#ff6f00" stroke-width="1.5" marker-end="url(#arr4)"/>
+  <line x1="320" y1="150" x2="340" y2="150" stroke="#ff6f00" stroke-width="1.5" marker-end="url(#arr4)"/>
+  <line x1="420" y1="150" x2="440" y2="150" stroke="#ff6f00" stroke-width="1.5" marker-end="url(#arr4)"/>
+  <line x1="440" y1="155" x2="420" y2="155" stroke="#ff6f00" stroke-width="1" marker-end="url(#arr4)"/>
+  <line x1="340" y1="155" x2="320" y2="155" stroke="#ff6f00" stroke-width="1" marker-end="url(#arr4)"/>
+  <line x1="240" y1="155" x2="220" y2="155" stroke="#ff6f00" stroke-width="1" marker-end="url(#arr4)"/>
+  <line x1="140" y1="155" x2="120" y2="155" stroke="#ff6f00" stroke-width="1" marker-end="url(#arr4)"/>
+  <!-- 说明 -->
+  <text x="80" y="195" text-anchor="middle" font-size="10" fill="#2e7d32">叶子节点存数据</text>
+  <text x="320" y="195" text-anchor="middle" font-size="10" fill="#1565c0">非叶子节点只存索引</text>
+  <text x="280" y="220" text-anchor="middle" font-size="11" fill="#ff6f00">← 双向链表支持范围查询 →</text>
+  <text x="325" y="245" text-anchor="middle" font-size="11" fill="#555">3-4层B+树可存千万级数据，每次查询只需3-4次磁盘IO</text>
+</svg>
+<div class="caption">B+树结构：非叶子节点只存索引(节省空间)，叶子节点存数据+双向链表(范围查询高效)</div>
+</div>
+
+<table class="compare-table">
+<tr><th>对比</th><th>B树</th><th>B+树</th></tr>
+<tr><td>非叶子节点</td><td>存索引+数据</td><td>只存索引(更紧凑，一次IO读更多)</td></tr>
+<tr><td>叶子节点</td><td>无链表</td><td>双向链表相连(范围查询O(logN+K))</td></tr>
+<tr><td>查询稳定性</td><td>不稳定(可能非叶子就命中)</td><td>稳定(都要到叶子节点)</td></tr>
+<tr><td>单次IO信息量</td><td>少(非叶子含数据)</td><td>多(非节点只含索引)</td></tr>
+</table>
+
+<h4>6.2 聚簇索引 vs 非聚簇索引</h4>
+
+<table class="compare-table">
+<tr><th>对比</th><th>聚簇索引(InnoDB主键)</th><th>非聚簇索引(二级索引)</th></tr>
+<tr><td>叶子存什么</td><td>完整数据行</td><td>索引列值 + 主键值</td></tr>
+<tr><td>查询方式</td><td>直接拿到数据</td><td>先查到主键，再回表查数据</td></tr>
+<tr><td>每表几个</td><td>1个</td><td>多个</td></tr>
+<tr><td>类比</td><td>字典的拼音目录(直接定位页)</td><td>字典的部首目录(先查拼音再翻页)</td></tr>
+</table>
+
+<div class="note">覆盖索引：如果查询的列全在二级索引里，就不需要回表。如SELECT id,name FROM users WHERE name='张三'，如果(name)是索引，id在叶子节点直接有，不用回表。这就是"覆盖索引优化"。</div>
+
+<h4>6.3 索引失效场景</h4>
+
+<ul>
+  <li><strong>最左前缀违反</strong>：联合索引(a,b,c)，查询条件没有a则不走索引</li>
+  <li><strong>索引列做运算/函数</strong>：WHERE YEAR(create_time)=2026 → 改 WHERE create_time >= '2026-01-01'</li>
+  <li><strong>隐式类型转换</strong>：WHERE phone=13800138000(phone是varchar) → 字符串比较变全表扫描</li>
+  <li><strong>LIKE左模糊</strong>：LIKE '%abc'不走索引，LIKE 'abc%'可以</li>
+  <li><strong>OR条件</strong>：WHERE a=1 OR b=2 如果b没有索引则全表扫描</li>
+  <li><strong>NOT IN / NOT EXISTS</strong>：通常不走索引，改用LEFT JOIN</li>
+</ul>
+
+<h4>6.4 主从复制与读写分离</h4>
+
+<div class="diagram">
+<svg viewBox="0 0 600 180" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr5" markerWidth="8" markerHeight="8" refX="6" refY="2" orient="auto">
+      <path d="M0,0 L6,2 L0,4 Z" fill="#1565c0"/>
+    </marker>
+  </defs>
+  <!-- Master -->
+  <rect x="30" y="50" width="120" height="50" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="90" y="72" text-anchor="middle" font-size="13" fill="#1565c0">Master(主)</text>
+  <text x="90" y="88" text-anchor="middle" font-size="10" fill="#555">读写</text>
+  <!-- binlog -->
+  <rect x="30" y="115" width="120" height="24" rx="4" fill="#fff3e0" stroke="#ff6f00"/>
+  <text x="90" y="131" text-anchor="middle" font-size="10" fill="#ff6f00">binlog(二进制日志)</text>
+  <line x1="90" y1="100" x2="90" y2="115" stroke="#ff6f00" stroke-width="1.5" marker-end="url(#arr5)"/>
+  <!-- Slaves -->
+  <rect x="230" y="50" width="120" height="50" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="290" y="72" text-anchor="middle" font-size="13" fill="#2e7d32">Slave1(从)</text>
+  <text x="290" y="88" text-anchor="middle" font-size="10" fill="#555">只读</text>
+  <rect x="430" y="50" width="120" height="50" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="490" y="72" text-anchor="middle" font-size="13" fill="#2e7d32">Slave2(从)</text>
+  <text x="490" y="88" text-anchor="middle" font-size="10" fill="#555">只读</text>
+  <!-- 复制箭头 -->
+  <line x1="150" y1="70" x2="230" y2="70" stroke="#1565c0" stroke-width="2" marker-end="url(#arr5)"/>
+  <line x1="150" y1="75" x2="430" y2="75" stroke="#1565c0" stroke-width="2" marker-end="url(#arr5)"/>
+  <text x="190" y="60" text-anchor="middle" font-size="10" fill="#1565c0">IO线程拉取binlog</text>
+  <!-- relay log -->
+  <rect x="230" y="115" width="120" height="24" rx="4" fill="#f3e5f5" stroke="#7b1fa2"/>
+  <text x="290" y="131" text-anchor="middle" font-size="10" fill="#7b1fa2">relay log→回放</text>
+  <rect x="430" y="115" width="120" height="24" rx="4" fill="#f3e5f5" stroke="#7b1fa2"/>
+  <text x="490" y="131" text-anchor="middle" font-size="10" fill="#7b1fa2">relay log→回放</text>
+  <line x1="290" y1="100" x2="290" y2="115" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arr5)"/>
+  <line x1="490" y1="100" x2="490" y2="115" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arr5)"/>
+  <text x="320" y="160" text-anchor="middle" font-size="11" fill="#555">主从复制：binlog → IO线程拉取 → relay log → SQL线程回放</text>
+</svg>
+<div class="caption">MySQL主从复制原理：Master写binlog，Slave拉取并回放</div>
+</div>
+
+<p>三种复制方式：</p>
+<ul>
+  <li><strong>异步复制</strong>(默认)：Master不等待Slave确认，性能高但可能丢数据</li>
+  <li><strong>半同步复制</strong>(semi-sync)：Master等至少1个Slave确认才返回，兼顾性能和安全</li>
+  <li><strong>组复制</strong>(MGR)：基于Paxos，多主一致性，但性能损耗大</li>
+</ul>
+
+<h4>6.5 分库分表</h4>
+
+<table class="compare-table">
+<tr><th>方式</th><th>说明</th><th>适用场景</th></tr>
+<tr><td>垂直分库</td><td>按业务拆库(订单库/用户库/商品库)</td><td>业务耦合低</td></tr>
+<tr><td>垂直分表</td><td>按列拆表(热列+冷列分离)</td><td>大字段、冷热数据</td></tr>
+<tr><td>水平分库</td><td>同表数据分到不同库(取模/范围/哈希)</td><td>单库数据量大</td></tr>
+<tr><td>水平分表</td><td>同库内按规则拆成多表</td><td>单表千万级以上</td></tr>
+</table>
+
+<div class="warn">分库分表后的问题：①跨库JOIN困难(需应用层组装) ②分布式事务(Seata) ③全局唯一ID(Snowflake雪花算法) ④跨库分页排序复杂。不要一上来就分，先加索引→缓存→读写分离→最后才分库分表。</div>
+
+<div class="interview-q">
+  <div class="question">MySQL为什么用B+树而不是B树或Hash索引？</div>
+  <div class="interview-answer">
+    <p>B+树相比B树：1）非叶子节点只存索引不存数据，单次磁盘IO能读更多索引节点，树更矮，IO次数更少；2）叶子节点双向链表相连，范围查询( BETWEEN / > / < )只需要找到起点然后顺着链表走，B树需要中序遍历回溯，效率低。</p>
+    <p>相比Hash索引：Hash等值查询O(1)确实快，但不支持范围查询、排序、最左前缀匹配。数据库大量场景是范围查询和排序，B+树更通用。</p>
+    <p>InnoDB选B+树是因为它兼顾了等值查询和范围查询，且查询稳定(每次都到叶子)。</p>
+  </div>
+  <div class="interview-tip">能说出"范围查询"和"非叶子节点不存数据省空间"是B+树的两大优势就够了。提一句"Hash索引Memory引擎支持"说明知识面广。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">什么情况下索引会失效？你怎么排查的？</div>
+  <div class="interview-answer">
+    <p>常见失效场景：1）违反最左前缀(联合索引(a,b,c)查询没a)；2）索引列做运算/函数(WHERE YEAR(time)=2026)；3）隐式类型转换(varchar列用int查)；4）LIKE左模糊('%abc')；5）OR条件有一侧无索引；6）NOT IN。</p>
+    <p>排查方法：用EXPLAIN分析执行计划，看type列(ALL=全表扫描, ref/range=走索引)、key列(实际使用的索引)、rows列(预估扫描行数)。如果type=ALL但应该走索引，就是索引失效了。</p>
+  </div>
+  <div class="interview-tip">说EXPLAIN是必答。能说出看type/key/rows三列说明你有实际调优经验。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">分库分表怎么选分片键？分完后跨库查询怎么办？</div>
+  <div class="interview-answer">
+    <p>选分片键原则：1）查询频率最高的字段(如user_id)；2）数据分布均匀(避免热点)；3）尽量让查询落在单分片内。</p>
+    <p>跨库查询的解决方案：1）冗余字段——在分片表里冗余一些常用查询字段，避免跨库JOIN；2）数据同步——用Canal监听binlog同步到ES，复杂查询走ES；3）应用层组装——分别查各分片再在内存合并(性能差，尽量少用)；4）绑定表/广播表——小表(如配置表)每个库都放一份。</p>
+  </div>
+  <div class="interview-tip">提Canal+ES方案是加分项，展示你把前面ES的知识串起来了。说"先加索引→缓存→读写分离→最后分库分表"展示工程判断力。</div>
+</div>
+
+<!-- ==================== 7. Nginx ==================== -->
+<h3>七、Nginx <span class="difficulty">⭐⭐ 中高频</span></h3>
+
+<p>Nginx是后端最常用的反向代理和Web服务器，面试常问负载均衡、正向vs反向代理、性能优化。</p>
+
+<div class="one-liner">Nginx = 反向代理 + 负载均衡 + 静态资源服务，单机可扛数万并发，靠的是epoll事件驱动+非阻塞IO+多进程。</div>
+
+<h4>7.1 正向代理 vs 反向代理</h4>
+
+<table class="compare-table">
+<tr><th>对比</th><th>正向代理</th><th>反向代理</th></tr>
+<tr><td>代理谁</td><td>代理客户端</td><td>代理服务端</td></tr>
+<tr><td>客户端知道</td><td>知道目标服务器(如VPN)</td><td>不知道真实服务器(如nginx)</td></tr>
+<tr><td>典型场景</td><td>翻墙、隐藏客户端IP</td><td>负载均衡、隐藏服务器IP</td></tr>
+<tr><td>类比</td><td>代购(你找代购买，代购去买)</td><td>客服总机(你打总机号，总机转分机)</td></tr>
+</table>
+
+<h4>7.2 负载均衡策略</h4>
+
+<div class="code-block">
+<span class="lang">Nginx配置</span>
+<pre><span class="cmt"># 1. 轮询(默认) - 按顺序逐一分配</span>
+upstream backend {
+    server 192.168.1.1:8080;
+    server 192.168.1.2:8080;
+}
+
+<span class="cmt"># 2. 加权轮询 - 按weight比例分配，配置高的机器多分</span>
+upstream backend {
+    server 192.168.1.1:8080 weight=3;
+    server 192.168.1.2:8080 weight=1;
+}
+
+<span class="cmt"># 3. IP Hash - 同一IP总是打到同一台(会话粘性)</span>
+upstream backend {
+    ip_hash;
+    server 192.168.1.1:8080;
+    server 192.168.1.2:8080;
+}
+
+<span class="cmt"># 4. least_conn - 分给当前连接数最少的</span>
+upstream backend {
+    least_conn;
+    server 192.168.1.1:8080;
+    server 192.168.1.2:8080;
+}
+
+<span class="cmt"># 5. 一致性Hash - 解决IP Hash增减节点时大面积缓存失效</span>
+upstream backend {
+    hash $request_uri consistent;
+    server 192.168.1.1:8080;
+    server 192.168.1.2:8080;
+}</pre>
+</div>
+
+<h4>7.3 Nginx为什么高并发</h4>
+
+<div class="diagram">
+<svg viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr6" markerWidth="8" markerHeight="8" refX="6" refY="2" orient="auto">
+      <path d="M0,0 L6,2 L0,4 Z" fill="#1565c0"/>
+    </marker>
+  </defs>
+  <!-- Master Process -->
+  <rect x="230" y="10" width="140" height="36" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="300" y="32" text-anchor="middle" font-size="12" fill="#1565c0">Master Process</text>
+  <text x="300" y="44" text-anchor="middle" font-size="10" fill="#555">管理+信号处理</text>
+  <!-- arrows down -->
+  <line x1="260" y1="46" x2="100" y2="70" stroke="#999" stroke-width="1" marker-end="url(#arr6)"/>
+  <line x1="300" y1="46" x2="300" y2="70" stroke="#999" stroke-width="1" marker-end="url(#arr6)"/>
+  <line x1="340" y1="46" x2="500" y2="70" stroke="#999" stroke-width="1" marker-end="url(#arr6)"/>
+  <!-- Worker Processes -->
+  <rect x="40" y="70" width="120" height="36" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="100" y="88" text-anchor="middle" font-size="11" fill="#2e7d32">Worker-1</text>
+  <text x="100" y="100" text-anchor="middle" font-size="9" fill="#555">epoll+非阻塞IO</text>
+  <rect x="240" y="70" width="120" height="36" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="300" y="88" text-anchor="middle" font-size="11" fill="#2e7d32">Worker-2</text>
+  <text x="300" y="100" text-anchor="middle" font-size="9" fill="#555">epoll+非阻塞IO</text>
+  <rect x="440" y="70" width="120" height="36" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="500" y="88" text-anchor="middle" font-size="11" fill="#2e7d32">Worker-N</text>
+  <text x="500" y="100" text-anchor="middle" font-size="9" fill="#555">epoll+非阻塞IO</text>
+  <!-- 连接 -->
+  <rect x="40" y="130" width="520" height="24" rx="4" fill="#fff3e0" stroke="#ff6f00"/>
+  <text x="300" y="146" text-anchor="middle" font-size="11" fill="#ff6f00">数万并发连接 (epoll事件驱动，一个Worker可处理数万连接)</text>
+  <!-- 说明 -->
+  <text x="300" y="178" text-anchor="middle" font-size="11" fill="#555">Master管理Worker，Worker各自独立处理连接</text>
+  <text x="300" y="196" text-anchor="middle" font-size="11" fill="#555">Worker数通常=CPU核心数，避免上下文切换</text>
+  <text x="300" y="214" text-anchor="middle" font-size="11" fill="#d32f2f">单Worker内epoll+非阻塞IO → 单线程处理万级并发连接</text>
+</svg>
+<div class="caption">Nginx多进程+epoll架构：Master管理，Worker用epoll处理数万并发连接</div>
+</div>
+
+<ul>
+  <li><strong>多进程模型</strong>：1个Master + N个Worker(通常N=CPU核心数)，Master管理Worker，Worker独立处理请求</li>
+  <li><strong>epoll事件驱动</strong>：1个Worker用epoll管理数万个连接，非阻塞IO + 事件回调，不阻塞等待</li>
+  <li><strong>零拷贝(sendfile)</strong>：静态文件传输用sendfile直接从磁盘到网卡，不经过用户态</li>
+  <li><strong>内存池</strong>：自己管理内存分配，减少内存碎片和系统调用</li>
+</ul>
+
+<div class="java-analogy">Nginx的epoll模型 ≈ Java Netty的EventLoop：单线程+Selector多路复用+非阻塞IO。Nginx的Worker ≈ Netty的WorkerGroup，Master ≈ BossGroup。思路一模一样。</div>
+
+<h4>7.4 常用场景配置</h4>
+
+<div class="code-block">
+<span class="lang">Nginx典型反向代理配置</span>
+<pre><span class="cmt"># 前端静态资源 + API反向代理 + 负载均衡</span>
+server {
+    listen 80;
+    server_name api.example.com;
+
+    <span class="cmt"># 前端静态文件</span>
+    location / {
+        root /usr/share/nginx/html;
+        try_files $uri $uri/ /index.html;  <span class="cmt"># SPA路由</span>
+    }
+
+    <span class="cmt"># API反向代理到后端集群</span>
+    location /api/ {
+        proxy_pass http://backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    <span class="cmt"># WebSocket支持(Agent流式输出需要)</span>
+    location /ws/ {
+        proxy_pass http://backend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}</pre>
+</div>
+
+<div class="note">做Agent开发时，LLM流式输出(SSE/WebSocket)通常需要Nginx做反向代理。注意配置proxy_buffering off关闭缓冲，否则流式输出会被Nginx缓存导致体验差。</div>
+
+<div class="interview-q">
+  <div class="question">Nginx为什么能扛高并发？</div>
+  <div class="interview-answer">
+    <p>三个核心原因：1）<strong>多进程+epoll</strong>——Master管理N个Worker(CPU核心数)，每个Worker用epoll事件驱动管理数万连接，单线程不阻塞；2）<strong>非阻塞IO</strong>——IO操作不等待，立即返回，事件就绪再回调处理；3）<strong>零拷贝</strong>——静态资源用sendfile直接从磁盘到网卡，不经过用户态。</p>
+    <p>本质和Redis一样：瓶颈不在CPU计算而在IO，用epoll把IO等待变成事件通知，单线程也能处理海量连接。</p>
+  </div>
+  <div class="interview-tip">和Redis对比"都是epoll事件驱动"是高级答法。提Netty类比说明你Java体系的知识是通的。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Nginx负载均衡有哪些策略？一致性Hash解决什么问题？</div>
+  <div class="interview-answer">
+    <p>五种策略：轮询(默认)、加权轮询(按机器配置)、IP Hash(会话粘性)、least_conn(最少连接)、一致性Hash。</p>
+    <p>IP Hash的问题：当增减后端节点时，Hash环重新映射，大量请求会落到新节点导致缓存大面积失效。一致性Hash把节点和请求都映射到Hash环上，增减节点只影响相邻区间的请求，缓存失效面小。</p>
+    <p>场景：缓存代理(如Nginx代理Redis/Memcached)用一致性Hash，增减节点时缓存命中率不暴跌。</p>
+  </div>
+  <div class="interview-tip">提"缓存失效"是关键——一致性Hash的初衷就是减少增减节点时的缓存失效。能说出Hash环原理更佳。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">正向代理和反向代理什么区别？Nginx是哪个？</div>
+  <div class="interview-answer">
+    <p>正向代理代理客户端——客户端知道要访问谁，代理帮你去访问(如VPN、翻墙工具)。反向代理代理服务端——客户端只知道代理地址，不知道真实服务器(如Nginx)。</p>
+    <p>Nginx做的是反向代理：客户端请求Nginx，Nginx根据配置转发到后端真实服务器，客户端不知道也不关心后端有谁。</p>
+    <p>一句话：正向代理代理客户端(隐藏客户端)，反向代理代理服务端(隐藏服务端)。</p>
+  </div>
+  <div class="interview-tip">用"代购 vs 客服总机"类比最直观。如果面试官追问正向代理场景，说VPN/翻墙即可。</div>
+</div>
+
+<!-- ==================== 重点回顾 ==================== -->
+<div class="review-card">
+  <ul>
+    <li><strong>Redis快的原因：</strong>纯内存 + 单线程避免锁竞争 + IO多路复用epoll + 优化的数据结构(SDS/跳表/ziplist)</li>
+    <li><strong>缓存三大问题：</strong>穿透(查不存在→布隆过滤器/空值缓存)、击穿(热点过期→互斥锁/永不过期)、雪崩(批量过期→随机TTL/多级缓存)</li>
+    <li><strong>分布式锁三要素：</strong>原子加锁(SET NX PX) + UUID防误删 + 看门狗续期。注意主从切换丢锁问题</li>
+    <li><strong>RDB vs AOF：</strong>RDB全量快照恢复快但可能丢数据，AOF命令日志更安全但恢复慢，生产混用</li>
+    <li><strong>Kafka高吞吐：</strong>顺序写磁盘 + 零拷贝sendfile + 批量处理 + Partition分区并行</li>
+    <li><strong>Kafka消息不丢：</strong>生产端acks=all + Broker副本ISR + 消费端手动提交offset</li>
+    <li><strong>Kafka vs RabbitMQ：</strong>Kafka高吞吐大数据流，RabbitMQ灵活路由低延迟业务消息</li>
+    <li><strong>ES倒排索引：</strong>词→文档列表，全文检索O(1)；vs B+树精确匹配，vs向量检索语义匹配</li>
+    <li><strong>MySQL B+树：</strong>非叶子只存索引(省空间)，叶子存数据+双向链表(范围查询快)，3-4层存千万数据</li>
+    <li><strong>聚簇vs非聚簇：</strong>聚簇索引叶子存完整数据行(主键)，二级索引叶子存主键值需回表，覆盖索引免回表</li>
+    <li><strong>索引失效：</strong>违反最左前缀、索引列做运算/函数、隐式类型转换、LIKE左模糊、OR一侧无索引</li>
+    <li><strong>分库分表顺序：</strong>先加索引→缓存→读写分离→最后才分库分表。分片键选查询最频繁+分布均匀的字段</li>
+    <li><strong>Nginx高并发：</strong>多进程(Master+Worker) + epoll事件驱动 + 非阻塞IO + 零拷贝sendfile</li>
+    <li><strong>负载均衡策略：</strong>轮询/加权/IP Hash/least_conn/一致性Hash，后者解决增减节点缓存大面积失效</li>
+    <li><strong>正vs反向代理：</strong>正向代理客户端(翻墙VPN)，反向代理服务端(Nginx负载均衡)</li>
+    <li><strong>Nacos AP vs CP：</strong>AP临时实例立即摘除(微服务)，CP持久实例共识保留(有状态服务)</li>
+    <li><strong>ZooKeeper：</strong>临时节点(服务注册)+顺序节点(分布式锁)+Watcher(通知)。ZAB不是Raft</li>
+  </ul>
+</div>
+
+<!-- ===== 章节导航 ===== -->
+<div class="chapter-nav">
+  <a href="01-java-foundation.html" class="prev">← Java后端核心复习</a>
+  <a href="03-llm-foundation.html" class="next">LLM大模型基础 →</a>
+</div>
+
+</main>
+<script>
+(function(){
+  var btn = document.getElementById("sidebarToggle");
+  var body = document.body;
+  try { if(localStorage.getItem("sb")==="0") body.classList.add("sidebar-collapsed"); } catch(e){}
+  function update(){ btn.textContent = body.classList.contains("sidebar-collapsed") ? "▶" : "◀"; }
+  btn.addEventListener("click", function(){
+    body.classList.toggle("sidebar-collapsed");
+    try { localStorage.setItem("sb", body.classList.contains("sidebar-collapsed")?"0":"1"); } catch(e){}
+    update();
+  });
+  update();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>高频面试题汇总 — Agent面试宝典</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="sidebarToggle" class="sidebar-toggle" title="收起/展开菜单">◀</button>
+
+<!-- ===== 侧边栏 ===== -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <h1>Agent面试宝典</h1>
+    <p>Java后端 → AI Agent 转型指南</p>
+  </div>
+  <nav>
+      <a href="index.html"><span class="num">00</span>首页</a>
+      <a href="01-java-foundation.html"><span class="num">01</span>Java后端核心复习</a>
+      <a href="02-middleware.html"><span class="num">02</span>常用中间件</a>
+      <a href="03-llm-foundation.html"><span class="num">03</span>LLM大模型基础</a>
+      <a href="04-prompt-engineering.html"><span class="num">04</span>Prompt工程</a>
+      <a href="05-langchain4j.html"><span class="num">05</span>LangChain4j框架详解</a>
+      <a href="06-agent-core.html"><span class="num">06</span>Agent核心概念</a>
+      <a href="07-rag.html"><span class="num">07</span>RAG检索增强生成</a>
+      <a href="08-vector-db.html"><span class="num">08</span>向量数据库与Embedding</a>
+      <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
+      <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
+      <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
+      <a href="12-project-packaging.html"><span class="num">12</span>项目经验包装与表达</a>
+      <a href="13-interview-qa.html" class="active"><span class="num">13</span>高频面试题汇总</a>
+      <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
+      <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
+      <a href="16-spring-ai.html"><span class="num">16</span>Spring AI对比</a>
+      <a href="17-agent-security.html"><span class="num">17</span>Agent安全</a>
+  </nav>
+</aside>
+
+<!-- ===== 主内容 ===== -->
+<main class="main">
+
+<div class="chapter-header">
+  <span class="chapter-num">第11章</span>
+  <h2>高频面试题汇总</h2>
+  <div class="goal"><strong>学习目标：</strong>按8大类别系统梳理46道高频面试题，每题配参考答案与加分技巧。Java基础验证存量能力，LLM/Agent/RAG验证转行知识储备，项目经验验证实战落地。建议面试前通读3遍，重点掌握⭐⭐⭐标记题。</div>
+</div>
+
+<div class="one-liner">面试不是背答案，而是展示思考过程——先给结论，再展开原理，最后联系项目经验。</div>
+
+<div class="diagram">
+<svg viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="20" text-anchor="middle" font-size="14" fill="#1565c0" font-weight="bold">面试题分布概览：46题分8大类</text>
+  <rect x="20" y="35" width="120" height="50" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="80" y="55" text-anchor="middle" font-size="11" fill="#1565c0" font-weight="bold">Java基础</text>
+  <text x="80" y="72" text-anchor="middle" font-size="10" fill="#555">7题 ⭐⭐⭐</text>
+  <rect x="150" y="35" width="120" height="50" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="210" y="55" text-anchor="middle" font-size="11" fill="#1565c0" font-weight="bold">LLM基础</text>
+  <text x="210" y="72" text-anchor="middle" font-size="10" fill="#555">6题 ⭐⭐⭐</text>
+  <rect x="280" y="35" width="120" height="50" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="340" y="55" text-anchor="middle" font-size="11" fill="#1565c0" font-weight="bold">Agent核心</text>
+  <text x="340" y="72" text-anchor="middle" font-size="10" fill="#555">6题 ⭐⭐⭐</text>
+  <rect x="410" y="35" width="120" height="50" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="470" y="55" text-anchor="middle" font-size="11" fill="#1565c0" font-weight="bold">RAG/向量</text>
+  <text x="470" y="72" text-anchor="middle" font-size="10" fill="#555">6题 ⭐⭐⭐</text>
+  <rect x="20" y="95" width="120" height="50" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+  <text x="80" y="115" text-anchor="middle" font-size="11" fill="#ff6f00" font-weight="bold">LangChain4j</text>
+  <text x="80" y="132" text-anchor="middle" font-size="10" fill="#555">6题 ⭐⭐</text>
+  <rect x="150" y="95" width="120" height="50" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+  <text x="210" y="115" text-anchor="middle" font-size="11" fill="#ff6f00" font-weight="bold">工具生态</text>
+  <text x="210" y="132" text-anchor="middle" font-size="10" fill="#555">4题 ⭐⭐</text>
+  <rect x="280" y="95" width="120" height="50" rx="6" fill="#ffebee" stroke="#d32f2f"/>
+  <text x="340" y="115" text-anchor="middle" font-size="11" fill="#d32f2f" font-weight="bold">项目经验</text>
+  <text x="340" y="132" text-anchor="middle" font-size="10" fill="#555">7题 ⭐⭐⭐</text>
+  <rect x="410" y="95" width="120" height="50" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="470" y="115" text-anchor="middle" font-size="11" fill="#2e7d32" font-weight="bold">开放题</text>
+  <text x="470" y="132" text-anchor="middle" font-size="10" fill="#555">4题 ⭐</text>
+  <text x="300" y="170" text-anchor="middle" font-size="12" fill="#555">复习优先级：⭐⭐⭐(Java/LLM/Agent/RAG/项目) > ⭐⭐(LangChain4j/工具) > ⭐(开放题)</text>
+  <text x="300" y="190" text-anchor="middle" font-size="12" fill="#d32f2f">面试前3天：通读全部 → 前1天：重点看⭐⭐⭐ → 面试当天：看项目经验题</text>
+  <text x="300" y="210" text-anchor="middle" font-size="11" fill="#999">答题策略：先给结论 → 展开原理(30秒) → 联系项目经验(展示实战) → 反问(展示深度)</text>
+</svg>
+<div class="caption">46道面试题分布：8大类按重要度分级，红色⭐⭐⭐是必会题</div>
+</div>
+
+<!-- ==================== 一、Java基础类 ==================== -->
+<h3>一、Java基础类 <span class="difficulty">验证存量能力 ⭐⭐⭐</span></h3>
+
+<div class="note">本类题目验证4年Java后端功底，面试官借此判断存量技术深度。回答要简洁有力，避免长篇大论。</div>
+
+<!-- Q1 -->
+<div class="interview-q">
+  <div class="question">1. 线程池的核心参数有哪些？拒绝策略有哪些？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>ThreadPoolExecutor有7个核心参数：<strong>corePoolSize</strong>（核心线程数）、<strong>maximumPoolSize</strong>（最大线程数）、<strong>keepAliveTime</strong>（空闲存活时间）、<strong>unit</strong>（时间单位）、<strong>workQueue</strong>（阻塞队列）、<strong>threadFactory</strong>（线程工厂）、<strong>handler</strong>（拒绝策略）。</p>
+    <p>执行流程：先填满核心线程→再填满队列→再创建非核心线程到max→最后触发拒绝策略。4种内置拒绝策略：AbortPolicy（抛异常，默认）、CallerRunsPolicy（调用者执行）、DiscardPolicy（静默丢弃）、DiscardOldestPolicy（丢弃最老任务）。</p>
+    <p>生产环境禁用Executors工厂方法（无界队列OOM风险），必须用ThreadPoolExecutor手动创建并命名线程。</p>
+  </div>
+  <div class="interview-tip">提到阿里规约禁用Executors.newFixedThreadPool的原因（LinkedBlockingQueue无界），并说项目中用ThreadPoolExecutorBuilder自定义线程池+有界队列+CallerRunsPolicy。</div>
+</div>
+
+<!-- Q2 -->
+<div class="interview-q">
+  <div class="question">2. synchronized和ReentrantLock的区别？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>五个核心区别：① <strong>实现层面</strong>：synchronized是JVM关键字（monitorenter/monitorexit指令），ReentrantLock是JDK API层（基于AQS实现）；② <strong>锁释放</strong>：synchronized自动释放，ReentrantLock必须手动unlock（finally块）；③ <strong>公平性</strong>：synchronized非公平，ReentrantLock可选公平/非公平；④ <strong>可中断</strong>：synchronized不可中断，ReentrantLock支持lockInterruptibly；⑤ <strong>条件变量</strong>：synchronized只有一个wait/notify，ReentrantLock可多个Condition。</p>
+    <p>JDK6后synchronized引入锁升级（偏向→轻量→重量），性能差距大幅缩小。能用synchronized就用synchronized，需要高级特性（公平、可中断、多条件）才用ReentrantLock。</p>
+  </div>
+  <div class="interview-tip">提到锁升级过程（偏向锁→轻量级锁CAS自旋→重量级锁OS互斥），并说"JDK6之后性能不是选择synchronized还是ReentrantLock的主要因素，功能需求才是"。</div>
+</div>
+
+<!-- Q3 -->
+<div class="interview-q">
+  <div class="question">3. volatile关键字的作用？Happens-Before原则？</div>
+  <div class="interview-answer">
+    <p>volatile两个作用：① <strong>保证可见性</strong>：写入后立即刷新到主内存，读取时从主内存加载，避免线程间工作内存不一致；② <strong>禁止指令重排</strong>：通过内存屏障防止编译器/JVM重排序。但<strong>不保证原子性</strong>——volatile int的i++不是线程安全的。</p>
+    <p>Happens-Before是JMM定义的偏序关系，如果A Happens-Before B，则A的操作对B可见。8条规则包括：程序顺序、volatile写→读、锁释放→获取、线程start、线程join、传递性等。volatile的可见性就是通过"volatile写 Happens-Before 后续volatile读"这条规则保证的。</p>
+  </div>
+  <div class="interview-tip">举例DCL单例模式中volatile防止new对象的重排（分配内存→赋值引用→初始化，重排后其他线程可能拿到未初始化的对象），展示对JMM的深入理解。</div>
+</div>
+
+<!-- Q4 -->
+<div class="interview-q">
+  <div class="question">4. G1垃圾回收器的工作原理？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>G1（Garbage First）将堆划分为多个大小相等的Region（1-32MB），每个Region可以是Eden、Survivor、Old或Humongous，不再是物理连续的年轻代/老年代。G1通过<strong>Remembered Set</strong>记录跨Region引用，避免全堆扫描。</p>
+    <p>GC流程：① <strong>年轻代GC</strong>：STW，回收Eden+Survivor，存活对象复制到新Survivor；② <strong>混合回收</strong>：回收全部年轻代+部分老年代Region（根据回收价值排序，Garbage First由此得名）；③ <strong>Full GC</strong>：单线程兜底（混合回收跟不上时触发）。</p>
+    <p>G1的核心优势是<strong>可预测停顿</strong>：通过-XX:MaxGCPauseMillis设置目标停顿时间，G1在目标时间内尽量多回收高价值Region。JDK9开始G1成为默认GC。</p>
+  </div>
+  <div class="interview-tip">对比G1和ZGC（染色指针+读屏障，停顿<10ms，TB级堆），说"G1适合4-32GB堆，ZGC适合超大堆低延迟场景"。</div>
+</div>
+
+<!-- Q5 -->
+<div class="interview-q">
+  <div class="question">5. Spring Bean的生命周期？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>完整生命周期：① <strong>实例化</strong>（构造方法）→ ② <strong>属性注入</strong>（@Autowired/@Value）→ ③ <strong>Aware接口回调</strong>（BeanNameAware/BeanFactoryAware）→ ④ <strong>BeanPostProcessor前置</strong>（postProcessBeforeInitialization）→ ⑤ <strong>初始化</strong>（@PostConstruct→InitializingBean.afterPropertiesSet→init-method）→ ⑥ <strong>BeanPostProcessor后置</strong>（postProcessAfterInitialization，AOP代理在此创建）→ ⑦ <strong>使用</strong> → ⑧ <strong>销毁</strong>（@PreDestroy→DisposableBean.destroy→destroy-method）。</p>
+    <p>核心理解：BeanPostProcessor是Spring扩展的灵魂，AOP、自动代理、配置增强都基于它实现。@PostConstruct和init-method的执行顺序是注解优先。</p>
+  </div>
+  <div class="interview-tip">强调BeanPostProcessor后置处理是AOP代理创建的时机，并说"理解了BPP就理解了Spring扩展机制的核心"。</div>
+</div>
+
+<!-- Q6 -->
+<div class="interview-q">
+  <div class="question">6. MySQL的MVCC机制？</div>
+  <div class="interview-answer">
+    <p>MVCC（多版本并发控制）通过<strong>undo log版本链</strong> + <strong>ReadView</strong>实现快照读，让读操作不加锁也能看到一致的数据视图。每行记录有隐藏字段：trx_id（最后修改的事务ID）、roll_pointer（指向undo log的指针），多次修改形成版本链。</p>
+    <p>ReadView包含：m_ids（活跃事务列表）、min_trx_id（最小活跃事务ID）、max_trx_id（下一个分配的事务ID）、creator_trx_id（当前事务ID）。可见性判断：trx_id == creator可见；trx_id < min可见（已提交）；trx_id >= max不可见（未来事务）；min ≤ trx_id < max则查m_ids列表，不在列表中则可见。</p>
+    <p>RC隔离级别每次SELECT都生成新ReadView（不可重复读）；RR隔离级别事务开始时生成一次ReadView（可重复读）。</p>
+  </div>
+  <div class="interview-tip">画版本链的图，并对比RC和RR下ReadView生成时机的差异，展示对隔离级别本质的理解。</div>
+</div>
+
+<!-- Q7 -->
+<div class="interview-q">
+  <div class="question">7. Kafka如何保证消息不丢失？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>三个环节保证不丢失：① <strong>生产者端</strong>：acks=all（所有ISR副本确认）+ retries重试 + 幂等producer（enable.idempotence=true避免重试重复）；② <strong>Broker端</strong>：min.insync.replicas≥2（至少2个副本同步）+ unclean.leader.election.enable=false（禁止非ISR副本成为leader，防止数据丢失）；③ <strong>消费者端</strong>：手动提交offset（enable.auto.commit=false），处理完业务再提交。</p>
+    <p>进一步保证Exactly-Once：事务producer（transactional.id）+ 消费者read_committed隔离级别。但Exactly-Once代价大，通常用At-Least-Once + 消费端幂等来等价实现。</p>
+  </div>
+  <div class="interview-tip">说"acks=all + min.insync.replicas=2是生产标配"，并提到项目中用Redis做消费端幂等去重，展示工程实践。</div>
+</div>
+
+<!-- ==================== 二、LLM基础类 ==================== -->
+<h3>二、LLM基础类 <span class="difficulty">验证转行知识储备 ⭐⭐⭐</span></h3>
+
+<div class="note">本类题目验证对LLM基础概念的理解深度，面试官借此判断转行的诚意和学习能力。</div>
+
+<!-- Q8 -->
+<div class="interview-q">
+  <div class="question">8. Transformer的自注意力机制是什么？为什么比RNN好？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>自注意力（Self-Attention）公式：Attention(Q,K,V) = softmax(QK^T/√d_k)V。每个位置的token通过与所有位置计算注意力权重，加权求和得到新的表示。Q/K/V分别由输入线性变换得到，多头注意力（Multi-Head）让模型从不同子空间关注不同模式。</p>
+    <p>比RNN好的三个原因：① <strong>并行计算</strong>：RNN必须逐步计算（h_t依赖h_{t-1}），Transformer所有位置同时计算，GPU利用率高；② <strong>长距离依赖</strong>：RNN信息随步数衰减，Transformer任意两个位置直接交互，路径长度O(1)；③ <strong>全局视野</strong>：每个位置都能看到整个序列，信息融合更充分。</p>
+    <p>代价是O(n²)的计算复杂度，所以长上下文需要稀疏注意力、FlashAttention等优化。</p>
+  </div>
+  <div class="interview-tip">提到位置编码（Sinusoidal/RoPE/ALiBi）解决Transformer无位置感知的问题，并说"RoPE通过旋转矩阵实现相对位置编码，是当前主流LLM的标配"。</div>
+</div>
+
+<!-- Q9 -->
+<div class="interview-q">
+  <div class="question">9. 什么是token？中英文token有什么差异？</div>
+  <div class="interview-answer">
+    <p>Token是LLM处理文本的最小单位，不是字也不是词，而是通过BPE（Byte Pair Encoding）或SentencePiece算法切分的子词单元。模型先将文本tokenize为token序列，每个token映射为一个整数ID，再查embedding表得到向量。</p>
+    <p>中英文差异显著：英文通常1 token ≈ 0.75 word，"hello"是1个token；中文1个汉字通常2-3个token（因为中文不在基础词表中，需要用byte-level BPE拆分）。例如"你好世界"可能消耗8-10个token，而"hello world"只消耗2个token。</p>
+    <p>实际影响：中文上下文窗口的有效容量比英文小约2-3倍，成本计算也要注意中文token消耗更大。可以用tokenizer在线工具验证具体token数。</p>
+  </div>
+  <div class="interview-tip">提到不同模型的tokenizer不同（GPT用BPE，LLaMA用SentencePiece），并说"做中文RAG时token效率是选择模型的一个考量因素"。</div>
+</div>
+
+<!-- Q10 -->
+<div class="interview-q">
+  <div class="question">10. Temperature参数的作用？什么时候调高什么时候调低？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>Temperature控制softmax输出的概率分布"锐度"。公式上，logit先除以temperature再做softmax。temperature→0时分布趋近one-hot（总选最高概率token），temperature→∞时分布趋近均匀（随机选）。temperature越低输出越确定，越高越随机多样。</p>
+    <p>调低（0-0.3）：客服问答、代码生成、数据抽取、事实性回答——需要准确稳定。调高（0.7-1.0）：创意写作、头脑风暴、文案生成——需要多样性。中间值（0.4-0.6）：对话聊天、通用场景——平衡准确和自然。</p>
+    <p>注意temperature和top_p通常配合使用，不建议同时调高。生产环境一般temperature=0.7、top_p=0.9作为默认。</p>
+  </div>
+  <div class="interview-tip">说"项目中客服助手用temperature=0.3保证回答稳定，创意推荐用0.8增加多样性"，联系实际场景展示工程判断力。</div>
+</div>
+
+<!-- Q11 -->
+<div class="interview-q">
+  <div class="question">11. LLM为什么会产生幻觉？如何缓解？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>幻觉（Hallucination）根因：① <strong>训练数据</strong>：语料本身有错误信息或过时信息；② <strong>模型本质</strong>：LLM是概率生成模型，next token prediction本质是"最像"而非"最对"，没有事实校验机制；③ <strong>知识边界</strong>：训练数据有截止日期，超出范围模型会"编造"看似合理的回答。</p>
+    <p>缓解策略：① <strong>RAG</strong>：检索外部知识库作为上下文，让模型基于事实回答；② <strong>Prompt约束</strong>：明确指示"如果不确定就说不知道"、"仅根据以下信息回答"；③ <strong>Temperature调低</strong>：减少随机性；④ <strong>后处理校验</strong>：用规则或另一个LLM验证答案；⑤ <strong>Function Calling</strong>：对事实性问题调用工具获取准确数据。</p>
+    <p>完全消除幻觉目前不可能，目标是将其控制在可接受范围内。</p>
+  </div>
+  <div class="interview-tip">说"项目中用RAG+Prompt约束+置信度阈值三重防护，当检索相关度低于阈值时直接回复'该问题超出我的知识范围'"，展示系统化思维。</div>
+</div>
+
+<!-- Q12 -->
+<div class="interview-q">
+  <div class="question">12. 什么是Function Calling？底层是怎么实现的？</div>
+  <div class="interview-answer">
+    <p>Function Calling是LLM输出结构化函数调用指令的能力。开发者定义函数schema（名称、描述、参数类型），LLM根据用户意图判断是否需要调用函数，如果需要则输出JSON格式的函数名和参数，而不是自然语言。</p>
+    <p>底层实现：① 模型在训练时就见过大量function calling格式数据（SFT阶段）；② 推理时将函数schema作为system prompt注入上下文；③ 模型输出特殊token（如<tool_call>）标记函数调用；④ 框架解析输出，执行对应函数，将结果拼回上下文继续对话。本质上仍是next token prediction，只是训练时学会了"看到函数描述就输出结构化JSON"的模式。</p>
+    <p>不同模型实现不同：OpenAI用tool_calls字段，Anthropic用tool_use block，开源模型通常用特殊token标记。</p>
+  </div>
+  <div class="interview-tip">强调"Function Calling不是模型有了新能力，而是训练时学会了输出特定格式"，展示对LLM本质的理解。</div>
+</div>
+
+<!-- Q13 -->
+<div class="interview-q">
+  <div class="question">13. 上下文窗口和RAG是什么关系？什么时候用长上下文什么时候用RAG？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>两者不互斥而是互补。上下文窗口是模型一次能处理的最大token数（如GPT-4 128K、Gemini 1M），RAG是检索增强技术，从知识库中检索相关片段拼入上下文。RAG本质上也是在利用上下文窗口，只是通过检索筛选出最相关的部分，而不是全塞进去。</p>
+    <p>用长上下文的场景：文档总结（需要全局信息）、少量文档深度分析、对话历史保持。用RAG的场景：知识库量大（超出窗口）、需要精确引用来源、知识频繁更新、成本敏感（长上下文token费用高）。</p>
+    <p>实践建议：即使有128K窗口，超过32K后模型注意力会衰减（Lost in the Middle问题），所以RAG+合理上下文是更稳健的方案。长上下文适合"精读少量文档"，RAG适合"泛读大量知识"。</p>
+  </div>
+  <div class="interview-tip">提到"Lost in the Middle"现象（中间位置信息容易被忽略），并说"项目中即使GPT-4有128K窗口，也用RAG检索top-5片段，既省成本又避免注意力衰减"。</div>
+</div>
+
+<!-- ==================== 三、Agent核心类 ==================== -->
+<h3>三、Agent核心类 <span class="difficulty">核心能力验证 ⭐⭐⭐</span></h3>
+
+<div class="note">这是转行的核心赛道，面试官会重点考察。回答要体现对Agent范式的深入理解和工程实践经验。</div>
+
+<!-- Q14 -->
+<div class="interview-q">
+  <div class="question">14. 什么是Agent？和Chatbot有什么本质区别？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>Agent是<strong>以LLM为大脑，能感知环境、自主决策、调用工具、执行行动</strong>的自主系统。核心要素：LLM（推理决策）+ Tools（工具调用）+ Memory（记忆）+ Planning（规划能力）。Agent能根据目标自主拆解任务、选择工具、执行行动、观察结果、调整策略。</p>
+    <p>和Chatbot的本质区别：① <strong>主动性</strong>：Chatbot被动回答问题，Agent主动规划和执行多步任务；② <strong>行动力</strong>：Chatbot只输出文本，Agent能调用API、操作数据库、执行代码产生真实影响；③ <strong>自主性</strong>：Chatbot单轮交互，Agent能循环执行直到完成目标；④ <strong>适应性</strong>：Chatbot固定流程，Agent根据中间结果动态调整策略。</p>
+    <p>一句话总结：Chatbot是"你说我答"，Agent是"你说我做，做不好我自己想办法"。</p>
+  </div>
+  <div class="interview-tip">用类比："Chatbot像客服只转接电话，Agent像专员能自己查系统、调资源、解决问题"，形象展示理解。</div>
+</div>
+
+<!-- Q15 -->
+<div class="interview-q">
+  <div class="question">15. ReAct模式是什么？画一下流程图 <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>ReAct = Reasoning + Acting，是Agent最经典的循环模式。每轮包含三个步骤：① <strong>Thought</strong>（思考）：LLM分析当前状态，决定下一步做什么；② <strong>Action</strong>（行动）：调用工具执行；③ <strong>Observation</strong>（观察）：获取工具返回结果。循环直到LLM判断任务完成输出Final Answer。</p>
+    <p>流程图：用户输入 → LLM Thought → Action(调用Tool) → Observation(获取结果) → LLM Thought → ... → Final Answer。本质是一个while循环，每轮把历史Thought/Action/Observation拼入上下文让LLM继续推理。</p>
+    <p>ReAct的优势是将推理和行动交织，LLM能根据执行结果调整策略，比纯CoT（只推理不执行）更适合需要外部信息的任务。缺点是每轮都调用LLM，token消耗大、延迟高。</p>
+  </div>
+  <div class="interview-tip">手画流程图，并提到ReAct论文（Yao et al. 2022）和CoT的关系，说"ReAct = CoT + Tool Use"，展示学术视野。</div>
+</div>
+
+<!-- Q16 -->
+<div class="interview-q">
+  <div class="question">16. Agent如何决定调用哪个工具？工具描述重要吗？</div>
+  <div class="interview-answer">
+    <p>Agent通过LLM的Function Calling能力决定调用哪个工具。流程：所有可用工具的schema（名称、描述、参数定义）作为上下文注入LLM → LLM根据用户意图和工具描述选择最匹配的工具 → 输出结构化函数调用。本质上LLM在做"意图-工具"的语义匹配。</p>
+    <p>工具描述极其重要，它就是LLM理解工具的唯一信息。好的描述应该：① <strong>说清做什么</strong>（功能边界）；② <strong>说清什么时候用</strong>（适用场景）；③ <strong>说清参数含义</strong>（每个参数的类型、范围、示例）。描述写得不好，LLM会选错工具或传错参数。</p>
+    <p>实践技巧：工具名称要语义化（searchOrder比tool1好），描述中包含使用示例，参数加enum约束，多个相似工具要明确区分场景。</p>
+  </div>
+  <div class="interview-tip">说"项目中踩过坑——工具描述太模糊导致LLM乱调工具，后来在描述中加了'when to use'和'when NOT to use'，准确率提升20%+"，用真实经验说话。</div>
+</div>
+
+<!-- Q17 -->
+<div class="interview-q">
+  <div class="question">17. 多Agent协作有哪些模式？各自适用什么场景？</div>
+  <div class="interview-answer">
+    <p>四种主流模式：① <strong>Pipeline/串行</strong>：Agent A的输出给Agent B，如"调研Agent→写作Agent→审核Agent"。适合流程明确的任务；② <strong>Supervisor/管理者</strong>：一个Manager Agent分发任务给多个Worker Agent，汇总结果。适合需要任务拆解和协调的复杂任务；③ <strong>Debate/辩论</strong>：多个Agent对同一问题给出不同方案，互相评审迭代。适合需要多视角的决策任务；④ <strong>Hierarchical/层级</strong>：树状结构，顶层Agent管理子Agent，子Agent再管理孙Agent。适合大型复杂项目。</p>
+    <p>选择原则：简单串行任务用Pipeline，需要协调用Supervisor，需要质量保证用Debate，超大型任务用Hierarchical。不要过度设计——单Agent能解决的就不要上多Agent，多Agent的协调成本和不确定性很高。</p>
+  </div>
+  <div class="interview-tip">强调"多Agent不是银弹，协调开销大、debug困难"，并说"项目中客服助手用单Agent+多工具，够用就不上多Agent"，展示克制和工程判断。</div>
+</div>
+
+<!-- Q18 -->
+<div class="interview-q">
+  <div class="question">18. Agent和固定Workflow什么时候用哪个？</div>
+  <div class="interview-answer">
+    <p>固定Workflow是预定义的流程图，每一步做什么、走哪个分支都是确定的，LLM只在特定节点做文本处理。Agent是LLM自主决策每一步做什么，流程是动态生成的。</p>
+    <p>用固定Workflow的场景：流程基本固定且已知（如审批流、ETL）、对可控性要求高、需要审计追溯、错误处理要确定。用Agent的场景：流程不确定需要动态规划、用户意图多样、需要根据中间结果灵活调整、探索性任务。</p>
+    <p>实践中常混合使用：大框架用Workflow保证可控，关键决策点用Agent增加灵活性。例如客服系统：整体流程是Workflow（意图分类→检索→生成→审核），但检索和生成环节用Agent动态决定查什么、怎么回答。</p>
+  </div>
+  <div class="interview-tip">说"能用Workflow解决的不要用Agent，Agent的不确定性是代价"，并引用"Workflow for reliability, Agent for flexibility"的工程哲学。</div>
+</div>
+
+<!-- Q19 -->
+<div class="interview-q">
+  <div class="question">19. Agent的Planning能力是怎么实现的？</div>
+  <div class="interview-answer">
+    <p>Agent的Planning主要通过三种方式实现：① <strong>Prompt引导的CoT规划</strong>：在system prompt中要求LLM"先制定计划再执行"，LLM输出step-by-step计划。简单但依赖prompt质量；② <strong>ReAct循环式规划</strong>：每轮Thought中可以重新规划，根据Observation调整后续步骤。灵活但可能跑偏；③ <strong>显式Plan-Execute架构</strong>：先用Planner Agent生成完整计划，再用Executor Agent逐步执行，执行失败可以回到Planner重新规划。可控性最好。</p>
+    <p>Planning的挑战：LLM规划容易过于乐观（不考虑失败）、计划太粗或太细、长任务容易丢失目标。缓解：限制最大步数、每步校验结果、设置超时fallback、用"反思"机制让LLM检查自己是否偏离目标。</p>
+  </div>
+  <div class="interview-tip">提到Plan-and-Execute和ReAct的区别（前者先规划后执行，后者边想边做），并说"复杂任务用Plan-Execute，简单任务用ReAct就够了"。</div>
+</div>
+
+<!-- ==================== 四、RAG/向量检索类 ==================== -->
+<h3>四、RAG/向量检索类 <span class="difficulty">项目相关 ⭐⭐⭐</span></h3>
+
+<div class="note">RAG是面试中必问的项目相关技术，每道题都要能联系到客服助手项目的实际经验。</div>
+
+<!-- Q20 -->
+<div class="interview-q">
+  <div class="question">20. RAG的完整流程是什么？离线和在线分别做什么？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p><strong>离线阶段（数据准备）</strong>：① 文档加载（PDF/Word/HTML/数据库）→ ② 文档分块（Chunking，按语义/固定大小切分）→ ③ Embedding向量化（调用embedding模型将文本转为向量）→ ④ 存入向量数据库（Milvus/Pinecone/PGVector）。</p>
+    <p><strong>在线阶段（检索生成）</strong>：① 用户Query向量化 → ② 向量检索top-K相似文档 → ③ （可选）Reranking重排 → ④ 构造Prompt（System + 检索结果 + 用户问题）→ ⑤ LLM生成回答 → ⑥ （可选）后处理校验/引用标注。</p>
+    <p>核心思想：用检索代替记忆，让LLM基于检索到的事实回答，减少幻觉。离线关注数据质量和索引效率，在线关注检索精度和生成质量。</p>
+  </div>
+  <div class="interview-tip">说"项目中离线用langchain4j的DocumentSplitter分块+bge-large-zh embedding+Milvus存储，在线用混合检索+cross-encoder重排"，展示完整技术栈。</div>
+</div>
+
+<!-- Q21 -->
+<div class="interview-q">
+  <div class="question">21. 文档分块有哪些策略？分块大小怎么定？</div>
+  <div class="interview-answer">
+    <p>主要分块策略：① <strong>固定大小分块</strong>：按token/字符数切分，简单但可能切断语义。通常加overlap（重叠10-20%）缓解；② <strong>递归字符分块</strong>：优先按段落→句子→字符递归切分，尽量保持语义完整；③ <strong>语义分块</strong>：用embedding计算相邻句子相似度，在语义跳变处切分。效果好但成本高；④ <strong>结构化分块</strong>：按Markdown标题/HTML标签/代码函数切分，保持文档结构。</p>
+    <p>分块大小经验值：FAQ类200-300 token（精确匹配）、文档类500-800 token（保留上下文）、代码类按函数切分。太小信息不足，太大检索精度下降且浪费token。需要根据数据类型和检索效果调优。</p>
+  </div>
+  <div class="interview-tip">说"项目中FAQ用300 token+overlap 50，产品文档用500 token+按标题分块，通过A/B测试确定最优大小"，展示数据驱动的调优方法。</div>
+</div>
+
+<!-- Q22 -->
+<div class="interview-q">
+  <div class="question">22. 向量检索和BM25关键词检索有什么区别？为什么要混合？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>向量检索（Dense Retrieval）：用embedding将query和文档映射到同一向量空间，计算余弦相似度。优势是理解语义（"怎么退款"能匹配"退货流程"），劣势是对精确关键词不敏感（产品名、错误码等）。BM25（Sparse Retrieval）：基于词频和文档频率的统计检索，类似ES的TF-IDF。优势是精确关键词匹配，劣势是不理解语义。</p>
+    <p>混合检索（Hybrid Search）的原因：两者互补。向量检索覆盖语义相似但用词不同的场景，BM25覆盖专有名词、错误码、产品型号等精确匹配场景。实践做法：同时执行两种检索，用RRF（Reciprocal Rank Fusion）或加权融合合并结果。</p>
+    <p>项目中客服场景：用户问"ERROR_4023怎么解决"需要BM25精确匹配错误码，问"怎么取消订单"需要向量检索语义匹配，缺一不可。</p>
+  </div>
+  <div class="interview-tip">提到RRF融合公式（score = Σ 1/(k+rank)），并说"混合检索比单一检索recall提升15-20%，是RAG的标配"。</div>
+</div>
+
+<!-- Q23 -->
+<div class="interview-q">
+  <div class="question">23. 什么是Reranking？为什么检索后还要重排？</div>
+  <div class="interview-answer">
+    <p>Reranking是用更精细的模型对检索结果重新排序。检索阶段（向量检索/BM25）为了速度用轻量模型（双塔结构，query和doc独立编码），精度有限。Reranking用Cross-Encoder模型（query和doc拼接后一起编码）精度更高但速度慢，所以只对top-K（如20条）重排取top-5。</p>
+    <p>需要重排的原因：① 向量检索是"近似最近邻"（ANN），有精度损失；② 双塔模型query和doc独立编码，丢失交互信息；③ 检索结果可能有相关但不精确的文档，重排能筛出最相关的。典型模型：bge-reranker-large、cross-encoder/ms-marco-MiniLM。</p>
+    <p>流程：检索top-20 → Reranker重排 → 取top-5 → 拼入Prompt。重排虽然增加一步延迟，但对最终回答质量提升显著。</p>
+  </div>
+  <div class="interview-tip">说"项目中加Reranking后回答准确率从78%提升到85%，延迟增加约200ms可接受"，用数据说话。</div>
+</div>
+
+<!-- Q24 -->
+<div class="interview-q">
+  <div class="question">24. RAG效果不好怎么排查？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>按RAG流程逐环节排查：① <strong>检索环节</strong>：打印检索结果，看相关文档是否被召回。如果没召回——检查embedding模型、分块策略、相似度阈值；如果召回了但排名低——加Reranking；② <strong>上下文构造</strong>：检查拼入Prompt的上下文是否包含答案信息，是否被噪声淹没。减少top-K或加重排；③ <strong>生成环节</strong>：检查LLM输出是否利用了上下文。如果没用——优化Prompt（强调"根据以下信息回答"）；如果幻觉——加约束Prompt或换更强模型；④ <strong>数据质量</strong>：检查知识库本身是否有过时/错误/重复数据。</p>
+    <p>工具化排查：用RAGAS等评估框架计算Faithfulness（忠实度）、Answer Relevancy（答案相关性）、Context Precision/Recall（上下文精度/召回）。建立评估集定期回归测试。</p>
+  </div>
+  <div class="interview-tip">说"项目搭了评估Pipeline，用50条标注QA定期跑RAGAS指标，每次改动有数据支撑"，展示工程化思维。</div>
+</div>
+
+<!-- Q25 -->
+<div class="interview-q">
+  <div class="question">25. HyDE是什么？什么场景下有用？</div>
+  <div class="interview-answer">
+    <p>HyDE（Hypothetical Document Embeddings）：先用LLM根据用户query生成一个"假设性答案文档"，再用这个假设文档的embedding去检索，而不是直接用原始query检索。核心思想：query和文档在embedding空间分布不同（query短、文档长），直接检索有gap，假设答案更接近文档分布，检索效果更好。</p>
+    <p>适用场景：query很短或很口语化，与知识库文档风格差异大时。例如用户问"咋退钱"，直接检索可能不好匹配"退款流程文档"，但LLM生成的假设答案"用户想要申请退款，需要先进入订单页面..."更接近文档风格，检索更准。</p>
+    <p>不适用场景：query本身就很具体（如错误码检索），或LLM生成的假设答案可能引入错误信息反而误导检索。成本上多一次LLM调用，需要权衡。</p>
+  </div>
+  <div class="interview-tip">说"HyDE本质是用LLM做query改写的一种特殊形式，和Query Expansion、Step-Back Prompting是同类思路"，展示举一反三。</div>
+</div>
+
+<!-- ==================== 五、LangChain4j/工程化类 ==================== -->
+<h3>五、LangChain4j/工程化类 <span class="difficulty">技术深度 ⭐⭐</span></h3>
+
+<!-- Q26 -->
+<div class="interview-q">
+  <div class="question">26. langchain4j和Python LangChain有什么区别？为什么选Java版？</div>
+  <div class="interview-answer">
+    <p>主要区别：① <strong>语言生态</strong>：langchain4j是Java原生，能直接集成Spring Boot、Maven/Gradle、Java企业级中间件；Python LangChain依赖Python生态；② <strong>设计理念</strong>：langchain4j更简洁，用@AiService注解声明式开发，API设计更Java风格（Builder模式、接口驱动）；LangChain更灵活但API变化快、碎片化严重；③ <strong>功能覆盖</strong>：LangChain功能更全（更多集成、更多Agent类型），langchain4j覆盖核心功能但生态还在发展。</p>
+    <p>选Java版的原因：① 团队是Java技术栈，学习成本低；② 客服系统需要和现有Java微服务集成（Spring Cloud、Kafka、MySQL）；③ 企业部署环境对Python支持不好；④ Java的类型安全和编译期检查更适合维护大型项目。</p>
+  </div>
+  <div class="interview-tip">说"langchain4j 1.0已正式发布，API稳定了，加上Java生态的运维成熟度，对企业落地是更务实的选择"，展示技术选型的工程考量。</div>
+</div>
+
+<!-- Q27 -->
+<div class="interview-q">
+  <div class="question">27. @AiService的底层原理是什么？</div>
+  <div class="interview-answer">
+    <p>@AiService是langchain4j的声明式AI服务注解，类似MyBatis的@Mapper。底层通过<strong>动态代理</strong>实现：① 启动时扫描@AiService注解的接口，为每个接口创建代理对象；② 调用接口方法时，代理将方法参数转换为ChatMessage；③ 根据方法上的注解（@SystemMessage、@UserMessage）构造Prompt；④ 调用底层ChatLanguageModel完成LLM调用；⑤ 如果方法有@Tool注解，自动注册工具；⑥ 如果返回值是结构化类型，自动做JSON解析和类型转换。</p>
+    <p>核心是Java动态代理+反射，开发者只定义接口，框架处理消息构造、模型调用、结果解析的所有细节。和Spring的@FeignClient、MyBatis的@Mapper思路一致——接口即配置，代理即实现。</p>
+  </div>
+  <div class="interview-tip">类比"@AiService和@Mapper一样都是动态代理，面试官一听就懂"，展示对Java设计模式的熟练运用。</div>
+</div>
+
+<!-- Q28 -->
+<div class="interview-q">
+  <div class="question">28. langchain4j的Tools是怎么工作的？</div>
+  <div class="interview-answer">
+    <p>langchain4j的Tool机制：① 用@Tool注解标记工具方法，@P注解描述参数；② 框架通过反射读取方法签名、注解描述，生成Function Calling的JSON Schema；③ Schema作为tools参数传给LLM；④ LLM决定调用工具时返回tool_calls，框架通过反射调用对应Java方法；⑤ 方法返回值序列化为字符串，拼入上下文继续对话。</p>
+    <p>关键细节：工具方法可以是任何Java方法（查数据库、调API、执行计算），框架自动处理参数类型转换。工具执行异常会被捕获，异常信息返回给LLM让它自行处理（如换一个工具或调整参数）。</p>
+    <p>注意工具方法应该是线程安全的，因为可能被并发调用。复杂工具建议拆分为多个小工具，每个职责单一，LLM选择更准确。</p>
+  </div>
+  <div class="interview-tip">说"@Tool本质是反射+Function Calling，和Spring的@RequestMapping异曲同工——都是把方法注册为可调用的端点"，用Java类比展示理解。</div>
+</div>
+
+<!-- Q29 -->
+<div class="interview-q">
+  <div class="question">29. ChatMemory怎么管理token？MessageWindow和TokenWindow有什么区别？</div>
+  <div class="interview-answer">
+    <p>ChatMemory管理对话历史，防止上下文超出模型窗口。两种策略：① <strong>MessageWindowChatMemory</strong>：按消息条数保留，如保留最近20条消息。简单但不精确——不同消息长度差异大，20条可能远超或远低于token限制；② <strong>TokenWindowChatMemory</strong>：按token数保留，如保留最近4000 token。精确控制但需要tokenizer计算每条消息的token数。</p>
+    <p>超出窗口时都采用FIFO淘汰最旧消息，但TokenWindow会保留system message不淘汰。实际项目中TokenWindow更常用，因为token直接关联成本和窗口限制。</p>
+    <p>高级策略：摘要记忆（把旧对话摘要为一条消息）、向量记忆（将历史存入向量库按相关度检索），适合需要长记忆的场景。</p>
+  </div>
+  <div class="interview-tip">说"项目中用TokenWindowChatMemory(4000) + SystemPrompt固定，既控制成本又保证关键信息不丢"，展示实际配置经验。</div>
+</div>
+
+<!-- Q30 -->
+<div class="interview-q">
+  <div class="question">30. Agent系统怎么做错误处理和降级？</div>
+  <div class="interview-answer">
+    <p>多层错误处理：① <strong>工具层</strong>：每个工具方法try-catch，异常返回错误描述给LLM（而非抛异常中断），让LLM自行调整策略；② <strong>LLM层</strong>：设置maxRetries重试，处理超时/限流/API异常，重试用exponential backoff；③ <strong>Agent层</strong>：设置maxSteps防止死循环，超时fallback到规则引擎或预设回复；④ <strong>系统层</strong>：熔断器（连续失败触发降级）、降级策略（LLM不可用时回退到关键词匹配+模板回复）。</p>
+    <p>降级策略设计：优雅降级而非直接报错——LLM挂了用规则引擎，检索挂了用缓存，工具挂了告知用户"该功能暂时不可用"。保证用户始终能拿到合理响应。</p>
+  </div>
+  <div class="interview-tip">说"项目用Resilience4j做熔断+降级，LLM连续失败5次自动切换到规则引擎，保证SLA"，展示企业级可靠性思维。</div>
+</div>
+
+<!-- Q31 -->
+<div class="interview-q">
+  <div class="question">31. 怎么监控Agent的运行和成本？</div>
+  <div class="interview-answer">
+    <p>监控维度：① <strong>业务指标</strong>：回答准确率、用户满意度、首次解决率、转人工率；② <strong>性能指标</strong>：端到端延迟（P50/P95/P99）、各环节耗时（检索/LLM/工具）、吞吐量；③ <strong>成本指标</strong>：每次对话token消耗、API调用次数、日均费用；④ <strong>质量指标</strong>：幻觉率、工具调用成功率、拒答率。</p>
+    <p>技术实现：langchain4j的ChatModelListener/ToolListener监听各环节事件，上报到Prometheus+Grafana看板。token消耗和费用从API response的usage字段提取。日志记录完整Thought/Action/Observation链路用于debug和审计。设置告警：延迟超阈值、错误率飙升、日费用超预算。</p>
+  </div>
+  <div class="interview-tip">说"项目用Micrometer+Prometheus监控，Grafana看板展示实时token消耗和费用，日均成本控制在XX元内"，展示成本意识。</div>
+</div>
+
+<!-- ==================== 六、工具生态/视野类 ==================== -->
+<h3>六、工具生态/视野类 <span class="difficulty">展示广度 ⭐⭐</span></h3>
+
+<!-- Q32 -->
+<div class="interview-q">
+  <div class="question">32. 你还关注哪些Agent框架？</div>
+  <div class="interview-answer">
+    <p>持续关注的框架：① <strong>LangGraph</strong>（LangChain团队出品）：用图结构定义Agent流程，节点是函数/LLM调用，边是条件路由。适合复杂多Agent编排，比LangChain的AgentExecutor更可控；② <strong>CrewAI</strong>：Python多Agent框架，定义Crew（团队）、Agent（角色）、Task（任务），简洁易用，适合快速原型；③ <strong>Claude Code / Cursor</strong>：AI编程Agent，展示Agent在垂直领域的落地；④ <strong>AutoGen</strong>（微软）：多Agent对话框架，Agent之间可以对话协作；⑤ <strong>langchain4j</strong>：Java生态的Agent框架，我们项目在用。</p>
+    <p>关注方式：GitHub trending、论文arxiv、Twitter/X上关注作者、实际跑demo体验。不追新但保持敏感，判断哪些值得深入。</p>
+  </div>
+  <div class="interview-tip">说"LangGraph的图结构编排思路对我影响很大，我在langchain4j项目里也借鉴了显式DAG定义"，展示跨界学习能力。</div>
+</div>
+
+<!-- Q33 -->
+<div class="interview-q">
+  <div class="question">33. MCP是什么？为什么重要？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>MCP（Model Context Protocol）是Anthropic提出的开放协议，标准化LLM与外部工具/数据源的连接。类比：MCP之于AI Agent，就像USB之于电脑——统一的接口标准，让任何LLM能连任何工具，不用每个模型每个工具单独写适配。</p>
+    <p>核心概念：MCP Server暴露工具（Tools）、资源（Resources）、提示模板（Prompts），MCP Client（如Claude Desktop）连接Server自动发现可用能力。协议基于JSON-RPC，支持stdio和HTTP+SSE两种传输。</p>
+    <p>为什么重要：① <strong>标准化</strong>：工具写一次，所有支持MCP的客户端都能用；② <strong>解耦</strong>：LLM和工具独立演进；③ <strong>生态</strong>：社区共享MCP Server，避免重复造轮子。OpenAI、Google也在跟进，MCP可能成为Agent工具生态的统一标准。</p>
+  </div>
+  <div class="interview-tip">说"MCP可能成为Agent时代的HTTP——协议层标准化后，生态会爆发式增长"，展示前瞻视野。</div>
+</div>
+
+<!-- Q34 -->
+<div class="interview-q">
+  <div class="question">34. Dify/Coze这些低代码平台和代码框架是什么关系？</div>
+  <div class="interview-answer">
+    <p>低代码平台（Dify/Coze/百炼）和代码框架（langchain4j/LangChain）是不同层次的工具：低代码平台提供可视化拖拽编排，预置常用组件（LLM/检索/工具/条件分支），快速搭建Agent/RAG应用，适合非技术人员或快速验证。代码框架提供完整编程能力，灵活度高，适合复杂定制和企业级生产。</p>
+    <p>关系定位：低代码平台适合<strong>原型验证和简单场景</strong>，验证想法后用代码框架做<strong>生产级实现</strong>。低代码平台的底层也是类似LangChain的框架，只是封装了可视化界面。</p>
+    <p>选择建议：简单FAQ客服用Dify够了，复杂多Agent协作+定制工具+企业集成用代码框架。两者不矛盾，可以先用低代码验证效果，再代码实现生产版本。</p>
+  </div>
+  <div class="interview-tip">说"我用Dify快速验证了客服Agent的可行性，确认效果后用langchain4j做生产部署，低代码+代码是互补不是对立"，展示务实态度。</div>
+</div>
+
+<!-- Q35 -->
+<div class="interview-q">
+  <div class="question">35. 如果重新选技术栈你会怎么选？</div>
+  <div class="interview-answer">
+    <p>基于项目经验，重新选的考量：① <strong>语言</strong>：仍是Java团队就选langchain4j，如果团队Python能力强选LangChain/LangGraph（生态更成熟）；② <strong>模型</strong>：国内场景优先国产模型（GLM/DeepSeek/Qwen），成本低、合规、中文好；③ <strong>向量库</strong>：中小规模用PGVector（和PostgreSQL一体，运维简单），大规模用Milvus（性能好）；④ <strong>编排</strong>：简单场景用langchain4j原生，复杂多Agent用LangGraph（如果可以混用Python）。</p>
+    <p>核心原则：技术栈服务于业务需求，不追新不追热。选成熟稳定的、团队熟悉的、社区活跃的。Agent技术迭代快，架构要留够灵活性，模型/向量库/框架都应该是可替换的。</p>
+  </div>
+  <div class="interview-tip">强调"架构层面做好抽象，模型/向量库/框架可插拔替换，这样技术迭代时不用推倒重来"，展示架构思维。</div>
+</div>
+
+<!-- ==================== 七、项目经验类 ==================== -->
+<h3>七、项目经验类 <span class="difficulty">实战验证 ⭐⭐⭐</span></h3>
+
+<div class="note">项目经验是面试的核心区分度。回答要用STAR结构（Situation-Task-Action-Result），有数据有细节有反思。</div>
+
+<!-- Q36 -->
+<div class="interview-q">
+  <div class="question">36. 介绍一下你的客服助手项目（3分钟版） <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p><strong>背景</strong>：公司客服日均咨询量大，人工客服响应慢、成本高，且夜间无人值守。需要智能客服自动处理常见问题，复杂问题转人工。</p>
+    <p><strong>方案</strong>：基于langchain4j开发智能客服Agent，核心架构：RAG知识库（产品文档+FAQ+工单历史）+ Function Calling工具（查订单/查物流/创建工单/转人工）+ 多轮对话记忆。技术栈：Spring Boot + langchain4j + GLM-4 + Milvus + Redis + MySQL。</p>
+    <p><strong>实现</strong>：离线用DocumentSplitter分块+bge-large-zh embedding建索引；在线用混合检索（向量+BM25）+Cross-Encoder重排+LLM生成。Prompt工程做意图分类和回答约束，加幻觉检测和兜底转人工策略。用Resilience4j做熔断降级，Micrometer监控全链路。</p>
+    <p><strong>成果</strong>：上线后自动解决率约XX%，平均响应时间从分钟级降到秒级，用户满意度提升XX%，日均节省人工成本约XX元。（<em>待补充具体数据</em>）</p>
+  </div>
+  <div class="interview-tip">3分钟版要精炼：背景1句、方案3句、技术栈1句、成果2句。准备1分钟版和5分钟版应对不同场景，面试官追问再展开细节。</div>
+</div>
+
+<!-- Q37 -->
+<div class="interview-q">
+  <div class="question">37. 项目中最大的挑战是什么？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>最大挑战是<strong>回答准确率和稳定性的平衡</strong>。初期直接用LLM+RAG，准确率不理想且不稳定——同样的问题不同时间回答不一致，有时幻觉编造不存在的政策，有时工具调用错误。</p>
+    <p>解决过程：① <strong>幻觉问题</strong>：加Prompt约束（"仅根据检索到的信息回答，不确定就说不知道"）+ 检索相关度阈值（低于0.7直接拒答转人工）+ 关键事实后校验；② <strong>不稳定问题</strong>：temperature降到0.3 + 固定system prompt + 缓存高频问题答案；③ <strong>工具误调</strong>：优化工具描述（加when to use/when NOT to use）+ 工具调用前做意图二次确认；④ <strong>持续优化</strong>：建评估集定期回归，bad case分析迭代Prompt和检索策略。</p>
+    <p>体会：Agent开发不是"调通就行"，持续调优和工程保障才是真正的挑战。</p>
+  </div>
+  <div class="interview-tip">讲挑战要展示"发现问题→分析原因→解决→验证"的完整闭环，不要只说问题不说怎么解决的。有数据更好。</div>
+</div>
+
+<!-- Q38 -->
+<div class="interview-q">
+  <div class="question">38. 客服助手的准确率怎么样？怎么评估的？ <span class="tag tag-hot">高频</span> <span class="tag tag-mid">[预留位]</span></div>
+  <div class="interview-answer">
+    <p>评估方法：① <strong>离线评估</strong>：构建500条标注QA集（含常见问题、边界case、对抗case），用RAGAS框架计算Faithfulness（忠实度）、Answer Relevancy（答案相关性）、Context Precision（上下文精度）三个指标；② <strong>在线评估</strong>：用户反馈点赞/点踩 + 转人工率 + 会话完成率；③ <strong>人工抽检</strong>：每天抽50条对话人工评分（1-5分），跟踪质量趋势。</p>
+    <p>当前指标：离线准确率约XX%，在线用户满意度约XX%，转人工率约XX%。（<em>待补充具体数据</em>）</p>
+    <p>评估的坑：标注集要有代表性（不能全是简单问题），要定期更新（业务变化后旧case可能失效），离线指标和在线体验可能有gap（要两者结合看）。</p>
+  </div>
+  <div class="interview-tip">说"评估体系比Agent本身更重要——没有评估就没有优化方向"，展示对ML工程化的理解。补充具体数据后更有说服力。</div>
+</div>
+
+<!-- Q39 -->
+<div class="interview-q">
+  <div class="question">39. 遇到幻觉怎么处理的？</div>
+  <div class="interview-answer">
+    <p>项目中幻觉处理的三道防线：① <strong>预防</strong>——RAG检索提供事实基础 + Prompt约束"仅根据以下信息回答，如果信息不足以回答请说'我需要帮您转接人工客服'" + temperature=0.3降低随机性；② <strong>检测</strong>——检索相关度低于0.7触发拒答 + 关键实体校验（回答中提到的产品名/政策名在知识库中是否存在）+ 置信度评估（让LLM自评回答的确定程度）；③ <strong>兜底</strong>——检测到疑似幻觉时转人工 + 记录case用于后续优化。</p>
+    <p>实际效果：三道防线后幻觉率从初期的约X%降到X%。（<em>待补充具体数据</em>）核心思路是"宁可说不知道也不要说错"，对客服场景来说错误信息的代价远大于转人工。</p>
+  </div>
+  <div class="interview-tip">强调"客服场景下幻觉的代价远高于转人工，所以策略偏保守——不确定就转人工"，展示业务理解。</div>
+</div>
+
+<!-- Q40 -->
+<div class="interview-q">
+  <div class="question">40. 知识库怎么更新的？ <span class="tag tag-mid">[预留位]</span></div>
+  <div class="interview-answer">
+    <p>知识库更新机制：① <strong>全量重建</strong>：每周凌晨定时全量重新分块+embedding+建索引，保证数据一致性。用蓝绿切换——新索引建好后原子切换，不停服；② <strong>增量更新</strong>：业务系统知识库变更时发Kafka消息，Agent服务消费消息增量更新向量索引（新增/删除/修改对应文档）；③ <strong>手动触发</strong>：管理后台提供手动重建入口，紧急修改后即时生效。</p>
+    <p>技术细节：Milvus支持upsert操作做增量更新。分块策略要保持一致（同一文档更新后分块数可能变化，要先删旧chunk再加新chunk）。更新频率约每天增量+每周全量。（<em>待补充具体数据</em>）</p>
+  </div>
+  <div class="interview-tip">说"知识库更新是RAG系统运维的重点，要保证更新时检索不中断、更新后索引一致"，展示运维意识。</div>
+</div>
+
+<!-- Q41 -->
+<div class="interview-q">
+  <div class="question">41. 并发量多少？怎么保证性能？ <span class="tag tag-mid">[预留位]</span></div>
+  <div class="interview-answer">
+    <p>性能保障措施：① <strong>异步非阻塞</strong>：用Spring WebFlux + 响应式编程，LLM调用是异步的，不阻塞线程；② <strong>连接池</strong>：Milvus连接池、HTTP客户端连接池复用连接；③ <strong>缓存</strong>：高频问题答案缓存到Redis（TTL 30分钟），相似问题embedding缓存减少embedding API调用；④ <strong>限流</strong>：令牌桶限流保护LLM API不超QPS限制；⑤ <strong>水平扩展</strong>：无状态设计，按需扩Pod。</p>
+    <p>当前性能：日均约XXXX次对话，峰值QPS约XX，平均响应时间约X秒（含LLM生成时间）。（<em>待补充具体数据</em>）瓶颈在LLM API延迟，通过流式输出（SSE）让用户感知更快。</p>
+  </div>
+  <div class="interview-tip">说"LLM API是性能瓶颈，用流式输出改善用户体感+缓存减少调用次数"，展示性能优化思路。补充具体QPS数据。</div>
+</div>
+
+<!-- Q42 -->
+<div class="interview-q">
+  <div class="question">42. 如果重新做你会怎么改进？</div>
+  <div class="interview-answer">
+    <p>几个方向的改进：① <strong>架构</strong>：引入显式意图分类层（小模型/规则做意图路由），不同意图走不同处理链路，而非全靠LLM决策，提升可控性和性能；② <strong>RAG</strong>：加HyDE做query改写、引入多路召回（向量+BM25+知识图谱）、做query-aware的动态分块；③ <strong>评估</strong>：建立更完善的在线评估Pipeline，自动收集bad case聚类分析，形成"发现→分析→优化→验证"闭环；④ <strong>多模态</strong>：支持图片输入（用户截图报错，Agent识别+处理）；⑤ <strong>Agent能力</strong>：加Planning能力处理复杂多步问题（如"帮我退货并退款"需要多个工具协作）。</p>
+    <p>核心反思：第一版过于依赖LLM的自主决策，工程可控性不足。重新做会更注重"Workflow+Agent"的平衡——关键路径用Workflow保证可靠，灵活环节用Agent增加智能。</p>
+  </div>
+  <div class="interview-tip">改进建议要具体可落地，不要说"用更好的模型"这种废话。展示"反思→改进"的能力比完美方案更打动面试官。</div>
+</div>
+
+<!-- ==================== 八、开放题/软技能类 ==================== -->
+<h3>八、开放题/软技能类 <span class="difficulty">⭐</span></h3>
+
+<!-- Q43 -->
+<div class="interview-q">
+  <div class="question">43. 你为什么想从Java后端转Agent开发？</div>
+  <div class="interview-answer">
+    <p>三个原因：① <strong>技术趋势</strong>：AI Agent是下一代软件交互范式，从"人适应软件"到"软件适应人"，这个方向有巨大的增量空间。4年Java经验让我有扎实的工程基础，转Agent开发不是抛弃存量而是用存量做增量；② <strong>能力匹配</strong>：Agent开发不只是调LLM API，还需要后端工程能力——系统设计、并发处理、可靠性保障、监控运维，这些正是Java后端的强项。纯AI背景的人往往缺工程化能力，Java转Agent反而有独特优势；③ <strong>个人兴趣</strong>：对AI技术有持续热情，业余学习LLM原理、跑开源模型、做side project，转方向是水到渠成而非临时起意。</p>
+  </div>
+  <div class="interview-tip">核心信息："不是逃离Java，而是用Java优势做Agent增量"。避免说"Java卷不动了"这种负面理由，要展示主动选择而非被动逃避。</div>
+</div>
+
+<!-- Q44 -->
+<div class="interview-q">
+  <div class="question">44. 你觉得Java后端经验对Agent开发有什么帮助？</div>
+  <div class="interview-answer">
+    <p>Java后端经验在Agent开发的多个环节都有直接价值：① <strong>系统工程</strong>：Agent是后端系统，需要API设计、数据库、缓存、消息队列、微服务——这些是Java后端的核心技能，纯AI背景的人往往不具备；② <strong>可靠性工程</strong>：错误处理、降级熔断、限流、监控告警——Agent系统同样需要，Java生态有成熟方案（Resilience4j、Micrometer）；③ <strong>并发与性能</strong>：Agent服务面对并发请求，线程池、异步编程、连接池优化是Java后端的日常；④ <strong>企业集成</strong>：Agent要和现有企业系统集成（CRM、ERP、DB），Java/Spring生态集成能力最强；⑤ <strong>代码质量</strong>：类型安全、设计模式、测试习惯，对维护大型Agent系统很重要。</p>
+    <p>一句话：AI科学家做Demo，工程师做产品。Java后端经验让我能把Agent从Demo做到生产。</p>
+  </div>
+  <div class="interview-tip">金句"AI科学家做Demo，工程师做产品"很打动面试官。强调"工程化能力是Agent落地的稀缺能力"。</div>
+</div>
+
+<!-- Q45 -->
+<div class="interview-q">
+  <div class="question">45. 你平时怎么学习AI新技术的？</div>
+  <div class="interview-answer">
+    <p>学习方法分三层：① <strong>信息源</strong>：arxiv（论文）、GitHub trending（开源项目）、Twitter/X关注AI领域KOL（Andrej Karpathy、Yann LeCun等）、Hugging Face（模型动态）、公众号/博客（中文社区）；② <strong>学习方式</strong>：论文精读（先看abstract+conclusion，感兴趣再细读method）→ 跑开源项目（clone下来跑demo，改参数理解原理）→ 做side project（用新技术解决真实问题，哪怕是小工具）；③ <strong>深度</strong>：对关键概念不只看"是什么"还要理解"为什么"——比如看Transformer不只记住attention公式，还理解为什么用QKV、为什么除以√d_k。</p>
+    <p>时间分配：每周约5-8小时业余学习，保持持续但不burnout。原则是"广度扫描+深度实践"——广泛了解趋势，选择有潜力的方向深入实践。</p>
+  </div>
+  <div class="interview-tip">展示真实的学习路径和项目经验，不要说"看论文"就完了。提到具体的side project更有说服力。</div>
+</div>
+
+<!-- Q46 -->
+<div class="interview-q">
+  <div class="question">46. 对Agent开发的未来怎么看？</div>
+  <div class="interview-answer">
+    <p>三个判断：① <strong>短期（1-2年）</strong>：Agent在垂直场景落地（客服、编程、数据分析、运维），RAG+Function Calling是主流模式，多Agent协作开始成熟。关键是可靠性提升——从"能跑"到"能稳定跑"；② <strong>中期（3-5年）</strong>：Agent成为软件交互的标准范式，就像移动互联网之于PC互联网。MCP等标准协议成熟，Agent生态爆发。长上下文+多模态+工具调用融合，Agent能力大幅提升；③ <strong>长期</strong>：Agent可能重构软件开发本身——AI写AI，人类更多做架构和监督。但Agent不会取代工程师，而是放大工程师的能力，"会用Agent的工程师"淘汰"不会用Agent的工程师"。</p>
+    <p>我的定位：做"懂工程的Agent开发者"，在技术变革期用工程能力把握增量机会。</p>
+  </div>
+  <div class="interview-tip">展示有判断力而非盲目乐观，说"短期谨慎中期乐观"，并落到自己的定位上——面试官想看的是你的思考而非预测本身。</div>
+</div>
+
+<!-- ==================== 重点回顾 ==================== -->
+<div class="review-card">
+  <ul>
+    <li><strong>面试核心策略：</strong>先给结论→再展开原理→最后联系项目经验，3句话内回答"是什么"</li>
+    <li><strong>Java基础类：</strong>验证存量深度，简洁有力不啰嗦，7题覆盖并发/JVM/Spring/DB/MQ五大领域</li>
+    <li><strong>LLM基础类：</strong>验证转行诚意，Transformer/Token/Temperature/幻觉/Function Calling是必答题</li>
+    <li><strong>Agent核心类：</strong>核心区分度，ReAct/工具选择/多Agent/Workflow vs Agent要能画图能举例</li>
+    <li><strong>RAG类：</strong>项目相关必问，完整流程/分块/混合检索/Reranking/排查要有实战经验支撑</li>
+    <li><strong>工程化类：</strong>技术深度展示，langchain4j原理/错误处理/监控成本体现工程化能力</li>
+    <li><strong>项目经验类：</strong>用STAR结构讲，有数据有细节有反思，3分钟版+1分钟版+5分钟版准备</li>
+    <li><strong>开放题类：</strong>展示动机和学习力，"不是逃离Java而是用Java优势做Agent增量"</li>
+    <li><strong>预留位题目：</strong>框架性回答已给出，面试前务必补充具体数据（准确率/QPS/成本等）</li>
+    <li><strong>通用加分项：</strong>画图能力、类比思维、数据驱动、成本意识、前瞻视野——每道题都可以展示</li>
+  </ul>
+</div>
+
+<!-- ==================== 章节导航 ==================== -->
+<div class="chapter-nav">
+  <a href="12-project-packaging.html" class="prev">← 项目经验包装与表达</a>
+  <a href="index.html" class="next">回到首页 →</a>
+</div>
+
+</main>
+<script>
+(function(){
+  var btn = document.getElementById("sidebarToggle");
+  var body = document.body;
+  try { if(localStorage.getItem("sb")==="0") body.classList.add("sidebar-collapsed"); } catch(e){}
+  function update(){ btn.textContent = body.classList.contains("sidebar-collapsed") ? "▶" : "◀"; }
+  btn.addEventListener("click", function(){
+    body.classList.toggle("sidebar-collapsed");
+    try { localStorage.setItem("sb", body.classList.contains("sidebar-collapsed")?"0":"1"); } catch(e){}
+    update();
+  });
+  update();
+})();
+</script>
+</body>
+</html>

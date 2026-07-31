@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent核心概念 · AI Agent面试宝典</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="sidebarToggle" class="sidebar-toggle" title="收起/展开菜单">◀</button>
+  <!-- ===== 侧边栏 ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1>AI Agent 面试宝典</h1>
+      <p>Java后端 -> AI Agent 转行指南</p>
+    </div>
+    <nav>
+      <a href="index.html"><span class="num">00</span>首页</a>
+      <a href="01-java-foundation.html"><span class="num">01</span>Java后端核心复习</a>
+      <a href="02-middleware.html"><span class="num">02</span>常用中间件</a>
+      <a href="03-llm-foundation.html"><span class="num">03</span>LLM大模型基础</a>
+      <a href="04-prompt-engineering.html"><span class="num">04</span>Prompt工程</a>
+      <a href="05-langchain4j.html"><span class="num">05</span>LangChain4j框架详解</a>
+      <a href="06-agent-core.html" class="active"><span class="num">06</span>Agent核心概念</a>
+      <a href="07-rag.html"><span class="num">07</span>RAG检索增强生成</a>
+      <a href="08-vector-db.html"><span class="num">08</span>向量数据库与Embedding</a>
+      <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
+      <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
+      <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
+      <a href="12-project-packaging.html"><span class="num">12</span>项目经验包装与表达</a>
+      <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
+      <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
+      <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
+      <a href="16-spring-ai.html"><span class="num">16</span>Spring AI对比</a>
+      <a href="17-agent-security.html"><span class="num">17</span>Agent安全</a>
+  </nav>
+  </aside>
+
+  <!-- ===== 主内容 ===== -->
+  <main class="main">
+    <!-- 章节标题 -->
+    <header class="chapter-header">
+      <span class="chapter-num">CHAPTER 06</span>
+      <h2>Agent核心概念</h2>
+      <div class="goal">
+        <strong>🎯 学习目标：</strong>理解Agent的本质（感知->决策->行动->观察的自主系统），掌握ReAct、Planning、Tool Use、Multi-Agent协作等核心机制，能用Java工程师熟悉的概念类比讲清楚Agent与传统chatbot/workflow的区别，从容应对转行面试的核心问题。
+      </div>
+    </header>
+
+    <p class="one-liner">Agent不是"会聊天的机器人"，而是"会自己决定做什么、调用什么工具、并根据结果调整下一步"的自主系统——它的核心是<strong>决策循环</strong>，而不是对话能力。</p>
+
+    <!-- ===================== 1. 什么是Agent ===================== -->
+    <h3>1. 什么是Agent <span class="difficulty">★★★★★ 必考</span></h3>
+
+    <p>很多人把Agent和Chatbot混为一谈，这是面试中最常见的认知误区。面试官问"什么是Agent"，本质是在考察你对<strong>自主决策</strong>这一核心特征的理解。</p>
+
+    <p><strong>Agent的本质定义</strong>：Agent是一个以LLM为大脑、通过<strong>感知->决策->行动->观察</strong>循环自主完成任务的系统。它不只是回答问题，而是<strong>主动决定做什么</strong>。具体来说，Agent接收用户输入或环境状态（感知），LLM推理出该做什么、用什么工具（决策），调用工具/API执行具体操作（行动），获取执行结果并判断是否继续循环（观察）。这个循环会持续进行，直到LLM判断任务完成。</p>
+
+    <p><strong>Agent vs Chatbot vs Workflow的核心区别</strong>在于<strong>决策由谁做</strong>。Chatbot无决策能力——用户问什么，LLM直接用自身知识回答，遇到不知道的就开始"编"（幻觉），因为它没有获取外部真实信息的手段。Workflow的决策由开发者预先编排——A->B->C->D的执行路径在代码里写死，LLM只在每个节点"填空"（比如A节点让LLM做摘要，B节点让LLM做分类），路径不会因中间结果改变。Agent的决策由LLM动态完成——它根据当前上下文和上一步结果，自主决定下一步调什么工具、是否继续循环、何时结束。这带来灵活性，但也带来不可控性。</p>
+
+    <div class="concept-card">
+      <h4>Agent的核心能力：感知-决策-行动-观察循环</h4>
+      <ul>
+        <li><strong>感知（Perceive）</strong>：接收用户输入或环境状态（如工具返回结果）</li>
+        <li><strong>决策（Reason）</strong>：LLM推理该做什么、用什么工具、传什么参数</li>
+        <li><strong>行动（Act）</strong>：调用工具/API执行具体操作（查库、调接口、发邮件）</li>
+        <li><strong>观察（Observe）</strong>：获取执行结果，判断是否完成任务、是否继续循环</li>
+      </ul>
+      <p>这四步循环是所有Agent的执行骨架，ReAct、Plan-and-Execute等模式都是在这个骨架上的变体。</p>
+    </div>
+
+    <div class="java-analogy">Agent ≈ Spring MVC Controller + Service层自动编排 + 外部API调用。Controller接收请求，但不像传统Controller那样写死调用链，而是把"该调哪个Service"这个决策权交给LLM；Service层也不再是固定方法栈，而是LLM根据上下文动态选择工具组合。可以把Agent理解为一个<strong>"方法调用栈由LLM实时决定"</strong>的Service编排器——传统Controller的方法调用链是编译期确定的，Agent的方法调用链是运行时由LLM决定的。</div>
+
+    <h4>Chatbot vs Agent vs Workflow</h4>
+    <p>三者最容易混淆，面试官经常追问。核心区别在于<strong>决策由谁做</strong>：</p>
+
+    <div class="diagram">
+      <svg viewBox="0 0 900 260" xmlns="http://www.w3.org/2000/svg">
+        <!-- Chatbot -->
+        <rect x="20" y="20" width="270" height="220" rx="10" fill="#f8f9fa" stroke="#e0e0e0" stroke-width="2"/>
+        <text x="155" y="50" text-anchor="middle" font-size="16" font-weight="700" fill="#1565c0">Chatbot（聊天机器人）</text>
+        <rect x="50" y="70" width="210" height="40" rx="6" fill="#e3f2fd"/>
+        <text x="155" y="95" text-anchor="middle" font-size="13" fill="#1565c0">用户提问 -> LLM -> 回答</text>
+        <text x="155" y="135" text-anchor="middle" font-size="12" fill="#555">无外部工具</text>
+        <text x="155" y="160" text-anchor="middle" font-size="12" fill="#555">无决策能力，只靠模型知识</text>
+        <text x="155" y="185" text-anchor="middle" font-size="12" fill="#555">遇到不知道就"编"（幻觉）</text>
+        <text x="155" y="220" text-anchor="middle" font-size="12" fill="#999" font-style="italic">例：ChatGPT原始形态</text>
+
+        <!-- Agent -->
+        <rect x="315" y="20" width="270" height="220" rx="10" fill="#e8f5e9" stroke="#4caf50" stroke-width="2"/>
+        <text x="450" y="50" text-anchor="middle" font-size="16" font-weight="700" fill="#2e7d32">Agent（智能体）</text>
+        <rect x="345" y="70" width="210" height="40" rx="6" fill="#c8e6c9"/>
+        <text x="450" y="95" text-anchor="middle" font-size="13" fill="#2e7d32">用户提问 -> LLM决策 -> 工具循环</text>
+        <text x="450" y="135" text-anchor="middle" font-size="12" fill="#555">LLM动态决定调用哪个工具</text>
+        <text x="450" y="160" text-anchor="middle" font-size="12" fill="#555">循环执行，自主调整路径</text>
+        <text x="450" y="185" text-anchor="middle" font-size="12" fill="#555">能获取真实信息，避免幻觉</text>
+        <text x="450" y="220" text-anchor="middle" font-size="12" fill="#999" font-style="italic">例：AutoGPT、客服Agent</text>
+
+        <!-- Workflow -->
+        <rect x="610" y="20" width="270" height="220" rx="10" fill="#fff3e0" stroke="#ff6f00" stroke-width="2"/>
+        <text x="745" y="50" text-anchor="middle" font-size="16" font-weight="700" fill="#ed6c02">Workflow（工作流）</text>
+        <rect x="640" y="70" width="210" height="40" rx="6" fill="#ffe0b2"/>
+        <text x="745" y="95" text-anchor="middle" font-size="13" fill="#ed6c02">固定链路：A -> B -> C -> D</text>
+        <text x="745" y="135" text-anchor="middle" font-size="12" fill="#555">路径预先编排，LLM只填空</text>
+        <text x="745" y="160" text-anchor="middle" font-size="12" fill="#555">可控性强，但灵活性低</text>
+        <text x="745" y="185" text-anchor="middle" font-size="12" fill="#555">路径不因中间结果改变</text>
+        <text x="745" y="220" text-anchor="middle" font-size="12" fill="#999" font-style="italic">例：固定Prompt流水线</text>
+      </svg>
+      <div class="caption">图6-1 Chatbot / Agent / Workflow 核心差异对比</div>
+    </div>
+
+    <table class="compare-table">
+      <thead>
+        <tr><th>维度</th><th>Chatbot</th><th>Agent</th><th>Workflow</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>决策者</td><td>无决策，直接回答</td><td>LLM动态决策</td><td>开发者预先编排</td></tr>
+        <tr><td>工具调用</td><td>❌ 不调用</td><td>✅ 按需调用</td><td>✅ 固定顺序调用</td></tr>
+        <tr><td>执行路径</td><td>单轮</td><td>多轮循环</td><td>固定链路</td></tr>
+        <tr><td>可控性</td><td>高</td><td>较低（需Guardrail）</td><td>最高</td></tr>
+        <tr><td>灵活性</td><td>低</td><td>最高</td><td>中</td></tr>
+        <tr><td>幻觉风险</td><td>高（无外部信息源）</td><td>低（能查真实数据）</td><td>低（可控流程）</td></tr>
+        <tr><td>适用场景</td><td>闲聊、问答</td><td>复杂任务、探索性任务</td><td>确定流程的批处理</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ===================== 2. ReAct模式 ===================== -->
+    <h3>2. ReAct模式 (Reasoning + Acting) <span class="difficulty">★★★★★ 必考</span></h3>
+
+    <p>ReAct是Agent最核心的执行范式，几乎所有的Agent框架都基于它。<strong>"ReAct"</strong> = Reasoning（推理）+ Acting（行动），由Yao等人2022年提出，核心思想是让LLM<strong>边想边做边看</strong>。</p>
+
+    <p><strong>ReAct为什么有效</strong>：如果直接让LLM调用工具（不先推理），LLM经常盲目调用——用户问"帮我查下北京天气顺便推荐穿什么"，不推理的LLM可能直接调getWeather，拿到天气后再调getClothingRecommendation，但它没有先想"这个问题需要两步：先查天气，再根据天气推荐穿搭"。ReAct强制LLM在每次行动前先输出一段自然语言推理（Thought），这段推理帮助LLM理清思路、避免盲目调工具、也方便人类调试时看到LLM的"思考过程"。</p>
+
+    <p><strong>循环机制</strong>：Think->Act->Observe->Think->Act->Observe...直到LLM在Think阶段判断"任务已完成，可以输出最终答案"，循环终止。框架通常设置<code>maxIterations</code>（如10次）防止死循环——如果LLM一直调工具但始终无法完成任务，到上限就强制终止并返回当前结果。这个参数是Agent工程化的必配项。</p>
+
+    <div class="one-liner">ReAct = "我想想该做什么 -> 我去做 -> 我看看结果 -> 我再想想"——一个不断循环的决策过程，直到任务完成。</div>
+
+    <div class="diagram">
+      <svg viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/svg">
+        <!-- Think -->
+        <ellipse cx="360" cy="60" rx="100" ry="40" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+        <text x="360" y="56" text-anchor="middle" font-size="16" font-weight="700" fill="#1565c0">Think 思考</text>
+        <text x="360" y="76" text-anchor="middle" font-size="11" fill="#555">该做什么？用什么工具？</text>
+        <text x="360" y="92" text-anchor="middle" font-size="10" fill="#999">输出自然语言推理</text>
+
+        <!-- Act -->
+        <ellipse cx="560" cy="190" rx="100" ry="40" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>
+        <text x="560" y="186" text-anchor="middle" font-size="16" font-weight="700" fill="#2e7d32">Act 行动</text>
+        <text x="560" y="206" text-anchor="middle" font-size="11" fill="#555">调用选中的工具/API</text>
+        <text x="560" y="222" text-anchor="middle" font-size="10" fill="#999">ToolExecutionRequest</text>
+
+        <!-- Observe -->
+        <ellipse cx="360" cy="320" rx="100" ry="40" fill="#fff3e0" stroke="#ed6c02" stroke-width="2"/>
+        <text x="360" y="316" text-anchor="middle" font-size="16" font-weight="700" fill="#ed6c02">Observe 观察</text>
+        <text x="360" y="336" text-anchor="middle" font-size="11" fill="#555">拿到工具返回的结果</text>
+        <text x="360" y="352" text-anchor="middle" font-size="10" fill="#999">ToolExecutionResult</text>
+
+        <!-- Think again -->
+        <ellipse cx="160" cy="190" rx="100" ry="40" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2"/>
+        <text x="160" y="186" text-anchor="middle" font-size="16" font-weight="700" fill="#7b1fa2">Think 再思考</text>
+        <text x="160" y="206" text-anchor="middle" font-size="11" fill="#555">完成了吗？还需要做什么？</text>
+        <text x="160" y="222" text-anchor="middle" font-size="10" fill="#999">判断是否输出最终答案</text>
+
+        <!-- Arrows -->
+        <path d="M 440 80 Q 510 110 520 160" fill="none" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+        <path d="M 530 225 Q 480 260 430 285" fill="none" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+        <path d="M 290 310 Q 220 260 210 225" fill="none" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+        <path d="M 190 150 Q 240 110 290 80" fill="none" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+        <!-- exit arrow -->
+        <path d="M 60 190 Q 30 190 20 190" fill="none" stroke="#999" stroke-width="2" stroke-dasharray="5,4" marker-end="url(#arrow-gray)"/>
+        <text x="50" y="175" font-size="12" fill="#2e7d32" font-weight="bold">完成</text>
+        <text x="50" y="210" font-size="10" fill="#999">输出最终答案</text>
+
+        <!-- maxIterations -->
+        <text x="360" y="370" text-anchor="middle" font-size="11" fill="#d32f2f">⚠ 循环上限 maxIterations 防死循环（通常设10）</text>
+
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M0,0 L6,4 L0,8 z" fill="#555"/>
+          </marker>
+          <marker id="arrow-gray" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M0,0 L6,4 L0,8 z" fill="#999"/>
+          </marker>
+        </defs>
+      </svg>
+      <div class="caption">图6-2 ReAct循环：Think -> Act -> Observe -> Think（继续或结束）。强制先推理再行动，避免盲目调工具。</div>
+    </div>
+
+    <p>这个循环会一直进行，直到LLM判断<strong>任务已完成</strong>（输出Finish）或达到<strong>最大迭代次数</strong>上限。这就是为什么Agent需要设置maxIterations参数——防止它陷入死循环。</p>
+
+    <div class="code-block">
+      <span class="lang">Java · langchain4j ReAct Agent</span>
+<pre><span class="cmt">// langchain4j 对ReAct的封装：AiServices + Tools</span>
+<span class="kw">interface</span> <span class="fn">CustomerServiceAgent</span> {
+    @SystemMessage(<span class="str">"你是一个智能客服助手，可以查询订单、物流、退换货。"</span>
+            + <span class="str">"请先想清楚需要调用哪些工具，再执行。"</span>)
+    String <span class="fn">chat</span>(@UserMessage String userMessage);
+}
+
+<span class="cmt">// 定义Agent可用的工具——LLM会根据description自主决定是否调用</span>
+<span class="kw">class</span> <span class="fn">OrderTools</span> {
+    @Tool(<span class="str">"根据订单号查询订单状态，返回订单当前所在环节和预计送达时间"</span>)
+    <span class="kw">public</span> String <span class="fn">queryOrder</span>(@P(<span class="str">"订单号"</span>) String orderId) {
+        <span class="kw">return</span> orderService.getStatus(orderId);  <span class="cmt">// 实际查库</span>
+    }
+
+    @Tool(<span class="str">"根据订单号查询物流轨迹，返回最近3条物流信息"</span>)
+    <span class="kw">public</span> String <span class="fn">queryLogistics</span>(@P(<span class="str">"订单号"</span>) String orderId) {
+        <span class="kw">return</span> logisticsService.getTrack(orderId);
+    }
+}
+
+<span class="cmt">// 组装Agent——框架底层就是ReAct循环</span>
+CustomerServiceAgent agent = AiServices.builder(CustomerServiceAgent.<span class="kw">class</span>)
+    .chatLanguageModel(model)
+    .tools(<span class="kw">new</span> OrderTools())
+    .build();
+
+<span class="cmt">// 用户问"我的订单20230801到哪了"——Agent会自己想：</span>
+<span class="cmt">// Think 1: 需要先查订单状态</span>
+<span class="cmt">// Act 1:   调用 queryOrder("20230801")</span>
+<span class="cmt">// Observe 1: 拿到订单状态=已发货</span>
+<span class="cmt">// Think 2: 已发货，那就查物流</span>
+<span class="cmt">// Act 2:   调用 queryLogistics("20230801")</span>
+<span class="cmt">// Observe 2: 物流轨迹...</span>
+<span class="cmt">// Think 3: 信息齐全，可以回答用户了 -> 输出最终答案</span>
+String answer = agent.chat(<span class="str">"我的订单20230801到哪了"</span>);</pre>
+    </div>
+
+    <div class="warn">很多面试者只会背概念，但说不清"Think具体在想什么"。Think阶段LLM输出的是一段<strong>自然语言推理</strong>（"我需要先查订单状态..."），框架解析这段推理后决定调用哪个工具。description写不好，LLM就会在Think阶段选错工具。</div>
+
+    <!-- ===================== 3. Planning ===================== -->
+    <h3>3. Planning（任务规划） <span class="difficulty">★★★★☆</span></h3>
+
+    <p>复杂任务单步ReAct可能走偏——LLM边走边想，容易在某个分支钻牛角尖，或者走了十步才发现方向错了。Planning让Agent<strong>先拆解再执行</strong>，像项目经理一样先排期再干活。</p>
+
+    <p><strong>Agent如何分解复杂任务</strong>：用户说"帮我分析竞品并出一份报告"，单步ReAct的LLM可能上来就调搜索工具，搜一个竞品就开始写报告，写到一半发现信息不全又回去搜——效率低且容易遗漏。有Planning能力的Agent会先输出一个任务分解：1.搜索竞品名单获取3家主要竞品 -> 2.对每家竞品分别搜索产品特性、定价 -> 3.汇总对比生成报告大纲 -> 4.按大纲撰写报告输出。然后逐个执行子任务，每个子任务内部仍是ReAct循环，Planning只是把"大目标"切成"小目标序列"。</p>
+
+    <p><strong>两种范式的本质区别</strong>：ReAct是<strong>边走边想</strong>——每一步都根据上一步结果现场决定，灵活但容易跑偏、token消耗大（每步都要推理）。Plan-and-Execute是<strong>先规划后执行</strong>——Planner角色一次性生成完整计划，Executor角色逐个执行，结构清晰、可并行子任务，但规划固化、难应对突发情况（计划生成时没预料到的信息）。实际工程中常混合使用：先Plan出骨架，每个子任务内部用ReAct灵活执行。</p>
+
+    <h4>Plan-and-Execute vs ReAct 两种范式</h4>
+    <table class="compare-table">
+      <thead>
+        <tr><th>维度</th><th>ReAct</th><th>Plan-and-Execute</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>规划时机</td><td>边走边想，不预先规划</td><td>先一次性规划，再逐个执行</td></tr>
+        <tr><td>结构</td><td>单循环：Think-Act-Observe</td><td>Planner + Executor 双角色</td></tr>
+        <tr><td>优点</td><td>灵活、能根据中间结果调整</td><td>结构清晰、可并行子任务、token省</td></tr>
+        <tr><td>缺点</td><td>容易跑偏、token消耗大</td><td>规划固化、难应对突发情况</td></tr>
+        <tr><td>适用</td><td>探索性、步骤不确定的任务</td><td>流程相对固定的复杂任务</td></tr>
+      </tbody>
+    </table>
+
+    <div class="java-analogy">Planning ≈ 工作流引擎（Camunda/Activiti）的BPMN任务分解。Camunda里你画一张流程图，引擎按节点推进；Plan-and-Execute就是让LLM<strong>动态画出这张流程图</strong>再执行——Planner生成计划相当于生成BPMN定义，Executor按节点推进。ReAct则更像事件驱动——没有预定义流程，每一步都根据上一步结果现场决定，类似复杂事件处理（CEP）。</div>
+
+    <!-- ===================== 4. Tool Use ===================== -->
+    <h3>4. Tool Use（工具使用） <span class="difficulty">★★★★★ 必考</span></h3>
+
+    <p>Tool Use是Agent区别于Chatbot的<strong>根本能力</strong>。没有工具，Agent就退化成Chatbot。Function Calling是Tool Use在OpenAI API层的实现方式，现已成为各家模型的标准能力。</p>
+
+    <p><strong>Function Calling完整流程</strong>：①开发者用<code>@Tool</code>注解定义工具方法，框架把方法名、description、参数Schema转成JSON Schema发给LLM；②用户提问，LLM分析问题语义，根据每个工具的description决定是否调用工具、调哪个、传什么参数；③LLM输出一个结构化的<code>ToolExecutionRequest</code>（包含工具名+参数JSON），而不是直接输出自然语言；④框架解析请求，用反射调用对应的Java方法；⑤方法执行结果作为<code>ToolExecutionResult</code>回传给LLM；⑥LLM基于工具结果生成最终自然语言回答，或继续调用下一个工具（循环）。</p>
+
+    <p><strong>LLM如何选择正确的工具</strong>：核心靠<strong>工具的description</strong>。LLM看不到你的Java代码，它只读每个工具的描述字符串和参数描述，根据用户问题的语义匹配最合适的工具。这就像用户在API网关上看每个微服务的接口文档来决定调哪个API——description就是工具的"接口文档"。描述写得模糊或不全，LLM就会选错或漏选。</p>
+
+    <div class="diagram">
+      <svg viewBox="0 0 900 280" xmlns="http://www.w3.org/2000/svg">
+        <!-- User -->
+        <rect x="20" y="120" width="120" height="50" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+        <text x="80" y="145" text-anchor="middle" font-size="13" font-weight="600" fill="#1565c0">用户提问</text>
+        <text x="80" y="162" text-anchor="middle" font-size="10" fill="#555">"查订单20230801"</text>
+
+        <!-- LLM -->
+        <rect x="200" y="110" width="130" height="70" rx="8" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2"/>
+        <text x="265" y="138" text-anchor="middle" font-size="13" font-weight="600" fill="#7b1fa2">LLM分析</text>
+        <text x="265" y="155" text-anchor="middle" font-size="11" fill="#555">读description</text>
+        <text x="265" y="170" text-anchor="middle" font-size="11" fill="#555">语义匹配选工具</text>
+
+        <!-- Select Tool -->
+        <rect x="390" y="120" width="120" height="50" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>
+        <text x="450" y="145" text-anchor="middle" font-size="13" font-weight="600" fill="#2e7d32">选择Tool</text>
+        <text x="450" y="162" text-anchor="middle" font-size="10" fill="#555">输出ToolExecutionRequest</text>
+
+        <!-- Execute -->
+        <rect x="560" y="120" width="120" height="50" rx="8" fill="#fff3e0" stroke="#ed6c02" stroke-width="2"/>
+        <text x="620" y="145" text-anchor="middle" font-size="13" font-weight="600" fill="#ed6c02">执行Tool</text>
+        <text x="620" y="162" text-anchor="middle" font-size="10" fill="#555">反射调用Java方法</text>
+
+        <!-- Return -->
+        <rect x="730" y="50" width="140" height="50" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+        <text x="800" y="75" text-anchor="middle" font-size="13" font-weight="600" fill="#1565c0">返回结果</text>
+        <text x="800" y="92" text-anchor="middle" font-size="10" fill="#555">ToolExecutionResult</text>
+
+        <!-- LLM整合 -->
+        <rect x="730" y="200" width="140" height="50" rx="8" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2"/>
+        <text x="800" y="225" text-anchor="middle" font-size="13" font-weight="600" fill="#7b1fa2">LLM整合</text>
+        <text x="800" y="242" text-anchor="middle" font-size="10" fill="#555">基于结果生成回答</text>
+
+        <!-- 回答用户 -->
+        <rect x="560" y="200" width="120" height="50" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+        <text x="620" y="225" text-anchor="middle" font-size="13" font-weight="600" fill="#1565c0">回答用户</text>
+        <text x="620" y="242" text-anchor="middle" font-size="10" fill="#555">自然语言输出</text>
+
+        <!-- arrows -->
+        <path d="M 140 145 L 195 145" fill="none" stroke="#555" stroke-width="2" marker-end="url(#ar)"/>
+        <path d="M 330 145 L 385 145" fill="none" stroke="#555" stroke-width="2" marker-end="url(#ar)"/>
+        <path d="M 510 145 L 555 145" fill="none" stroke="#555" stroke-width="2" marker-end="url(#ar)"/>
+        <path d="M 680 130 L 800 100" fill="none" stroke="#555" stroke-width="2" marker-end="url(#ar)"/>
+        <path d="M 800 195 L 800 180" fill="none" stroke="#555" stroke-width="2" marker-end="url(#ar)"/>
+        <path d="M 730 225 L 685 225" fill="none" stroke="#555" stroke-width="2" marker-end="url(#ar)"/>
+
+        <!-- 循环标注 -->
+        <text x="730" y="155" text-anchor="middle" font-size="10" fill="#d32f2f">可能继续调Tool(循环)</text>
+
+        <defs>
+          <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M0,0 L6,4 L0,8 z" fill="#555"/>
+          </marker>
+        </defs>
+      </svg>
+      <div class="caption">图6-3 Function Calling完整流程：用户提问 -> LLM分析(读description) -> 选Tool -> 执行 -> 返回 -> LLM整合 -> 回答（可循环）</div>
+    </div>
+
+    <h4>好的 description vs 差的 description</h4>
+
+    <p>description是LLM选工具的<strong>唯一依据</strong>。LLM没有"调用代码"的能力，它只是读了每个工具的description，根据用户问题语义匹配最合适的工具。</p>
+
+    <div class="warn">description写得模糊或不全，LLM就会选错工具或不调用。比如"查询订单"和"查询订单状态"是两个不同的工具——如果description都只写"查询订单"，LLM根本分不清。建议：description要写清<strong>输入什么、输出什么、什么场景该用</strong>。</div>
+
+    <div class="code-block">
+      <span class="lang">Java · 工具描述的最佳实践</span>
+<pre><span class="cmt">// ❌ 差的description——LLM容易选错</span>
+@Tool(<span class="str">"查询订单"</span>)
+<span class="kw">public</span> String <span class="fn">queryOrder</span>(String orderId) { ... }
+
+<span class="cmt">// ✅ 好的description——输入、输出、场景都讲清楚</span>
+@Tool(<span class="str">"根据订单号查询订单状态，返回订单当前环节（待付款/已发货/已签收）"</span>
+    + <span class="str">"和预计送达时间。当用户询问'我的订单到哪了'、'订单状态'时使用。"</span>)
+<span class="kw">public</span> String <span class="fn">queryOrder</span>(@P(<span class="str">"订单号，纯数字，如20230801"</span>) String orderId) { ... }</pre>
+    </div>
+
+    <h4>多工具编排</h4>
+    <p>实际项目会有5-20个工具。LLM通过<strong>ReAct循环</strong>自主编排多个工具的调用顺序。比如"帮我查订单20230801的状态，顺便看看能不能退"：</p>
+    <ul>
+      <li>Think 1：需要先查订单状态 -> 调 queryOrder</li>
+      <li>Observe 1：已签收</li>
+      <li>Think 2：已签收的要看退换货政策 -> 调 queryReturnPolicy</li>
+      <li>Observe 2：7天无理由</li>
+      <li>Think 3：综合回答用户</li>
+    </ul>
+    <p>这种"按需串联"就是多工具编排的本质——<strong>没有硬编码调用顺序</strong>，全靠LLM根据上下文决定。这也是Agent比固定Workflow灵活的根本原因。</p>
+
+    <!-- ===================== 5. Multi-Agent ===================== -->
+    <h3>5. Multi-Agent协作 <span class="difficulty">★★★☆☆</span></h3>
+
+    <p>单个Agent能力有限——工具太多description会互相干扰，上下文太长LLM容易"忘记"前面的任务。复杂任务常拆给多个Agent协作，每个Agent专注一个领域，工具集小、上下文聚焦、准确率更高。这是当下Agent工程化的热门方向。</p>
+
+    <p><strong>三种主流协作模式</strong>各有适用场景：<strong>Supervisor-Worker</strong>（主管-工人）有一个中心Supervisor Agent负责任务拆解和分发，多个Worker Agent各司其职执行子任务，结果汇总回Supervisor整合。这是工程中最常用的模式——职责清晰、可控性强、好调试。<strong>Pipeline</strong>（流水线）是Agent串联——A的输出是B的输入，B的输出是C的输入，像工厂流水线。适合步骤固定但每步都需要LLM智能的任务。<strong>Router</strong>（路由器）是一个Router Agent根据输入分类，路由到对应的专家Agent——类似API网关的请求分发。</p>
+
+    <div class="diagram">
+      <svg viewBox="0 0 900 320" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="ar_m" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M0,0 L6,4 L0,8 z" fill="#555"/>
+          </marker>
+        </defs>
+
+        <!-- Supervisor-Worker -->
+        <text x="150" y="20" text-anchor="middle" font-size="13" font-weight="bold" fill="#1565c0">① Supervisor-Worker</text>
+        <rect x="100" y="35" width="100" height="40" rx="6" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+        <text x="150" y="60" text-anchor="middle" font-size="11" fill="#1565c0" font-weight="bold">Supervisor</text>
+        <rect x="40" y="120" width="80" height="35" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+        <text x="80" y="142" text-anchor="middle" font-size="10" fill="#2e7d32">Worker A</text>
+        <rect x="130" y="120" width="80" height="35" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+        <text x="170" y="142" text-anchor="middle" font-size="10" fill="#2e7d32">Worker B</text>
+        <rect x="220" y="120" width="80" height="35" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+        <text x="260" y="142" text-anchor="middle" font-size="10" fill="#2e7d32">Worker C</text>
+        <line x1="120" y1="75" x2="80" y2="118" stroke="#555" stroke-width="1.5" marker-end="url(#ar_m)"/>
+        <line x1="150" y1="75" x2="170" y2="118" stroke="#555" stroke-width="1.5" marker-end="url(#ar_m)"/>
+        <line x1="180" y1="75" x2="260" y2="118" stroke="#555" stroke-width="1.5" marker-end="url(#ar_m)"/>
+        <path d="M 80 155 L 120 200 L 150 200" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#ar_m)"/>
+        <path d="M 170 155 L 150 200" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#ar_m)"/>
+        <path d="M 260 155 L 180 200 L 150 200" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#ar_m)"/>
+        <text x="150" y="220" text-anchor="middle" font-size="10" fill="#555">结果汇总回Supervisor整合</text>
+        <text x="150" y="240" text-anchor="middle" font-size="9" fill="#999">例：客服Supervisor分发到</text>
+        <text x="150" y="255" text-anchor="middle" font-size="9" fill="#999">订单/物流/退款专家Agent</text>
+        <text x="150" y="280" text-anchor="middle" font-size="10" fill="#2e7d32" font-weight="bold">✓ 工程常用，可控性强</text>
+
+        <!-- Pipeline -->
+        <text x="500" y="20" text-anchor="middle" font-size="13" font-weight="bold" fill="#ff6f00">② Pipeline 流水线</text>
+        <rect x="380" y="60" width="70" height="40" rx="6" fill="#fff3e0" stroke="#ff6f00" stroke-width="2"/>
+        <text x="415" y="85" text-anchor="middle" font-size="10" fill="#ff6f00" font-weight="bold">Agent A</text>
+        <rect x="465" y="60" width="70" height="40" rx="6" fill="#fff3e0" stroke="#ff6f00" stroke-width="2"/>
+        <text x="500" y="85" text-anchor="middle" font-size="10" fill="#ff6f00" font-weight="bold">Agent B</text>
+        <rect x="550" y="60" width="70" height="40" rx="6" fill="#fff3e0" stroke="#ff6f00" stroke-width="2"/>
+        <text x="585" y="85" text-anchor="middle" font-size="10" fill="#ff6f00" font-weight="bold">Agent C</text>
+        <line x1="450" y1="80" x2="463" y2="80" stroke="#555" stroke-width="2" marker-end="url(#ar_m)"/>
+        <line x1="535" y1="80" x2="548" y2="80" stroke="#555" stroke-width="2" marker-end="url(#ar_m)"/>
+        <text x="415" y="120" text-anchor="middle" font-size="9" fill="#555">搜索</text>
+        <text x="500" y="120" text-anchor="middle" font-size="9" fill="#555">分析</text>
+        <text x="585" y="120" text-anchor="middle" font-size="9" fill="#555">写报告</text>
+        <text x="500" y="160" text-anchor="middle" font-size="10" fill="#555">A输出是B输入，串联执行</text>
+        <text x="500" y="180" text-anchor="middle" font-size="9" fill="#999">例：搜索Agent -> 分析Agent -> 报告Agent</text>
+        <text x="500" y="210" text-anchor="middle" font-size="10" fill="#555">步骤固定，每步需LLM智能</text>
+        <text x="500" y="240" text-anchor="middle" font-size="10" fill="#ff6f00" font-weight="bold">✓ 适合固定多步流程</text>
+
+        <!-- Router -->
+        <text x="780" y="20" text-anchor="middle" font-size="13" font-weight="bold" fill="#7b1fa2">③ Router 路由</text>
+        <rect x="730" y="35" width="100" height="40" rx="6" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2"/>
+        <text x="780" y="60" text-anchor="middle" font-size="11" fill="#7b1fa2" font-weight="bold">Router</text>
+        <rect x="670" y="120" width="75" height="35" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+        <text x="707" y="142" text-anchor="middle" font-size="9" fill="#2e7d32">订单专家</text>
+        <rect x="755" y="120" width="75" height="35" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+        <text x="792" y="142" text-anchor="middle" font-size="9" fill="#2e7d32">物流专家</text>
+        <rect x="840" y="120" width="75" height="35" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+        <text x="877" y="142" text-anchor="middle" font-size="9" fill="#2e7d32">退款专家</text>
+        <line x1="755" y1="75" x2="710" y2="118" stroke="#555" stroke-width="1.5" marker-end="url(#ar_m)"/>
+        <line x1="780" y1="75" x2="792" y2="118" stroke="#555" stroke-width="1.5" marker-end="url(#ar_m)"/>
+        <line x1="805" y1="75" x2="877" y2="118" stroke="#555" stroke-width="1.5" marker-end="url(#ar_m)"/>
+        <text x="780" y="180" text-anchor="middle" font-size="10" fill="#555">按意图分类，路由到专家</text>
+        <text x="780" y="200" text-anchor="middle" font-size="9" fill="#999">类似API网关请求分发</text>
+        <text x="780" y="230" text-anchor="middle" font-size="10" fill="#7b1fa2" font-weight="bold">✓ 适合意图分类场景</text>
+      </svg>
+      <div class="caption">图6-4 三种Multi-Agent协作模式对比：Supervisor-Worker / Pipeline / Router</div>
+    </div>
+
+    <div class="java-analogy">Multi-Agent ≈ 微服务架构中的服务编排。<strong>Supervisor-Worker</strong>就是<strong>API网关 + 后端微服务</strong>模式——网关（Supervisor）做路由分发，各微服务（Worker）独立处理。<strong>Pipeline</strong>像消息驱动的事件链——Kafka里topic A的消费者处理完发到topic B。<strong>Router</strong>就是纯粹的API网关路由——根据请求路径分发到不同后端。区别在于：微服务用代码做路由，Multi-Agent用LLM做路由决策。</div>
+
+    <div class="note">工程经验：Supervisor-Worker最常用因为可控——Supervisor能看到所有Worker的状态，可以兜底。Pipeline适合步骤明确的分析类任务。Router适合意图分类明确的客服场景。Peer-to-Peer（无中心节点，Agent互调）灵活但难调试，实际工程中很少用。</div>
+
+    <!-- ===================== 6. Agent vs Chain vs Workflow ===================== -->
+    <h3>6. Agent vs Chain vs Workflow <span class="difficulty">★★★★☆</span></h3>
+
+    <p>面试官最爱问的"选择题"：<strong>什么场景该用Agent，什么场景该用固定Workflow？</strong>答错会显得你对工程化没有判断力。</p>
+
+    <p><strong>判断标准是"流程能否穷举"</strong>。如果业务流程是确定的、步骤可以枚举（比如"用户提交订单->校验库存->扣款->生成发货单"），用Workflow——路径写死、可控性强、好调试、成本低、出问题能精确定位是哪个节点。如果任务开放性强、路径无法预先知道（比如"帮我研究一下竞品并给建议"），用Agent——靠LLM动态决策，灵活但路径不固定、调试难、成本高（每次都调LLM做决策）。</p>
+
+    <p><strong>实际工程的最佳实践是混合用</strong>：90%的企业场景用<strong>Workflow + 少量Agent节点</strong>就够了——主干用Workflow保证可控，少数需要灵活决策的节点嵌一个Agent。比如客服流程：识别意图（Workflow固定节点）-> 分发到对应处理逻辑（Router）-> 处理逻辑中用Agent综合多工具结果（Agent节点）-> 格式化输出（Workflow固定节点）。不要为了"看起来高级"而滥用纯Agent方案——成本高、不稳定、难维护。</p>
+
+    <table class="compare-table">
+      <thead>
+        <tr><th>维度</th><th>Agent</th><th>Chain（链）</th><th>Workflow（工作流）</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>决策方式</td><td>LLM每步动态决策</td><td>固定节点串联</td><td>支持分支/循环的固定图</td></tr>
+        <tr><td>灵活性</td><td>最高</td><td>低</td><td>中</td></tr>
+        <tr><td>可控性</td><td>最低</td><td>高</td><td>较高</td></tr>
+        <tr><td>开发成本</td><td>低（描述工具即可）</td><td>中</td><td>高（画流程图）</td></tr>
+        <tr><td>调试难度</td><td>高（路径不固定）</td><td>低</td><td>中</td></tr>
+        <tr><td>成本（每次）</td><td>高（LLM做决策）</td><td>低</td><td>中</td></tr>
+        <tr><td>适用</td><td>开放性、探索性任务</td><td>确定步骤的串联</td><td>有分支条件的多步流程</td></tr>
+      </tbody>
+    </table>
+
+    <div class="java-analogy">Agent ≈ 动态代理（Dynamic Proxy），运行时才决定调用哪个方法；Workflow ≈ Template Method模式，父类定好骨架、子类填空；Chain ≈ 责任链模式（Chain of Responsibility），一个节点处理完传给下一个。选哪个？<strong>业务流程能枚举完就用Workflow，流程无法穷举就上Agent</strong>。这不是技术优劣，是适用场景不同。</div>
+
+    <div class="warn">工程经验之谈：90%的企业场景其实用<strong>Workflow + 少量Agent节点</strong>就够了——固定流程部分用Workflow保可控，少数需要灵活决策的节点嵌一个Agent。纯Agent方案成本高、不稳定，不要为了"看起来高级"而滥用。面试时强调这个观点，立刻显得你做过真实项目、知道成本和稳定性取舍。</div>
+
+    <!-- ===================== 面试问答 ===================== -->
+    <h3>面试场景演练</h3>
+
+    <div class="interview-q">
+      <div class="question">Q1：什么是Agent，和普通chatbot有什么区别？</div>
+      <div class="interview-answer">
+        <p>Agent是一个以LLM为大脑、能通过<strong>感知->决策->行动->观察</strong>循环自主完成任务的系统。它和Chatbot的核心区别在于<strong>决策能力</strong>：Chatbot只能用模型自身知识回答，遇到不知道的就会"编"（幻觉）；Agent能在推理后<strong>主动调用外部工具</strong>（查库、调API）来获取真实信息，再基于结果回答。</p>
+        <p>举个客服例子：用户问"订单20230801到哪了"，Chatbot只能猜，Agent会调用queryOrder工具查真实状态再回答。本质上Agent多了一个"行动层"——能跟外部世界交互。</p>
+      </div>
+      <div class="interview-tip">用Java类比打高分会：Agent ≈ Controller + LLM动态编排的Service + 外部API，决策权从硬编码转移到了LLM。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">Q2：ReAct模式是什么，画一下流程？为什么有效？</div>
+      <div class="interview-answer">
+        <p>ReAct = Reasoning + Acting，核心是<strong>Think -> Act -> Observe</strong>的循环。LLM先推理该做什么（Think），再调用工具执行（Act），拿到结果观察（Observe），然后再次Think判断是否完成——循环直到输出最终答案。</p>
+        <p><strong>为什么有效</strong>：强制LLM在行动前先输出自然语言推理，帮助理清思路、避免盲目调工具。比如"查天气顺便推荐穿搭"，不推理的LLM可能直接调getWeather但忘了后续要推荐穿搭；ReAct的Think阶段会输出"需要两步：先查天气，再根据天气推荐穿搭"，思路清晰。</p>
+        <p>比如"查订单状态"：Think 1（要查订单）-> Act（调queryOrder）-> Observe（已发货）-> Think 2（要查物流）-> Act（调queryLogistics）-> Observe（轨迹）-> Think 3（信息齐全，回答用户）。</p>
+      </div>
+      <div class="interview-tip">能在白板/纸上现场画出Think-Act-Observe循环图是加分项；提到maxIterations防死循环更体现工程意识。说"先推理再行动避免盲目调工具"展示你理解Why。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">Q3：Agent怎么决定调用哪个工具？</div>
+      <div class="interview-answer">
+        <p>靠<strong>工具的description</strong>。LLM读每个工具的描述（"这个工具做什么、输入什么、什么场景用"），把用户问题的语义和description做匹配，选最合适的工具。所以description写得好坏直接决定Agent准不准——描述模糊，LLM就会选错或漏选。</p>
+        <p>实践上：description要包含<strong>功能 + 输入参数含义 + 触发场景</strong>，参数也要用@P注明含义。不能只写"查询订单"，要写"根据订单号查状态，返回环节和预计送达，当用户问订单到哪了时使用"。</p>
+        <p>差的description："查询订单"——LLM无法区分是查状态、查物流还是查详情。好的description：写清功能+输入+输出+触发场景。</p>
+      </div>
+      <div class="interview-tip">举一个"差description vs 好description"的对比例子，立刻显得有实战经验。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">Q4：多Agent协作有哪些模式？你的项目用的哪种？</div>
+      <div class="interview-answer">
+        <p>主要有三种：<strong>Supervisor-Worker</strong>（主管-工人），一个Supervisor负责任务拆解和分发，多个Worker各司其职执行，结果汇总回Supervisor整合；<strong>Pipeline</strong>（流水线），Agent串联执行，A输出是B输入；<strong>Router</strong>（路由），按意图分类路由到专家Agent。</p>
+        <p>工程上Supervisor-Worker最常用，因为可控——Supervisor能看到所有Worker状态，可以兜底。Pipeline适合步骤固定的分析类任务。Router适合意图分类明确的客服场景。</p>
+        <p>我做的客服系统就是Supervisor-Worker——Supervisor识别意图后分发给订单Agent、物流Agent、退款Agent，结果汇总后整合回答。</p>
+      </div>
+      <div class="interview-tip">类比微服务：Supervisor-Worker = API网关+微服务；Pipeline = 消息事件链；Router = API网关路由。类比一出来工程理解力立显。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">Q5：Agent和固定Workflow什么时候用哪个？</div>
+      <div class="interview-answer">
+        <p>看<strong>流程能否穷举</strong>。业务流程确定、步骤可枚举——用Workflow，可控性强、好调试、成本低；任务开放性强、路径无法预先知道——用Agent，靠LLM动态决策。类比Java：Agent像动态代理运行时决定调谁，Workflow像Template Method骨架预先定好。</p>
+        <p>实际工程里最佳实践是<strong>混合用</strong>：主干用Workflow保证可控，少数需要灵活的节点嵌Agent。比如客服流程主干是固定的（识别意图->分发->回答），但"回答"这步可以用Agent综合多工具结果。</p>
+      </div>
+      <div class="interview-tip">强调"不要为了高级而滥用Agent"——这体现你做过真实项目、知道成本和稳定性取舍。说"90%场景用Workflow+Agent节点就够了"非常加分。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">Q6：Planning和ReAct有什么区别？什么场景用Planning？</div>
+      <div class="interview-answer">
+        <p>ReAct是<strong>边走边想</strong>——每步都根据上一步结果现场决定，灵活但容易跑偏、token消耗大。Planning（Plan-and-Execute）是<strong>先规划后执行</strong>——Planner角色一次性生成完整计划，Executor角色逐个执行子任务，结构清晰、可并行，但规划固化、难应对突发情况。</p>
+        <p>类比：ReAct像事件驱动（CEP），每步现场决策；Planning像工作流引擎（Camunda），先画流程图再执行。</p>
+        <p>Planning适合流程相对固定的复杂任务——比如"分析竞品出报告"，步骤可以预先拆解（搜竞品->搜特性->对比->写报告）。ReAct适合探索性、步骤不确定的任务——比如"帮我查这个问题怎么解决"，走一步看一步。</p>
+      </div>
+      <div class="interview-tip">能说出"先规划后执行 vs 边走边想"和各自适用场景，说明你理解了两种范式的本质。提"实际常混合用：Plan出骨架，每步内部ReAct"更显示工程判断。</div>
+    </div>
+
+    <!-- ===================== 重点回顾 ===================== -->
+    <div class="review-card">
+      <ul>
+        <li>Agent = 感知->决策->行动->观察的自主系统，核心是<strong>LLM动态决策</strong>，不是"会聊天"。能调用工具获取真实信息，避免幻觉</li>
+        <li>Chatbot无工具（只会说）、Agent有工具且自主调用（会做事）、Workflow路径预先编排（可控但不灵活）——三者区别在<strong>决策权归谁</strong></li>
+        <li>ReAct = Think->Act->Observe循环，强制先推理再行动避免盲目调工具。需配maxIterations（通常10）防死循环</li>
+        <li>Planning：ReAct边走边想（灵活但易跑偏）vs Plan-and-Execute先规划后执行（结构清晰但固化）。类比Camunda工作流引擎</li>
+        <li>Tool Use靠<strong>description</strong>选工具——描述要含功能+输入+输出+触发场景，写不好就选错。多工具编排靠ReAct循环，无硬编码调用顺序</li>
+        <li>Function Calling流程：注册工具Schema->LLM输出ToolExecutionRequest->框架反射执行->结果回传->LLM整合（可循环）</li>
+        <li>Multi-Agent三种模式：Supervisor-Worker（工程常用，可控）、Pipeline（流水线串联）、Router（意图分类路由）。类比微服务编排</li>
+        <li>选型原则：流程能穷举用Workflow，开放任务用Agent，最佳实践是主干Workflow+节点Agent混合（90%场景够用）</li>
+      </ul>
+    </div>
+
+    <!-- 章节导航 -->
+    <nav class="chapter-nav">
+      <a class="prev" href="05-langchain4j.html">← 上一章：LangChain4j框架详解</a>
+      <a class="next" href="07-rag.html">下一章：RAG检索增强生成 →</a>
+    </nav>
+  </main>
+<script>
+(function(){
+  var btn = document.getElementById("sidebarToggle");
+  var body = document.body;
+  try { if(localStorage.getItem("sb")==="0") body.classList.add("sidebar-collapsed"); } catch(e){}
+  function update(){ btn.textContent = body.classList.contains("sidebar-collapsed") ? "▶" : "◀"; }
+  btn.addEventListener("click", function(){
+    body.classList.toggle("sidebar-collapsed");
+    try { localStorage.setItem("sb", body.classList.contains("sidebar-collapsed")?"0":"1"); } catch(e){}
+    update();
+  });
+  update();
+})();
+</script>
+</body>
+</html>

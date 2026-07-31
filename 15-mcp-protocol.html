@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCP协议深度 · AI Agent面试宝典</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="sidebarToggle" class="sidebar-toggle" title="收起/展开菜单">◀</button>
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1>AI Agent 面试宝典</h1>
+      <p>Java后端 → AI Agent 转行指南</p>
+    </div>
+    <nav>
+      <a href="index.html"><span class="num">00</span>首页</a>
+      <a href="01-java-foundation.html"><span class="num">01</span>Java后端核心复习</a>
+      <a href="02-middleware.html"><span class="num">02</span>常用中间件</a>
+      <a href="03-llm-foundation.html"><span class="num">03</span>LLM大模型基础</a>
+      <a href="04-prompt-engineering.html"><span class="num">04</span>Prompt工程</a>
+      <a href="05-langchain4j.html"><span class="num">05</span>LangChain4j框架详解</a>
+      <a href="06-agent-core.html"><span class="num">06</span>Agent核心概念</a>
+      <a href="07-rag.html"><span class="num">07</span>RAG检索增强生成</a>
+      <a href="08-vector-db.html"><span class="num">08</span>向量数据库与Embedding</a>
+      <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
+      <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
+      <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
+      <a href="12-project-packaging.html"><span class="num">12</span>项目经验：mall-agent</a>
+      <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
+      <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
+      <a href="15-mcp-protocol.html" class="active"><span class="num">15</span>MCP协议深度</a>
+  </nav>
+  </aside>
+
+  <main class="main">
+    <header class="chapter-header">
+      <span class="chapter-num">专题</span>
+      <h2>MCP协议深度 <span class="tag tag-hot">必考</span></h2>
+      <div class="goal">
+        <strong>🎯 学习目标：</strong>掌握MCP（Model Context Protocol）协议原理、Client-Server架构、Transport层（SSE/stdio）、Tools/Resources/Prompts三大核心概念、Java实现MCP客户端（SSE+JSON-RPC）、mall-agent中的MCP实战集成，能在面试中清晰阐述MCP的设计理念和工程价值。
+      </div>
+    </header>
+
+    <p class="one-liner">MCP是AI领域的"USB-C接口"——定义了一套统一的工具调用协议，让任何AI应用都能用同样的方式调用任何工具，不用为每个工具写定制适配代码。</p>
+
+    <!-- ===================== 1. MCP是什么 ===================== -->
+    <h3>1. MCP是什么 <span class="difficulty">★★★★★ 必考</span></h3>
+
+    <p>MCP（Model Context Protocol）是Anthropic于2024年底提出的<strong>标准化AI工具调用协议</strong>。它解决的问题非常具体：每个AI框架都自己定义工具接口格式，导致工具无法跨框架复用——你在langchain4j里写好的工具，Spring AI用不了，Python LangChain也用不了。</p>
+
+    <div class="concept-card">
+      <h4>MCP解决的核心问题</h4>
+      <p>在没有MCP之前，集成一个外部工具需要：1）理解那个工具的API文档（每个工具格式不同）；2）写适配代码（把工具API包装成框架要求的格式）；3）处理认证、重试、错误。如果要用10个工具，就要写10份适配代码。</p>
+      <p>有了MCP之后：1）MCP Server按统一协议暴露工具；2）MCP Client按统一协议发现和调用工具；3）任何框架只要实现MCP Client，就能调用所有MCP Server的工具。<strong>工具提供方和AI应用解耦</strong>——就像USB-C让所有设备用同一个接口充电一样。</p>
+    </div>
+
+    <div class="diagram">
+      <svg viewBox="0 0 850 350" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="am" markerWidth="8" markerHeight="8" refX="6" refY="2" orient="auto">
+            <path d="M0,0 L6,2 L0,4 Z" fill="#1565c0"/>
+          </marker>
+        </defs>
+        <text x="425" y="20" text-anchor="middle" font-size="14" font-weight="700" fill="#1565c0">MCP：统一工具调用协议</text>
+
+        <!-- 上层：AI应用 -->
+        <rect x="100" y="40" width="650" height="50" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+        <text x="425" y="65" text-anchor="middle" font-size="13" font-weight="600" fill="#1565c0">AI应用层</text>
+        <text x="425" y="82" text-anchor="middle" font-size="10" fill="#555">Claude Code | Cursor | langchain4j Agent | Spring AI Agent | 自定义Agent</text>
+
+        <!-- 中间：MCP协议层 -->
+        <rect x="200" y="110" width="450" height="40" rx="8" fill="#fff3e0" stroke="#ff6f00" stroke-width="2"/>
+        <text x="425" y="135" text-anchor="middle" font-size="13" font-weight="600" fill="#ff6f00">MCP协议层（标准化接口）</text>
+
+        <!-- 箭头 -->
+        <line x1="425" y1="90" x2="425" y2="108" stroke="#1565c0" stroke-width="2" marker-end="url(#am)"/>
+        <line x1="425" y1="150" x2="425" y2="168" stroke="#1565c0" stroke-width="2" marker-end="url(#am)"/>
+
+        <!-- 下层：工具服务 -->
+        <rect x="100" y="170" width="650" height="80" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>
+        <text x="425" y="195" text-anchor="middle" font-size="13" font-weight="600" fill="#2e7d32">MCP Server（工具提供方）</text>
+
+        <rect x="120" y="210" width="140" height="30" rx="4" fill="#c8e6c9"/>
+        <text x="190" y="230" text-anchor="middle" font-size="10" fill="#2e7d32">订单查询Server</text>
+
+        <rect x="280" y="210" width="140" height="30" rx="4" fill="#c8e6c9"/>
+        <text x="350" y="230" text-anchor="middle" font-size="10" fill="#2e7d32">知识库Server</text>
+
+        <rect x="440" y="210" width="140" height="30" rx="4" fill="#c8e6c9"/>
+        <text x="510" y="230" text-anchor="middle" font-size="10" fill="#2e7d32">支付Server</text>
+
+        <rect x="600" y="210" width="130" height="30" rx="4" fill="#c8e6c9"/>
+        <text x="665" y="230" text-anchor="middle" font-size="10" fill="#2e7d32">邮件Server</text>
+
+        <!-- 无MCP对比 -->
+        <line x1="20" y1="270" x2="830" y2="270" stroke="#ccc" stroke-width="1" stroke-dasharray="4,2"/>
+        <text x="425" y="290" text-anchor="middle" font-size="11" fill="#d32f2f">❌ 没有MCP时：每个AI应用需要为每个工具写定制适配代码 → N×M种组合</text>
+        <text x="425" y="310" text-anchor="middle" font-size="11" fill="#2e7d32">✅ 有了MCP时：AI应用实现MCP Client → 所有MCP Server工具自动可用 → N+M种组合</text>
+        <text x="425" y="335" text-anchor="middle" font-size="10" fill="#999">类比：USB-C之前每种设备需要专用充电线，USB-C之后一根线充所有设备</text>
+      </svg>
+      <div class="caption">MCP = AI工具调用的"USB-C标准"：统一接口，解耦工具提供方和AI应用</div>
+    </div>
+
+    <!-- ===================== 2. MCP架构 ===================== -->
+    <h3>2. MCP架构：Client-Server模型 <span class="difficulty">★★★★☆</span></h3>
+
+    <p>MCP采用经典的<strong>Client-Server架构</strong>，通过JSON-RPC 2.0进行通信。一个MCP Server可以同时被多个MCP Client连接，一个Client也可以连接多个Server。</p>
+
+    <div class="concept-card">
+      <h4>MCP架构三要素</h4>
+      <ul>
+        <li><strong>MCP Host</strong>：发起连接的AI应用（如Claude Desktop、Cursor、你的Agent）。它管理多个MCP Client实例，每个Client连接一个Server。</li>
+        <li><strong>MCP Client</strong>：协议客户端，负责与一个Server建立连接、发送请求、接收响应。一个Host可以有多个Client。</li>
+        <li><strong>MCP Server</strong>：协议服务端，暴露Tools/Resources/Prompts。一个Server可以同时服务多个Client。</li>
+      </ul>
+    </div>
+
+    <h4>Transport层：SSE vs stdio</h4>
+
+    <table class="compare-table">
+      <tr><th>Transport</th><th>通信方式</th><th>适用场景</th><th>mall-agent使用</th></tr>
+      <tr><td>SSE（Server-Sent Events）</td><td>HTTP长连接：GET /sse建立连接，POST /mcp/message发送JSON-RPC请求</td><td>远程Server，跨网络通信</td><td>✅ mall-agent连接远程mall-mcp-server</td></tr>
+      <tr><td>stdio</td><td>标准输入输出：启动子进程，通过stdin/stdout通信</td><td>本地Server，同机进程通信</td><td>—</td></tr>
+    </table>
+
+    <div class="code-block">
+      <span class="lang">MCP JSON-RPC请求/响应格式</span>
+<pre><span class="cmt">// 请求：列出所有工具</span>
+<span class="kw">POST</span> /mcp/message
+Content-Type: application/json
+
+{
+  <span class="str">"jsonrpc"</span>: <span class="str">"2.0"</span>,
+  <span class="str">"id"</span>: <span class="num">1</span>,
+  <span class="str">"method"</span>: <span class="str">"tools/list"</span>,
+  <span class="str">"params"</span>: {}
+}
+
+<span class="cmt">// 响应</span>
+{
+  <span class="str">"jsonrpc"</span>: <span class="str">"2.0"</span>,
+  <span class="str">"id"</span>: <span class="num">1</span>,
+  <span class="str">"result"</span>: {
+    <span class="str">"tools"</span>: [
+      {
+        <span class="str">"name"</span>: <span class="str">"query_order"</span>,
+        <span class="str">"description"</span>: <span class="str">"查询订单状态（只读）"</span>,
+        <span class="str">"inputSchema"</span>: {
+          <span class="str">"type"</span>: <span class="str">"object"</span>,
+          <span class="str">"properties"</span>: {
+            <span class="str">"orderId"</span>: {<span class="str">"type"</span>: <span class="str">"string"</span>, <span class="str">"description"</span>: <span class="str">"订单号"</span>}
+          }
+        }
+      }
+    ]
+  }
+}
+
+<span class="cmt">// 请求：调用工具</span>
+{
+  <span class="str">"jsonrpc"</span>: <span class="str">"2.0"</span>,
+  <span class="str">"id"</span>: <span class="num">2</span>,
+  <span class="str">"method"</span>: <span class="str">"tools/call"</span>,
+  <span class="str">"params"</span>: {
+    <span class="str">"name"</span>: <span class="str">"query_order"</span>,
+    <span class="str">"arguments"</span>: {<span class="str">"orderId"</span>: <span class="str">"ORD12345"</span>}
+  }
+}</pre>
+    </div>
+
+    <!-- ===================== 3. MCP核心概念 ===================== -->
+    <h3>3. MCP三大核心概念：Tools/Resources/Prompts <span class="difficulty">★★★★☆</span></h3>
+
+    <table class="compare-table">
+      <tr><th>概念</th><th>用途</th><th>谁控制</th><th>模型可见性</th></tr>
+      <tr><td><strong>Tools</strong></td><td>模型可调用的操作（查订单、发邮件、调API）</td><td>Server暴露，模型决定是否调用</td><td>模型可见——LLM根据Tool Description决定调用</td></tr>
+      <tr><td><strong>Resources</strong></td><td>模型可读取的数据（文档、数据库记录、文件）</td><td>Server暴露，模型/Client读取</td><td>模型可见——类似RAG的检索结果</td></tr>
+      <tr><td><strong>Prompts</strong></td><td>预定义的Prompt模板（欢迎语、错误提示、FAQ）</td><td>Server提供，Client选择使用</td><td>用户/Client可见——帮助用户快速开始</td></tr>
+    </table>
+
+    <div class="concept-card">
+      <h4>Tools vs Resources的核心区别</h4>
+      <p><strong>Tools是动作</strong>：LLM决定"我要调用这个工具"→执行操作→返回结果。如"查订单"、"发邮件"、"创建工单"。</p>
+      <p><strong>Resources是数据</strong>：LLM可以读取这些数据作为上下文，但不能修改。如"知识库文档"、"用户手册"、"API文档"。Resources更像RAG中的"检索结果"——给LLM提供背景信息，但LLM不能对它们执行操作。</p>
+      <p><strong>mall-agent主要用Tools</strong>（32个本地工具+MCP远程工具），Resources目前通过RAG的向量检索实现，没有走MCP的Resources机制。</p>
+    </div>
+
+    <!-- ===================== 4. MCP生命周期 ===================== -->
+    <h3>4. MCP生命周期：初始化→能力协商→工具调用 <span class="difficulty">★★★☆☆</span></h3>
+
+    <div class="diagram">
+      <svg viewBox="0 0 800 380" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="am2" markerWidth="8" markerHeight="8" refX="6" refY="2" orient="auto">
+            <path d="M0,0 L6,2 L0,4 Z" fill="#1565c0"/>
+          </marker>
+        </defs>
+        <text x="400" y="18" text-anchor="middle" font-size="14" font-weight="700" fill="#1565c0">MCP生命周期</text>
+
+        <!-- Phase 1 -->
+        <rect x="20" y="35" width="180" height="55" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+        <text x="110" y="55" text-anchor="middle" font-size="12" font-weight="600" fill="#1565c0">Phase 1: 初始化</text>
+        <text x="110" y="72" text-anchor="middle" font-size="9" fill="#555">Client→Server: initialize</text>
+        <text x="110" y="84" text-anchor="middle" font-size="9" fill="#555">Server→Client: 协议版本+能力</text>
+        <line x1="200" y1="62" x2="240" y2="62" stroke="#1565c0" stroke-width="2" marker-end="url(#am2)"/>
+
+        <rect x="240" y="35" width="180" height="55" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+        <text x="330" y="55" text-anchor="middle" font-size="12" font-weight="600" fill="#1565c0">Phase 2: 能力协商</text>
+        <text x="330" y="72" text-anchor="middle" font-size="9" fill="#555">Client→Server: tools/list</text>
+        <text x="330" y="84" text-anchor="middle" font-size="9" fill="#555">Server→Client: 工具列表+Schema</text>
+        <line x1="420" y1="62" x2="460" y2="62" stroke="#1565c0" stroke-width="2" marker-end="url(#am2)"/>
+
+        <rect x="460" y="35" width="180" height="55" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>
+        <text x="550" y="55" text-anchor="middle" font-size="12" font-weight="600" fill="#2e7d32">Phase 3: 工具调用</text>
+        <text x="550" y="72" text-anchor="middle" font-size="9" fill="#555">Client→Server: tools/call</text>
+        <text x="550" y="84" text-anchor="middle" font-size="9" fill="#555">Server→Client: 工具执行结果</text>
+
+        <!-- 详细时间线 -->
+        <text x="400" y="120" text-anchor="middle" font-size="12" font-weight="600" fill="#555">详细时序</text>
+
+        <rect x="60" y="135" width="120" height="28" rx="4" fill="#f8f9fa" stroke="#e0e0e0"/>
+        <text x="120" y="153" text-anchor="middle" font-size="10" fill="#555">GET /sse 建立连接</text>
+        <line x1="120" y1="163" x2="120" y2="180" stroke="#1565c0" stroke-width="1.5" marker-end="url(#am2)"/>
+
+        <rect x="60" y="182" width="120" height="28" rx="4" fill="#f8f9fa" stroke="#e0e0e0"/>
+        <text x="120" y="200" text-anchor="middle" font-size="10" fill="#555">POST initialize</text>
+        <line x1="120" y1="210" x2="120" y2="227" stroke="#1565c0" stroke-width="1.5" marker-end="url(#am2)"/>
+
+        <rect x="60" y="229" width="120" height="28" rx="4" fill="#f8f9fa" stroke="#e0e0e0"/>
+        <text x="120" y="247" text-anchor="middle" font-size="10" fill="#555">POST tools/list</text>
+        <line x1="120" y1="257" x2="120" y2="274" stroke="#1565c0" stroke-width="1.5" marker-end="url(#am2)"/>
+
+        <rect x="60" y="276" width="120" height="28" rx="4" fill="#e8f5e9" stroke="#2e7d32"/>
+        <text x="120" y="294" text-anchor="middle" font-size="10" fill="#2e7d32">POST tools/call</text>
+        <line x1="120" y1="304" x2="120" y2="321" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#am2)"/>
+
+        <rect x="60" y="323" width="120" height="28" rx="4" fill="#e8f5e9" stroke="#2e7d32"/>
+        <text x="120" y="341" text-anchor="middle" font-size="10" fill="#2e7d32">POST tools/call</text>
+        <text x="120" y="355" text-anchor="middle" font-size="9" fill="#999">（循环调用）</text>
+
+        <!-- 右侧说明 -->
+        <text x="280" y="155" font-size="10" fill="#555">SSE长连接，保持通道</text>
+        <text x="280" y="202" font-size="10" fill="#555">协商协议版本，交换能力</text>
+        <text x="280" y="249" font-size="10" fill="#555">发现所有可用工具+参数Schema</text>
+        <text x="280" y="296" font-size="10" fill="#2e7d32">LLM决定调用→Client发起tools/call</text>
+        <text x="280" y="343" font-size="10" fill="#2e7d32">ReAct循环：多轮工具调用</text>
+
+        <text x="400" y="375" text-anchor="middle" font-size="10" fill="#999" font-style="italic">MCP不可用时：返回disabled()占位实例，本地工具不受影响</text>
+      </svg>
+      <div class="caption">MCP生命周期：建立连接→初始化→能力协商→工具调用循环</div>
+    </div>
+
+    <!-- ===================== 5. Java实现MCP客户端 ===================== -->
+    <h3>5. Java实现MCP客户端（SSE+JSON-RPC） <span class="difficulty">★★★★★ 必考</span></h3>
+
+    <p>这是mall-agent的技术亮点——<strong>Java实现MCP客户端</strong>。大部分MCP客户端是Python/TS写的，Java实现展示了你的底层协议理解能力。</p>
+
+    <div class="code-block">
+      <span class="lang">Java (MCP客户端核心实现)</span>
+<pre><span class="kw">public class</span> McpSseClient {
+    <span class="kw">private final</span> WebClient webClient;  <span class="cmt">// WebFlux HTTP客户端</span>
+    <span class="kw">private final</span> String baseUrl;
+
+    <span class="cmt">// 1. 建立SSE连接，持续接收Server推送的事件</span>
+    <span class="kw">public</span> Flux&lt;String&gt; connect() {
+        <span class="kw">return</span> webClient.get()
+            .uri(baseUrl + <span class="str">"/sse"</span>)
+            .accept(MediaType.TEXT_EVENT_STREAM)
+            .retrieve()
+            .bodyToFlux(String.class);
+    }
+
+    <span class="cmt">// 2. 发送JSON-RPC请求</span>
+    <span class="kw">public</span> Mono&lt;JsonNode&gt; sendRequest(String method, JsonNode params) {
+        JsonNode request = objectMapper.createObjectNode()
+            .put(<span class="str">"jsonrpc"</span>, <span class="str">"2.0"</span>)
+            .put(<span class="str">"id"</span>, UUID.randomUUID().toString())
+            .put(<span class="str">"method"</span>, method)
+            .set(<span class="str">"params"</span>, params);
+
+        <span class="kw">return</span> webClient.post()
+            .uri(baseUrl + <span class="str">"/mcp/message"</span>)
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(request)
+            .retrieve()
+            .bodyToMono(JsonNode.class);
+    }
+
+    <span class="cmt">// 3. 发现工具列表</span>
+    <span class="kw">public</span> Mono&lt;List&lt;ToolDefinition&gt;&gt; listTools() {
+        <span class="kw">return</span> sendRequest(<span class="str">"tools/list"</span>, <span class="kw">null</span>)
+            .map(resp -> parseToolList(resp.get(<span class="str">"result"</span>)));
+    }
+
+    <span class="cmt">// 4. 调用工具</span>
+    <span class="kw">public</span> Mono&lt;String&gt; callTool(String toolName, Map&lt;String, Object&gt; args) {
+        JsonNode params = objectMapper.createObjectNode()
+            .put(<span class="str">"name"</span>, toolName)
+            .set(<span class="str">"arguments"</span>, objectMapper.valueToTree(args));
+
+        <span class="kw">return</span> sendRequest(<span class="str">"tools/call"</span>, params)
+            .map(resp -> resp.get(<span class="str">"result"</span>).toString());
+    }
+}</pre>
+    </div>
+
+    <div class="concept-card">
+      <h4>工具适配器：McpToolAdapter</h4>
+      <p>MCP返回的工具是JSON Schema格式，需要适配为langchain4j的Tool接口。McpToolAdapter做这个转换：</p>
+      <ul>
+        <li>inputSchema → 转换为Tool的参数定义（name + type + description）</li>
+        <li>工具调用 → 通过McpSseClient.callTool()发送JSON-RPC请求</li>
+        <li>返回值 → 包装为HardWorkflowTool的标准返回格式</li>
+      </ul>
+      <p>这样本地工具和MCP远程工具在ReAct循环中<strong>统一调度</strong>——LLM不需要知道工具是本地的还是远程的，它只需要知道"有一个工具叫query_order，参数是orderId"。</p>
+    </div>
+
+    <div class="warn">
+      <p><strong>MCP不可用时的降级策略</strong>：启动时连接MCP Server失败→返回McpTool.disabled()占位实例（调用时返回"工具不可用"）→本地工具不受影响。运行中断开→工具调用返回错误JSON→ReAct循环感知失败→尝试其他工具或返回"服务暂时不可用"。</p>
+      <p>当前欠缺：没有自动重连。生产环境应加指数退避重试（1s→2s→4s→8s→max 30s）。</p>
+    </div>
+
+    <!-- ===================== 6. mall-agent MCP实战 ===================== -->
+    <h3>6. mall-agent中的MCP实战 <span class="difficulty">★★★★★</span></h3>
+
+    <div class="concept-card">
+      <h4>架构设计：本地工具 + MCP远程工具统一注册</h4>
+      <p>mall-agent的HardWorkflowToolRegistry管理两类工具：</p>
+      <ol>
+        <li><strong>本地工具</strong>（32个）：直接实现HardWorkflowTool接口，注册在Spring容器中。如query_order、track_logistics、check_balance。</li>
+        <li><strong>MCP远程工具</strong>：启动时通过MCP Client连接mall-mcp-server → tools/list获取工具列表 → McpToolAdapter包装为HardWorkflowTool → 注册到Registry。</li>
+      </ol>
+      <p>LLM看到的是一个统一的工具列表，不区分本地/远程。工具分类选择性注入对两者同样生效。</p>
+    </div>
+
+    <div class="diagram">
+      <svg viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="am3" markerWidth="8" markerHeight="8" refX="6" refY="2" orient="auto">
+            <path d="M0,0 L6,2 L0,4 Z" fill="#1565c0"/>
+          </marker>
+        </defs>
+        <text x="400" y="18" text-anchor="middle" font-size="14" font-weight="700" fill="#1565c0">mall-agent MCP集成架构</text>
+
+        <!-- ReAct循环 -->
+        <rect x="300" y="35" width="200" height="40" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+        <text x="400" y="60" text-anchor="middle" font-size="12" font-weight="600" fill="#1565c0">ReAct循环（Agent大脑）</text>
+        <line x1="400" y1="75" x2="400" y2="95" stroke="#1565c0" stroke-width="2" marker-end="url(#am3)"/>
+
+        <!-- HardWorkflowToolRegistry -->
+        <rect x="250" y="97" width="300" height="36" rx="8" fill="#fff3e0" stroke="#ff6f00" stroke-width="2"/>
+        <text x="400" y="119" text-anchor="middle" font-size="12" font-weight="600" fill="#ff6f00">HardWorkflowToolRegistry</text>
+
+        <!-- 两条分支 -->
+        <line x1="300" y1="133" x2="180" y2="165" stroke="#1565c0" stroke-width="1.5" marker-end="url(#am3)"/>
+        <line x1="500" y1="133" x2="620" y2="165" stroke="#1565c0" stroke-width="1.5" marker-end="url(#am3)"/>
+
+        <!-- 本地工具 -->
+        <rect x="60" y="167" width="240" height="80" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>
+        <text x="180" y="190" text-anchor="middle" font-size="12" font-weight="600" fill="#2e7d32">本地工具 (32个)</text>
+        <text x="180" y="210" text-anchor="middle" font-size="9" fill="#555">query_order / track_logistics</text>
+        <text x="180" y="225" text-anchor="middle" font-size="9" fill="#555">check_balance / search_kb</text>
+        <text x="180" y="240" text-anchor="middle" font-size="9" fill="#555">直接实现HardWorkflowTool</text>
+
+        <!-- MCP远程工具 -->
+        <rect x="500" y="167" width="240" height="80" rx="8" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2"/>
+        <text x="620" y="190" text-anchor="middle" font-size="12" font-weight="600" fill="#7b1fa2">MCP远程工具</text>
+        <text x="620" y="210" text-anchor="middle" font-size="9" fill="#555">McpToolAdapter包装</text>
+        <text x="620" y="225" text-anchor="middle" font-size="9" fill="#555">SSE + JSON-RPC</text>
+        <text x="620" y="240" text-anchor="middle" font-size="9" fill="#555">MCP不可用→disabled()降级</text>
+
+        <!-- MCP Server -->
+        <rect x="500" y="260" width="240" height="30" rx="6" fill="#fce4ec" stroke="#c2185b" stroke-width="1.5"/>
+        <text x="620" y="280" text-anchor="middle" font-size="10" fill="#c2185b">mall-mcp-server（外部服务）</text>
+        <line x1="620" y1="247" x2="620" y2="258" stroke="#7b1fa2" stroke-width="1" stroke-dasharray="4,2"/>
+      </svg>
+      <div class="caption">本地工具和MCP远程工具统一注册到HardWorkflowToolRegistry，LLM看到统一列表</div>
+    </div>
+
+    <!-- ===================== 7. MCP vs 传统API调用 ===================== -->
+    <h3>7. MCP vs 传统API调用 <span class="difficulty">★★★☆☆</span></h3>
+
+    <table class="compare-table">
+      <tr><th>对比维度</th><th>传统API调用</th><th>MCP</th></tr>
+      <tr><td>工具发现</td><td>手动看文档→写适配代码</td><td>tools/list自动发现</td></tr>
+      <tr><td>接口格式</td><td>每个工具不同（REST/GraphQL/gRPC）</td><td>统一JSON-RPC 2.0</td></tr>
+      <tr><td>参数Schema</td><td>手动定义/文档里找</td><td>inputSchema自动获取</td></tr>
+      <tr><td>跨框架复用</td><td>每个框架写一次适配</td><td>一次实现，所有框架可用</td></tr>
+      <tr><td>认证</td><td>每个工具不同（API Key/OAuth/Basic）</td><td>MCP层统一管理</td></tr>
+      <tr><td>版本兼容</td><td>API改了就断</td><td>协议版本协商</td></tr>
+      <tr><td>mall-agent选择</td><td>本地工具用传统方式（Spring Bean）</td><td>远程工具用MCP</td></tr>
+    </table>
+
+    <div class="java-analogy">MCP ≈ <strong>JDBC之于数据库</strong>。JDBC之前：每个数据库有自己的一套API（Oracle OCI、MySQL C API）→ 换数据库要重写所有数据访问代码。JDBC之后：统一的Connection/Statement/ResultSet接口 → 换数据库只改驱动。MCP同理：统一Tools/Resources/Prompts接口 → 换工具只改Server，Client代码不变。</div>
+
+    <!-- ===================== 8. 面试Q&A ===================== -->
+    <h3>8. 面试Q&A <span class="difficulty">★★★★★</span></h3>
+
+    <div class="interview-q">
+      <div class="question">MCP协议是什么？解决了什么问题？</div>
+      <div class="interview-answer">
+        <p>MCP（Model Context Protocol）是Anthropic提出的标准化AI工具调用协议，解决"每个AI框架自己定义工具接口，工具无法跨框架复用"的问题。核心思想：定义统一的Client-Server协议（JSON-RPC 2.0 + SSE/stdio），Server暴露Tools/Resources/Prompts，Client自动发现和调用。</p>
+        <p>类比：MCP就是AI领域的"USB-C"——统一接口，解耦工具提供方和AI应用。之前每个框架需要为每个工具写定制适配代码（N×M），现在一次实现MCP即可（N+M）。</p>
+      </div>
+      <div class="interview-tip">"USB-C"类比简单有力。说"N×M变N+M"展示你理解协议的核心价值。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">你的项目怎么集成MCP的？Java怎么实现的？</div>
+      <div class="interview-answer">
+        <p>Java实现MCP客户端：用Spring WebFlux的WebClient连接mall-mcp-server。SSE长连接接收事件（GET /sse），JSON-RPC发送请求（POST /mcp/message）。启动时调用tools/list自动发现远程工具，McpToolAdapter包装为HardWorkflowTool接口，与本地32个工具统一注册到HardWorkflowToolRegistry。</p>
+        <p>关键设计：1）MCP不可用时返回disabled()占位，本地工具不受影响；2）LLM看到统一工具列表，不区分本地/远程；3）工具分类选择性注入对两者同样生效。</p>
+      </div>
+      <div class="interview-tip">说"Java实现MCP客户端"是加分项。提"disabled()降级"和"统一注册"展示工程设计。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">MCP的Tools和Resources有什么区别？</div>
+      <div class="interview-answer">
+        <p>Tools是<strong>动作</strong>：模型可调用的操作（查订单、发邮件、调API）。LLM决定是否调用、传什么参数。Resources是<strong>数据</strong>：模型可读取的数据（文档、数据库记录、文件）。LLM只能读取不能修改。</p>
+        <p>类比：Tools ≈ Service方法（有副作用），Resources ≈ 配置文件/数据库查询（只读）。mall-agent主要用Tools，Resources通过RAG向量检索实现。</p>
+      </div>
+      <div class="interview-tip">"动作vs数据"的区分要清楚。说"mall-agent主要用Tools"展示实际经验。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">MCP的SSE Transport和stdio Transport怎么选？</div>
+      <div class="interview-answer">
+        <p>SSE（HTTP长连接）：适合远程Server，跨网络通信。GET /sse建立事件通道，POST /mcp/message发送请求。需要处理断线重连。mall-agent用这个连接远程mall-mcp-server。</p>
+        <p>stdio（标准输入输出）：适合本地Server，启动子进程通过stdin/stdout通信。更简单、延迟更低，但只限同机。适合本地工具（如文件系统操作、本地数据库查询）。</p>
+        <p>选择原则：远程服务用SSE，本地工具用stdio。如果工具需要跨机器共享，用SSE。</p>
+      </div>
+      <div class="interview-tip">说清楚两种Transport的适用场景。提"远程用SSE，本地用stdio"是标准答案。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">MCP协议有什么局限？</div>
+      <div class="interview-answer">
+        <p>1）<strong>协议尚在演进</strong>：MCP还在快速迭代，API可能变化。2）<strong>性能开销</strong>：JSON-RPC序列化+HTTP往返比本地方法调用慢。高频调用场景需要批量优化。3）<strong>工具描述质量依赖</strong>：LLM根据Tool Description决定调用，描述写不好工具就废了。4）<strong>安全</strong>：MCP Server暴露什么工具需要谨慎——不应该把"删除数据库"这种工具暴露给LLM。5）<strong>生态仍在早期</strong>：MCP Server的数量和成熟度远不如REST API生态。</p>
+      </div>
+      <div class="interview-tip">能说出局限说明你不是盲目吹捧。提"协议演进中"和"安全"展示批判性思维。</div>
+    </div>
+
+    <div class="review-card">
+      <ul>
+        <li><strong>MCP是什么</strong>：标准化AI工具调用协议，Client-Server架构，JSON-RPC 2.0 + SSE/stdio</li>
+        <li><strong>核心概念</strong>：Tools（动作/模型可调用）+ Resources（数据/模型可读取）+ Prompts（模板/用户可见）</li>
+        <li><strong>Transport</strong>：SSE（远程/HTTP长连接）vs stdio（本地/标准输入输出）。mall-agent用SSE</li>
+        <li><strong>Java实现</strong>：WebClient + SSE + JSON-RPC，McpToolAdapter适配，HardWorkflowToolRegistry统一注册</li>
+        <li><strong>降级策略</strong>：MCP不可用→disabled()占位，本地工具不受影响。欠缺：自动重连</li>
+        <li><strong>类比JDBC</strong>：MCP统一工具调用接口，就像JDBC统一数据库访问接口</li>
+        <li><strong>面试要点</strong>："USB-C"类比 + N×M→N+M + Java实现MCP客户端 + 统一注册 + 降级策略</li>
+      </ul>
+    </div>
+
+    <div class="chapter-nav">
+      <a href="14-sse-streaming.html" class="prev">← SSE流式输出专题</a>
+      <a href="index.html" class="next">返回首页 →</a>
+    </div>
+
+  </main>
+<script>
+(function(){
+  var btn = document.getElementById("sidebarToggle");
+  var body = document.body;
+  try { if(localStorage.getItem("sb")==="0") body.classList.add("sidebar-collapsed"); } catch(e){}
+  function update(){ btn.textContent = body.classList.contains("sidebar-collapsed") ? "▶" : "◀"; }
+  btn.addEventListener("click", function(){
+    body.classList.toggle("sidebar-collapsed");
+    try { localStorage.setItem("sb", body.classList.contains("sidebar-collapsed")?"0":"1"); } catch(e){}
+    update();
+  });
+  update();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SSE流式输出 · AI Agent面试宝典</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="sidebarToggle" class="sidebar-toggle" title="收起/展开菜单">◀</button>
+  <!-- ===== 侧边栏 ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1>AI Agent 面试宝典</h1>
+      <p>Java后端 → AI Agent 转行指南</p>
+    </div>
+    <nav>
+      <a href="index.html"><span class="num">00</span>首页</a>
+      <a href="01-java-foundation.html"><span class="num">01</span>Java后端核心复习</a>
+      <a href="02-middleware.html"><span class="num">02</span>常用中间件</a>
+      <a href="03-llm-foundation.html"><span class="num">03</span>LLM大模型基础</a>
+      <a href="04-prompt-engineering.html"><span class="num">04</span>Prompt工程</a>
+      <a href="05-langchain4j.html"><span class="num">05</span>LangChain4j框架详解</a>
+      <a href="06-agent-core.html"><span class="num">06</span>Agent核心概念</a>
+      <a href="07-rag.html"><span class="num">07</span>RAG检索增强生成</a>
+      <a href="08-vector-db.html"><span class="num">08</span>向量数据库与Embedding</a>
+      <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
+      <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
+      <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
+      <a href="12-project-packaging.html"><span class="num">12</span>项目经验：mall-agent</a>
+      <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
+      <a href="14-sse-streaming.html" class="active"><span class="num">14</span>SSE流式输出专题</a>
+      <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
+      <a href="16-spring-ai.html"><span class="num">16</span>Spring AI对比</a>
+      <a href="17-agent-security.html"><span class="num">17</span>Agent安全</a>
+  </nav>
+  </aside>
+
+  <!-- ===== 主内容 ===== -->
+  <main class="main">
+    <!-- 章节标题 -->
+    <header class="chapter-header">
+      <span class="chapter-num">专题</span>
+      <h2>SSE流式输出 <span class="tag tag-hot">必考</span></h2>
+      <div class="goal">
+        <strong>🎯 学习目标：</strong>掌握SSE协议原理、Spring SseEmitter/WebFlux实现、EventSource前端API、Nginx代理配置（proxy_buffering off）、SSE vs WebSocket选型、断线重连与错误处理，能在面试中清晰阐述Agent流式输出的完整链路和踩过的坑。
+      </div>
+    </header>
+
+    <p class="one-liner">SSE是Agent回答"打字机效果"的底层协议——没有它，用户要等Agent全部思考完才能看到结果，体验极差。面试官问"流式输出怎么实现的"，考察的是你对<strong>HTTP长连接+事件流</strong>的完整理解。</p>
+
+    <!-- ===================== 1. 为什么需要流式输出 ===================== -->
+    <h3>1. 为什么Agent必须用流式输出 <span class="difficulty">★★★★★ 必考</span></h3>
+
+    <p>Agent和传统API最大的区别是<strong>响应时间不确定</strong>。传统API调用数据库+业务逻辑，100ms内返回；Agent要做LLM推理+工具调用+再推理，5-30秒很正常。如果等全部完成再返回，用户盯着白屏十几秒——体验灾难。</p>
+
+    <p><strong>流式输出解决三个问题：</strong></p>
+
+    <div class="concept-card">
+      <h4>流式输出的三大价值</h4>
+      <ol>
+        <li><strong>感知速度</strong>：用户看到第一个token只需0.5-1秒（TTFT, Time To First Token），而不是等30秒看完整答案。心理学上，看到内容在"打字"比等空白屏幕焦虑感低得多。</li>
+        <li><strong>中途取消</strong>：用户看到Agent推理方向错了，可以中途打断（Stop按钮），避免浪费Token。非流式只能等全部返回才知道结果。</li>
+        <li><strong>增量处理</strong>：前端可以边接收边渲染Markdown/代码高亮，不需要等完整响应再一次性渲染。对于长回答（如代码生成），增量渲染体验更好。</li>
+      </ol>
+    </div>
+
+    <div class="java-analogy">流式输出 ≈ Java InputStream的<strong>分块读取</strong>而非一次性readAllBytes()。传统API是"把整个byte[]一次性返回"，流式是"每读到一个chunk就返回给调用方"。WebFlux的Flux&lt;String&gt;就是这个模式——不是等待所有数据就绪，而是来一个推送一个。</div>
+
+    <!-- ===================== 2. SSE协议原理 ===================== -->
+    <h3>2. SSE协议原理 <span class="difficulty">★★★★☆</span></h3>
+
+    <p>SSE（Server-Sent Events）是HTTP协议上的<strong>单向推送</strong>标准。核心思想：客户端发起一个普通HTTP GET请求，服务端保持连接不关闭，持续向客户端推送文本事件流。这不是WebSocket那种全双工协议，而是HTTP长连接上的单向数据流。</p>
+
+    <p><strong>SSE协议格式非常简单</strong>——纯文本，每行一个字段，事件之间用空行分隔：</p>
+
+    <div class="code-block">
+      <span class="lang">SSE协议原始格式</span>
+<pre><span class="cmt">// 服务端推送的原始TCP数据</span>
+<span class="kw">data</span>: 你
+
+<span class="kw">data</span>: 好，我
+
+<span class="kw">data</span>: 来帮您
+
+<span class="kw">data</span>: 查一下
+
+<span class="kw">event</span>: done
+<span class="kw">data</span>: {"status":"completed"}
+
+<span class="cmt">// 每个字段的含义：</span>
+<span class="cmt">// data: 事件数据（必需）</span>
+<span class="cmt">// event: 事件类型（可选，默认message）</span>
+<span class="cmt">// id: 事件ID，用于断线重连时的Last-Event-ID</span>
+<span class="cmt">// retry: 重连间隔（毫秒）</span>
+<span class="cmt">// 空行: 事件结束标志</span></pre>
+    </div>
+
+    <div class="concept-card">
+      <h4>SSE协议的关键特性</h4>
+      <ul>
+        <li><strong>Content-Type: text/event-stream</strong>——服务端必须设置此响应头，浏览器才识别为SSE</li>
+        <li><strong>Connection: keep-alive</strong>——保持TCP连接不关闭</li>
+        <li><strong>Cache-Control: no-cache</strong>——禁止代理缓存，确保实时性</li>
+        <li><strong>Last-Event-ID</strong>——断线重连时客户端自动发送此请求头，服务端可以从中断处继续推送</li>
+        <li><strong>单向推送</strong>——客户端只能接收，不能通过SSE连接发送数据（需要发数据用另一个HTTP请求）</li>
+      </ul>
+    </div>
+
+    <div class="diagram">
+      <svg viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="2" orient="auto">
+            <path d="M0,0 L6,2 L0,4 Z" fill="#1565c0"/>
+          </marker>
+        </defs>
+        <!-- 客户端 -->
+        <rect x="20" y="80" width="120" height="60" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+        <text x="80" y="110" text-anchor="middle" font-size="14" font-weight="600" fill="#1565c0">客户端</text>
+        <text x="80" y="128" text-anchor="middle" font-size="10" fill="#555">EventSource</text>
+
+        <!-- 服务端 -->
+        <rect x="660" y="80" width="120" height="60" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>
+        <text x="720" y="110" text-anchor="middle" font-size="14" font-weight="600" fill="#2e7d32">服务端</text>
+        <text x="720" y="128" text-anchor="middle" font-size="10" fill="#555">SseEmitter</text>
+
+        <!-- GET请求 -->
+        <line x1="140" y1="100" x2="660" y2="100" stroke="#ff6f00" stroke-width="2" marker-end="url(#ar)"/>
+        <text x="400" y="90" text-anchor="middle" font-size="11" fill="#ff6f00">GET /api/chat/stream</text>
+        <text x="400" y="105" text-anchor="middle" font-size="10" fill="#999">Accept: text/event-stream</text>
+
+        <!-- 响应头 -->
+        <line x1="660" y1="120" x2="140" y2="120" stroke="#1565c0" stroke-width="1.5" marker-end="url(#ar)"/>
+        <text x="400" y="135" text-anchor="middle" font-size="10" fill="#2e7d32">HTTP 200 OK</text>
+        <text x="400" y="150" text-anchor="middle" font-size="10" fill="#555">Content-Type: text/event-stream</text>
+
+        <!-- 事件流 -->
+        <rect x="300" y="170" width="200" height="80" rx="8" fill="#f8f9fa" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="4,2"/>
+        <text x="400" y="195" text-anchor="middle" font-size="11" fill="#555">data: 你好</text>
+        <text x="400" y="212" text-anchor="middle" font-size="11" fill="#555">data: ，我来</text>
+        <text x="400" y="229" text-anchor="middle" font-size="11" fill="#555">data: 帮你查</text>
+        <text x="400" y="246" text-anchor="middle" font-size="11" fill="#555">…持续推送…</text>
+        <line x1="140" y1="210" x2="300" y2="210" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#ar)"/>
+
+        <text x="400" y="280" text-anchor="middle" font-size="11" fill="#999" font-style="italic">图：SSE单向推送，客户端一个GET请求，服务端持续推送事件流</text>
+      </svg>
+      <div class="caption">SSE本质：HTTP长连接上的单向文本事件流</div>
+    </div>
+
+    <!-- ===================== 3. Spring实现 ===================== -->
+    <h3>3. Spring实现：SseEmitter vs WebFlux <span class="difficulty">★★★★★ 必考</span></h3>
+
+    <p>Spring生态中有两种SSE实现方式，面试官经常问它们的区别。核心差异在于<strong>底层线程模型</strong>——一个阻塞一个非阻塞。</p>
+
+    <h4>3.1 Spring MVC SseEmitter（Servlet阻塞模型）</h4>
+
+    <p>SseEmitter是Spring MVC 4.2+提供的SSE支持，底层依赖<strong>Servlet 3.0+异步</strong>。每个SSE连接占用一个Tomcat线程（虽然可以异步释放），大并发场景下线程资源是瓶颈。</p>
+
+    <div class="code-block">
+      <span class="lang">Java (SseEmitter标准写法)</span>
+<pre><span class="kw">@GetMapping</span>(value = <span class="str">"/stream"</span>, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+<span class="kw">public</span> SseEmitter stream() {
+    <span class="cmt">// timeout: 30分钟无活动超时</span>
+    SseEmitter emitter = <span class="kw">new</span> SseEmitter(<span class="num">30</span> * <span class="num">60</span> * <span class="num">1000L</span>);
+
+    <span class="cmt">// 异步发送事件（通常用线程池）</span>
+    executor.execute(() -> {
+        <span class="kw">try</span> {
+            <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i &lt; <span class="num">10</span>; i++) {
+                emitter.send(SseEmitter.event()
+                    .name(<span class="str">"message"</span>)      <span class="cmt">// 事件类型</span>
+                    .data(<span class="str">"chunk "</span> + i)       <span class="cmt">// 事件数据</span>
+                    .id(String.valueOf(i)));  <span class="cmt">// 事件ID（断线重连用）</span>
+                Thread.sleep(<span class="num">1000</span>);
+            }
+            emitter.send(SseEmitter.event()
+                .name(<span class="str">"done"</span>)
+                .data(<span class="str">"{\"status\":\"completed\"}"</span>));
+            emitter.complete();
+        } <span class="kw">catch</span> (Exception e) {
+            emitter.completeWithError(e);
+        }
+    });
+
+    <span class="kw">return</span> emitter;
+}</pre>
+    </div>
+
+    <div class="warn">
+      <p><strong>SseEmitter的坑：</strong>默认timeout是30秒，长连接场景必须显式设大。onCompletion和onTimeout回调必须注册，否则连接断开时send()会抛异常。send()是阻塞调用，如果客户端断开连接（网络断开），send()会抛IOException，必须捕获处理。</p>
+    </div>
+
+    <h4>3.2 Spring WebFlux ServerSentEvent（响应式非阻塞）</h4>
+
+    <p>WebFlux基于Reactor，使用<strong>少量线程+NIO事件循环</strong>处理大量并发连接。一个SSE连接不占用线程，只占用一个文件描述符。对于Agent这种需要同时处理大量并发流式连接的场景，WebFlux是更好的选择。</p>
+
+    <div class="code-block">
+      <span class="lang">Java (WebFlux + LangChain4j流式)</span>
+<pre><span class="kw">@GetMapping</span>(value = <span class="str">"/chat/stream"</span>, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+<span class="kw">public</span> Flux&lt;ServerSentEvent&lt;String&gt;&gt; chatStream(<span class="kw">@RequestParam</span> String query) {
+    <span class="kw">return</span> Flux.create(sink -> {
+        <span class="cmt">// LangChain4j流式回调</span>
+        StreamingChatLanguageModel model = <span class="cmt">/* ... */</span>;
+        model.generate(query, <span class="kw">new</span> StreamingResponseHandler&lt;AiMessage&gt;() {
+            <span class="kw">@Override</span>
+            <span class="kw">public</span> <span class="kw">void</span> onNext(String token) {
+                <span class="cmt">// 每个token推送给前端</span>
+                sink.next(ServerSentEvent.builder(token).build());
+            }
+            <span class="kw">@Override</span>
+            <span class="kw">public</span> <span class="kw">void</span> onComplete() {
+                sink.next(ServerSentEvent.builder(<span class="str">"[DONE]"</span>).event(<span class="str">"done"</span>).build());
+                sink.complete();
+            }
+            <span class="kw">@Override</span>
+            <span class="kw">public</span> <span class="kw">void</span> onError(Throwable e) {
+                sink.error(e);
+            }
+        });
+    });
+}</pre>
+    </div>
+
+    <table class="compare-table">
+      <tr><th>对比维度</th><th>SseEmitter (MVC)</th><th>ServerSentEvent (WebFlux)</th></tr>
+      <tr><td>线程模型</td><td>每个连接一个Servlet线程（可异步释放）</td><td>Event Loop + 少量线程</td></tr>
+      <tr><td>并发能力</td><td>受Tomcat线程池限制（默认200）</td><td>理论数千并发，受文件描述符限制</td></tr>
+      <tr><td>背压支持</td><td>无（send()阻塞）</td><td>有（Reactor背压机制）</td></tr>
+      <tr><td>使用场景</td><td>简单SSE推送，并发量不大</td><td>高并发流式场景，Agent/LLM流式响应</td></tr>
+      <tr><td>学习成本</td><td>低，传统Servlet开发模式</td><td>中，需要理解Reactor响应式编程</td></tr>
+      <tr><td>mall-agent选择</td><td>—</td><td>✅ WebFlux，高并发Agent场景</td></tr>
+    </table>
+
+    <!-- ===================== 4. 前端EventSource ===================== -->
+    <h3>4. 前端EventSource API <span class="difficulty">★★★☆☆</span></h3>
+
+    <p>浏览器原生支持SSE，通过<strong>EventSource</strong>对象接收事件流。它比WebSocket API更简单——不需要握手，自动重连，自动解析事件格式。</p>
+
+    <div class="code-block">
+      <span class="lang">JavaScript (EventSource标准用法)</span>
+<pre><span class="kw">const</span> eventSource = <span class="kw">new</span> EventSource(<span class="str">'/api/chat/stream?query=你好'</span>);
+
+<span class="cmt">// 默认事件类型 "message"</span>
+eventSource.onmessage = (event) => {
+    <span class="kw">const</span> token = event.data;
+    appendToChat(token);  <span class="cmt">// 逐字追加到聊天界面</span>
+};
+
+<span class="cmt">// 自定义事件类型</span>
+eventSource.addEventListener(<span class="str">'done'</span>, (event) => {
+    <span class="kw">const</span> data = JSON.parse(event.data);
+    console.log(<span class="str">'流式完成'</span>, data);
+    eventSource.close();  <span class="cmt">// 主动关闭连接</span>
+});
+
+<span class="cmt">// 错误处理</span>
+eventSource.onerror = (event) => {
+    <span class="kw">if</span> (eventSource.readyState === EventSource.CLOSED) {
+        console.log(<span class="str">'连接已关闭（可能是服务端断开）'</span>);
+    } <span class="kw">else</span> {
+        console.log(<span class="str">'连接错误，EventSource会自动重连'</span>);
+    }
+};
+
+<span class="cmt">// 主动取消</span>
+<span class="kw">function</span> stopStreaming() {
+    eventSource.close();  <span class="cmt">// 关闭连接，停止接收</span>
+}</pre>
+    </div>
+
+    <div class="concept-card">
+      <h4>EventSource的自动重连机制</h4>
+      <p>EventSource有一个内置的重连机制：连接断开后，浏览器会自动重新发起GET请求。重连间隔由服务端通过<strong>retry:</strong>字段控制（毫秒）。如果服务端没设置，浏览器默认等几秒后重试。重连时浏览器会自动带上<strong>Last-Event-ID</strong>请求头，服务端可以根据这个ID从中断处继续推送。</p>
+      <p>这个机制对Agent场景很重要：网络抖动导致连接断开时，EventSource会自动重连，前端不需要写重连逻辑。但有一个限制：<strong>EventSource的GET请求不支持自定义请求头</strong>，如果需要传Token认证，只能用URL参数或Cookie。</p>
+    </div>
+
+    <!-- ===================== 5. Nginx配置 ===================== -->
+    <h3>5. Nginx代理配置：proxy_buffering off <span class="difficulty">★★★★★ 必考</span></h3>
+
+    <p>这是SSE在实际部署中<strong>踩坑率最高</strong>的配置。Nginx默认会对上游响应做<strong>代理缓冲</strong>（proxy_buffering on）——等上游响应全部到达后再一次性发给客户端。这个行为对SSE是致命的：流式推送变成了批量推送，用户看不到打字机效果。</p>
+
+    <div class="concept-card">
+      <h4>Nginx代理缓冲对SSE的破坏</h4>
+      <p>Nginx默认proxy_buffering=on时，会把上游（Spring应用）的响应先缓存到内存/磁盘，等收集完整个响应体再发送给客户端。对于SSE——服务端每10ms推送一个token，Nginx却把它们攒起来，等连接关闭或超时才一次性发出。结果：用户等了30秒，然后"刷"一下看到完整答案——流式推送完全失效。</p>
+      <p>关闭缓冲后，Nginx变成透传模式——上游推送一个字节，Nginx就转发一个字节给客户端。SSE的逐字推送行为得以保留。</p>
+    </div>
+
+    <div class="code-block">
+      <span class="lang">Nginx配置 (关键三段)</span>
+<pre><span class="kw">location</span> /api/chat/stream {
+    <span class="cmt"># ① 关闭代理缓冲——SSE最关键的配置</span>
+    <span class="kw">proxy_buffering</span> <span class="kw">off</span>;
+
+    <span class="cmt"># ② 关闭Nginx自己的响应缓存</span>
+    <span class="kw">proxy_cache</span> <span class="kw">off</span>;
+
+    <span class="cmt"># ③ 延长连接超时（默认60s对Agent不够）</span>
+    <span class="kw">proxy_read_timeout</span> <span class="num">300s</span>;
+    <span class="kw">proxy_send_timeout</span> <span class="num">300s</span>;
+
+    <span class="cmt"># ④ 禁用gzip压缩（流式内容不适合压缩）</span>
+    <span class="kw">gzip</span> <span class="kw">off</span>;
+
+    <span class="cmt"># ⑤ 设置HTTP版本（SSE需要HTTP/1.1长连接）</span>
+    <span class="kw">proxy_http_version</span> <span class="num">1.1</span>;
+    <span class="kw">proxy_set_header</span> Connection <span class="str">""</span>;
+
+    <span class="kw">proxy_pass</span> http://backend:8080;
+}</pre>
+    </div>
+
+    <div class="warn">
+      <p><strong>proxy_buffering off 是SSE的"保命配置"——面试必说。</strong>不关这个，所有流式推送变成批量推送，前端EventSource的逐字渲染完全失效。另外，proxy_read_timeout默认60秒，Agent的LLM推理+工具调用经常超过60秒，必须设大到300秒以上。如果用了K8s Ingress（Nginx Ingress Controller），也要在Ingress annotation里设置：<code>nginx.ingress.kubernetes.io/proxy-buffering: "off"</code> 和 <code>nginx.ingress.kubernetes.io/proxy-read-timeout: "300"</code>。</p>
+    </div>
+
+    <div class="note">除了proxy_buffering，另一个常见坑是<strong>中间代理的缓冲</strong>——CDN、API Gateway、负载均衡器都可能自带缓冲。排查方法：先绕过所有代理直连Spring应用测试SSE是否正常，如果正常说明代理层有问题，逐层排查。</div>
+
+    <!-- ===================== 6. SSE vs WebSocket vs 长轮询 ===================== -->
+    <h3>6. SSE vs WebSocket vs 长轮询 <span class="difficulty">★★★★☆</span></h3>
+
+    <p>面试官经常问"为什么用SSE不用WebSocket"，考察的是对<strong>协议选型</strong>的理解。三者的核心区别在于通信方向、协议层和复杂度。</p>
+
+    <table class="compare-table">
+      <tr><th>对比维度</th><th>SSE</th><th>WebSocket</th><th>HTTP长轮询</th></tr>
+      <tr><td>通信方向</td><td>单向（服务端→客户端）</td><td>全双工（双向）</td><td>单向（客户端→服务端→客户端）</td></tr>
+      <tr><td>协议</td><td>HTTP/1.1 长连接</td><td>WebSocket协议（ws://）</td><td>HTTP/1.1 多次请求</td></tr>
+      <tr><td>浏览器支持</td><td>所有现代浏览器</td><td>所有现代浏览器</td><td>所有浏览器</td></tr>
+      <tr><td>自动重连</td><td>✅ EventSource内置</td><td>❌ 需手动实现</td><td>❌ 需手动实现</td></tr>
+      <tr><td>二进制数据</td><td>❌ 仅文本</td><td>✅ 支持二进制</td><td>❌ 仅文本</td></tr>
+      <tr><td>Nginx代理</td><td>简单（HTTP代理）</td><td>需额外配置Upgrade</td><td>简单</td></tr>
+      <tr><td>防火墙友好</td><td>✅ 标准HTTP端口</td><td>⚠ 部分防火墙拦截</td><td>✅ 标准HTTP</td></tr>
+      <tr><td>Agent场景适用</td><td>✅ 流式回答（单向推送）</td><td>⚠ 过度设计（双向不必要）</td><td>❌ 低效（重复建连）</td></tr>
+    </table>
+
+    <div class="java-analogy">SSE ≈ 服务端给客户端<strong>发短信</strong>（单向推送），WebSocket ≈ 双方<strong>打电话</strong>（双向实时）。Agent场景中，用户把问题发给Agent是一个普通HTTP POST请求，Agent把答案流式推回用SSE——不需要WebSocket的全双工能力。用WebSocket就像给一个只收短信的场景配了双向通话，过度设计。</div>
+
+    <p><strong>为什么Agent场景SSE优于WebSocket：</strong></p>
+    <ul>
+      <li><strong>简单</strong>：SSE就是一个HTTP GET，不需要协议升级握手，不需要心跳保活，不需要处理帧格式</li>
+      <li><strong>自动重连</strong>：EventSource内置重连，WebSocket断线需要手动写重连逻辑（还要处理消息去重）</li>
+      <li><strong>Nginx友好</strong>：SSE走标准HTTP代理，WebSocket需要Nginx配置Upgrade头</li>
+      <li><strong>单向够用</strong>：用户发消息走普通POST，Agent流式回答走SSE——两个方向分开，职责清晰</li>
+    </ul>
+
+    <!-- ===================== 7. 断线重连 ===================== -->
+    <h3>7. 断线重连与错误处理 <span class="difficulty">★★★★☆</span></h3>
+
+    <p>SSE连接不是永远稳定的——网络抖动、服务端重启、Nginx超时都会导致连接断开。生产环境必须处理断线重连。</p>
+
+    <h4>7.1 客户端重连策略</h4>
+
+    <div class="code-block">
+      <span class="lang">JavaScript (增强版EventSource，带手动重连控制)</span>
+<pre><span class="kw">class</span> <span class="fn">RobustEventSource</span> {
+    <span class="kw">constructor</span>(url, options = {}) {
+        <span class="kw">this</span>.url = url;
+        <span class="kw">this</span>.maxRetries = options.maxRetries || <span class="num">3</span>;
+        <span class="kw">this</span>.retryDelay = options.retryDelay || <span class="num">2000</span>;
+        <span class="kw">this</span>.retryCount = <span class="num">0</span>;
+        <span class="kw">this</span>.lastEventId = <span class="kw">null</span>;
+        <span class="kw">this</span>.connect();
+    }
+
+    connect() {
+        <span class="kw">const</span> urlWithId = <span class="kw">this</span>.lastEventId
+            ? <span class="str">`${this.url}?lastEventId=${this.lastEventId}`</span>
+            : <span class="kw">this</span>.url;
+
+        <span class="kw">this</span>.es = <span class="kw">new</span> EventSource(urlWithId);
+
+        <span class="kw">this</span>.es.onmessage = (event) => {
+            <span class="kw">this</span>.lastEventId = event.lastEventId;
+            <span class="kw">this</span>.onMessage(event.data);
+        };
+
+        <span class="kw">this</span>.es.onerror = () => {
+            <span class="kw">if</span> (<span class="kw">this</span>.es.readyState === EventSource.CLOSED) {
+                <span class="kw">this</span>.retryCount++;
+                <span class="kw">if</span> (<span class="kw">this</span>.retryCount &lt;= <span class="kw">this</span>.maxRetries) {
+                    console.log(<span class="str">`重连 ${this.retryCount}/${this.maxRetries}`</span>);
+                    setTimeout(() => <span class="kw">this</span>.connect(), <span class="kw">this</span>.retryDelay);
+                } <span class="kw">else</span> {
+                    <span class="kw">this</span>.onFail(<span class="str">'重连次数耗尽'</span>);
+                }
+            }
+        };
+    }
+
+    close() { <span class="kw">this</span>.es.close(); <span class="kw">this</span>.retryCount = <span class="kw">this</span>.maxRetries + 1; }
+}</pre>
+    </div>
+
+    <h4>7.2 服务端处理客户端断开</h4>
+
+    <p>服务端需要感知客户端断开（关闭浏览器/网络断开），释放资源停止推送。否则服务端会一直向一个已断开的连接推送数据，浪费LLM Token。</p>
+
+    <div class="code-block">
+      <span class="lang">Java (WebFlux检测客户端断开)</span>
+<pre><span class="kw">@GetMapping</span>(value = <span class="str">"/chat/stream"</span>, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+<span class="kw">public</span> Flux&lt;ServerSentEvent&lt;String&gt;&gt; chatStream(<span class="kw">@RequestParam</span> String query) {
+    <span class="kw">return</span> Flux.create(sink -> {
+        model.generate(query, <span class="kw">new</span> StreamingResponseHandler&lt;&gt;() {
+            <span class="kw">@Override</span> <span class="kw">public</span> <span class="kw">void</span> onNext(String token) {
+                <span class="cmt">// sink.isCancelled()检测客户端是否已断开</span>
+                <span class="kw">if</span> (!sink.isCancelled()) {
+                    sink.next(ServerSentEvent.builder(token).build());
+                } <span class="kw">else</span> {
+                    <span class="cmt">// 客户端断开，停止LLM生成</span>
+                    model.cancel();  <span class="cmt">// 取消LLM调用，节省Token</span>
+                }
+            }
+            <span class="kw">@Override</span> <span class="kw">public</span> <span class="kw">void</span> onComplete() {
+                <span class="kw">if</span> (!sink.isCancelled()) sink.complete();
+            }
+        });
+    }).doOnCancel(() -> {
+        log.info(<span class="str">"客户端断开连接，取消LLM调用"</span>);
+        <span class="cmt">// 清理资源：取消LLM请求、释放上下文</span>
+    });
+}</pre>
+    </div>
+
+    <!-- ===================== 8. mall-agent实战 ===================== -->
+    <h3>8. mall-agent中的SSE实战 <span class="difficulty">★★★★★ 必考</span></h3>
+
+    <p>mall-agent的SSE实现有几个设计决策，面试时可以展开讲。</p>
+
+    <div class="concept-card">
+      <h4>设计决策1：为什么用WebFlux不用MVC SseEmitter</h4>
+      <p>矿池官网高峰期同时在线用户数可能上千，每个用户都在等Agent流式回答。MVC SseEmitter每个连接占用一个Tomcat线程（即使异步释放也有限制），WebFlux基于Netty NIO，少量线程处理数千并发连接。另外WebFlux的Flux可以和LangChain4j的StreamingResponseHandler天然对接——每个token到达时通过sink.next()推送，不需要自己管理线程池。</p>
+    </div>
+
+    <div class="concept-card">
+      <h4>设计决策2：缓冲解析 vs 流式推送的权衡</h4>
+      <p>mall-agent的ReAct循环有一个特殊处理：流式输出先<strong>全部缓冲</strong>，等完整响应拿到后确认没有Action（工具调用）才推送Final Answer给用户。这是因为LLM在流式输出时可能编造Observation——在Action还没执行时就先输出虚构的Observation。代价是失去了打字机效果，但保证了正确性。</p>
+      <p>面试时可以这样回答：这是<strong>正确性优先于体验</strong>的工程权衡。如果以后模型支持原生function calling（如DeepSeek），可以回归流式推送——模型在返回tool_calls时不会编造Observation。</p>
+    </div>
+
+    <div class="concept-card">
+      <h4>设计决策3：SSE事件类型设计</h4>
+      <p>mall-agent用了多种事件类型来区分不同阶段的消息：</p>
+      <ul>
+        <li><strong>thinking</strong>：Agent正在思考（显示"思考中..."动画）</li>
+        <li><strong>action</strong>：Agent正在调用工具（显示"正在查询..."）</li>
+        <li><strong>token</strong>：流式回答的文本片段（逐字渲染）</li>
+        <li><strong>error</strong>：错误信息（红色提示框）</li>
+        <li><strong>done</strong>：回答完成（停止加载动画，显示完整回答）</li>
+        <li><strong>transfer</strong>：转人工（显示人工客服接入提示）</li>
+      </ul>
+      <p>前端根据事件类型做不同的UI渲染，比只用一种事件类型+状态码更清晰。</p>
+    </div>
+
+    <div class="diagram">
+      <svg viewBox="0 0 850 480" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="asr" markerWidth="8" markerHeight="8" refX="6" refY="2" orient="auto">
+            <path d="M0,0 L6,2 L0,4 Z" fill="#1565c0"/>
+          </marker>
+        </defs>
+        <text x="425" y="20" text-anchor="middle" font-size="14" font-weight="700" fill="#1565c0">mall-agent SSE流式输出完整链路</text>
+
+        <!-- 浏览器 -->
+        <rect x="20" y="50" width="160" height="80" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+        <text x="100" y="85" text-anchor="middle" font-size="13" font-weight="600" fill="#1565c0">浏览器</text>
+        <text x="100" y="105" text-anchor="middle" font-size="10" fill="#555">EventSource</text>
+        <text x="100" y="120" text-anchor="middle" font-size="9" fill="#999">GET /api/chat/stream</text>
+
+        <!-- Nginx -->
+        <rect x="280" y="50" width="160" height="80" rx="8" fill="#fff3e0" stroke="#ff6f00" stroke-width="2"/>
+        <text x="360" y="80" text-anchor="middle" font-size="13" font-weight="600" fill="#ff6f00">Nginx</text>
+        <text x="360" y="100" text-anchor="middle" font-size="10" fill="#555">proxy_buffering off</text>
+        <text x="360" y="115" text-anchor="middle" font-size="10" fill="#555">proxy_read_timeout 300s</text>
+        <text x="360" y="130" text-anchor="middle" font-size="9" fill="#999">gzip off</text>
+
+        <!-- Spring WebFlux -->
+        <rect x="540" y="50" width="160" height="80" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>
+        <text x="620" y="80" text-anchor="middle" font-size="13" font-weight="600" fill="#2e7d32">Spring WebFlux</text>
+        <text x="620" y="100" text-anchor="middle" font-size="10" fill="#555">Flux&lt;SSE&gt;</text>
+        <text x="620" y="115" text-anchor="middle" font-size="10" fill="#555">AiController</text>
+        <text x="620" y="130" text-anchor="middle" font-size="9" fill="#999">Netty NIO</text>
+
+        <!-- 箭头 -->
+        <line x1="180" y1="90" x2="278" y2="90" stroke="#1565c0" stroke-width="2" marker-end="url(#asr)"/>
+        <line x1="440" y1="90" x2="538" y2="90" stroke="#1565c0" stroke-width="2" marker-end="url(#asr)"/>
+
+        <!-- 下游系统 -->
+        <rect x="200" y="180" width="160" height="50" rx="8" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="1.5"/>
+        <text x="280" y="200" text-anchor="middle" font-size="11" fill="#7b1fa2">LangChain4j</text>
+        <text x="280" y="218" text-anchor="middle" font-size="10" fill="#555">StreamingChatModel</text>
+        <line x1="620" y1="130" x2="620" y2="155" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="4,2"/>
+        <line x1="620" y1="155" x2="280" y2="155" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="4,2"/>
+        <line x1="280" y1="155" x2="280" y2="178" stroke="#1565c0" stroke-width="1.5" marker-end="url(#asr)"/>
+
+        <rect x="450" y="180" width="200" height="50" rx="8" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="1.5"/>
+        <text x="550" y="200" text-anchor="middle" font-size="11" fill="#7b1fa2">ReAct循环</text>
+        <text x="550" y="218" text-anchor="middle" font-size="10" fill="#555">缓冲区解析→推送Final Answer</text>
+
+        <!-- 事件流 -->
+        <rect x="80" y="280" width="690" height="180" rx="8" fill="#f8f9fa" stroke="#e0e0e0" stroke-width="1"/>
+        <text x="425" y="300" text-anchor="middle" font-size="12" font-weight="600" fill="#555">SSE事件流（浏览器→Nginx→WebFlux→浏览器）</text>
+
+        <rect x="100" y="315" width="120" height="30" rx="4" fill="#e3f2fd"/>
+        <text x="160" y="335" text-anchor="middle" font-size="10" fill="#1565c0">event: thinking</text>
+        <line x1="220" y1="330" x2="245" y2="330" stroke="#999" stroke-width="1" marker-end="url(#asr)"/>
+
+        <rect x="250" y="315" width="120" height="30" rx="4" fill="#fff3e0"/>
+        <text x="310" y="335" text-anchor="middle" font-size="10" fill="#ff6f00">event: action</text>
+        <line x1="370" y1="330" x2="395" y2="330" stroke="#999" stroke-width="1" marker-end="url(#asr)"/>
+
+        <rect x="400" y="315" width="120" height="30" rx="4" fill="#e8f5e9"/>
+        <text x="460" y="335" text-anchor="middle" font-size="10" fill="#2e7d32">event: token</text>
+        <line x1="520" y1="330" x2="545" y2="330" stroke="#999" stroke-width="1" marker-end="url(#asr)"/>
+
+        <rect x="550" y="315" width="100" height="30" rx="4" fill="#e8f5e9"/>
+        <text x="600" y="335" text-anchor="middle" font-size="10" fill="#2e7d32">event: token</text>
+        <line x1="650" y1="330" x2="665" y2="330" stroke="#999" stroke-width="1" marker-end="url(#asr)"/>
+
+        <rect x="670" y="315" width="80" height="30" rx="4" fill="#fce4ec"/>
+        <text x="710" y="335" text-anchor="middle" font-size="10" fill="#d32f2f">event: done</text>
+
+        <text x="425" y="380" text-anchor="middle" font-size="10" fill="#555">前端渲染：思考动画 → 工具调用动画 → 逐字渲染 → 完成</text>
+        <text x="425" y="400" text-anchor="middle" font-size="10" fill="#999">Nginx: proxy_buffering off 确保每个事件立即转发，不攒批</text>
+        <text x="425" y="420" text-anchor="middle" font-size="10" fill="#999">中间代理/Ingress/CDN层也需要检查缓冲配置</text>
+        <text x="425" y="445" text-anchor="middle" font-size="10" fill="#d32f2f">K8s Ingress: nginx.ingress.kubernetes.io/proxy-buffering: "off"</text>
+      </svg>
+      <div class="caption">mall-agent SSE完整链路：浏览器→Nginx→WebFlux→LangChain4j→ReAct→SSE事件流→浏览器渲染</div>
+    </div>
+
+    <!-- ===================== 9. 面试Q&A ===================== -->
+    <h3>9. 面试Q&A <span class="difficulty">★★★★★ 高频</span></h3>
+
+    <div class="interview-q">
+      <div class="question">Q1：你的Agent流式输出是怎么实现的？完整链路说一下。</div>
+      <div class="interview-answer">
+        <p>完整链路：浏览器EventSource发起GET /api/chat/stream → Nginx（proxy_buffering off，透传）→ Spring WebFlux AiController → Flux.create异步推送 → LangChain4j StreamingChatModel的onNext回调 → 每个token通过sink.next()推送SSE事件 → 经Nginx透明转发 → 浏览器EventSource.onmessage逐字渲染。</p>
+        <p>关键点：WebFlux用Netty NIO少量线程处理高并发，Nginx必须关proxy_buffering否则流式变成批量，LLM生成token到前端渲染的延迟控制在50ms内。</p>
+      </div>
+      <div class="interview-tip">画链路图加分。提proxy_buffering off展示你有部署经验。说出"WebFlux NIO"和"Event Loop"展示深入理解。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">Q2：Nginx代理SSE需要哪些配置？为什么？</div>
+      <div class="interview-answer">
+        <p>核心三段：</p>
+        <p>1）<strong>proxy_buffering off</strong>——最重要。Nginx默认会缓存上游响应，攒够再发给客户端。SSE需要逐字推送，必须关缓冲让Nginx变成透传模式。</p>
+        <p>2）<strong>proxy_read_timeout 300s</strong>——默认60秒，Agent的LLM推理+工具调用经常超过60秒，不设大Nginx会主动断开连接。</p>
+        <p>3）<strong>gzip off</strong>——流式内容不适合压缩（gzip需要攒够数据才能压缩，和proxy_buffering一样会破坏流式效果）。</p>
+        <p>K8s Ingress还要加annotation：nginx.ingress.kubernetes.io/proxy-buffering: "off"。</p>
+      </div>
+      <div class="interview-tip">三条都说清楚，尤其第一条必须强调。提K8s Ingress annotation展示你有容器化部署经验。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">Q3：SSE和WebSocket怎么选？Agent场景为什么用SSE？</div>
+      <div class="interview-answer">
+        <p>Agent场景用SSE的原因：</p>
+        <p>1）<strong>通信模式匹配</strong>：用户发消息（POST）→ Agent流式回答（SSE推送），Server→Client单向推送，不需要WebSocket的双向通道。</p>
+        <p>2）<strong>简单</strong>：SSE就是HTTP GET，不需要协议升级握手、心跳保活、帧格式处理。WebSocket要处理连接管理、心跳、断线重连——额外复杂度。</p>
+        <p>3）<strong>自动重连</strong>：EventSource内置重连+Last-Event-ID续传，WebSocket需要手动实现。</p>
+        <p>4）<strong>基础设施友好</strong>：SSE走标准HTTP，Nginx/CDN/防火墙都不需要额外配置。WebSocket需要Upgrade头，部分代理/防火墙会拦截。</p>
+        <p>WebSocket适合的场景：实时双向通信（在线协作、游戏、聊天室）。Agent是典型的单向推送场景，用WebSocket过度设计。</p>
+      </div>
+      <div class="interview-tip">不要只说"SSE简单"，要说"为什么Agent场景不需要双向"。提"过度设计"表明你有架构判断力。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">Q4：SseEmitter和WebFlux的ServerSentEvent有什么区别？</div>
+      <div class="interview-answer">
+        <p>核心区别在<strong>线程模型</strong>：</p>
+        <p>SseEmitter（Spring MVC）：每个SSE连接占用一个Tomcat线程（即使异步释放，线程池大小也有限制，默认200）。send()是阻塞调用。适合低并发场景。</p>
+        <p>ServerSentEvent（WebFlux）：基于Reactor，Event Loop + 少量线程处理数千并发连接。Flux支持背压——下游消费慢时上游减速。doOnCancel可以检测客户端断开并释放资源。适合高并发Agent场景。</p>
+        <p>mall-agent选WebFlux的原因：矿池高峰期上千用户同时等待Agent流式回答，MVC的线程池撑不住。WebFlux的Netty NIO用少量线程处理所有连接，和LangChain4j的StreamingResponseHandler天然对接。</p>
+      </div>
+      <div class="interview-tip">核心是线程模型差别。说"Event Loop + 少量线程"比说"WebFlux好"有深度。提背压和doOnCancel展示实际使用经验。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">Q5：流式输出时用户关闭网页会怎样？怎么处理？</div>
+      <div class="interview-answer">
+        <p>三件事：</p>
+        <p>1）<strong>检测断开</strong>：WebFlux Flux.create的sink.isCancelled()检测客户端断开。EventSource连接关闭时，Flux的订阅自动取消。</p>
+        <p>2）<strong>停止LLM</strong>：检测到断开后调用model.cancel()终止LLM推理，避免浪费Token。如果已经在工具调用中，等当前工具返回后不再继续下一轮ReAct。</p>
+        <p>3）<strong>清理资源</strong>：doOnCancel中释放上下文（ReActTraceStore、对话记忆），避免内存泄漏。</p>
+        <p>如果不处理，服务端会继续向已断开的TCP连接写数据（触发IOException），LLM继续生成完整回答浪费Token，内存中的上下文对象也不会被GC。</p>
+      </div>
+      <div class="interview-tip">分三层说（检测→停止→清理），展示系统性思维。提"节省Token"说明你有成本意识。</div>
+    </div>
+
+    <div class="interview-q">
+      <div class="question">Q6：EventSource的GET请求怎么传Token认证？</div>
+      <div class="interview-answer">
+        <p>三种方式：</p>
+        <p>1）<strong>URL参数</strong>：/api/chat/stream?token=xxx——最简单，但Token暴露在URL中（浏览器历史、服务器日志）。</p>
+        <p>2）<strong>Cookie</strong>：登录时设置HttpOnly Cookie，EventSource自动携带——安全，但跨域需要withCredentials配置。</p>
+        <p>3）<strong>先POST再SSE</strong>：用户先POST /api/chat发起对话（带Authorization头），返回streamId，然后EventSource连GET /api/chat/stream/{streamId}——最安全，Token不暴露在URL中，streamId一次性使用。</p>
+        <p>mall-agent用的是方案3：POST发起对话返回streamId，SSE通过streamId关联会话，认证在POST阶段完成。</p>
+      </div>
+      <div class="interview-tip">三种方案都说出来，展示你知道EventSource的局限性。提"方案3最安全"展示你有安全意识。</div>
+    </div>
+
+    <!-- ===================== 10. 重点回顾 ===================== -->
+    <div class="review-card">
+      <ul>
+        <li><strong>SSE协议</strong>：HTTP长连接上的单向文本事件流，Content-Type: text/event-stream，data/event/id/retry四字段</li>
+        <li><strong>Spring实现</strong>：SseEmitter（MVC，阻塞，低并发）vs ServerSentEvent（WebFlux，NIO，高并发）</li>
+        <li><strong>前端EventSource</strong>：原生API，自动重连+Last-Event-ID，不支持自定义请求头</li>
+        <li><strong>Nginx关键配置</strong>：proxy_buffering off（必开）、proxy_read_timeout 300s、gzip off、K8s Ingress annotation</li>
+        <li><strong>SSE vs WebSocket</strong>：Agent是单向推送场景，SSE够用；WebSocket双向+复杂，过度设计</li>
+        <li><strong>断线重连</strong>：EventSource内置重连，服务端sink.isCancelled()检测断开，model.cancel()省Token</li>
+        <li><strong>mall-agent设计</strong>：WebFlux+NIO、缓冲解析防编造Observation、多种事件类型区分状态、POST+streamId认证</li>
+        <li><strong>面试核心数字</strong>：proxy_read_timeout 300s、Tomcat线程池默认200、TTFT 0.5-1s、NIO少量线程处理数千连接</li>
+      </ul>
+    </div>
+
+    <div class="chapter-nav">
+      <a href="13-interview-qa.html" class="prev">← 高频面试题汇总</a>
+      <a href="index.html" class="next">返回首页 →</a>
+    </div>
+
+  </main>
+<script>
+(function(){
+  var btn = document.getElementById("sidebarToggle");
+  var body = document.body;
+  try { if(localStorage.getItem("sb")==="0") body.classList.add("sidebar-collapsed"); } catch(e){}
+  function update(){ btn.textContent = body.classList.contains("sidebar-collapsed") ? "▶" : "◀"; }
+  btn.addEventListener("click", function(){
+    body.classList.toggle("sidebar-collapsed");
+    try { localStorage.setItem("sb", body.classList.contains("sidebar-collapsed")?"0":"1"); } catch(e){}
+    update();
+  });
+  update();
+})();
+</script>
+</body>
+</html>

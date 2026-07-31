@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>项目经验：mall-agent智能客服 — Agent面试宝典</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="sidebarToggle" class="sidebar-toggle" title="收起/展开菜单">◀</button>
+
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <h1>Agent面试宝典</h1>
+    <p>Java后端 → AI Agent 转型指南</p>
+  </div>
+  <nav>
+    <a href="index.html"><span class="num">00</span>首页</a>
+    <a href="01-java-foundation.html"><span class="num">01</span>Java后端核心复习</a>
+    <a href="02-middleware.html"><span class="num">02</span>常用中间件</a>
+    <a href="03-llm-foundation.html"><span class="num">03</span>LLM大模型基础</a>
+    <a href="04-prompt-engineering.html"><span class="num">04</span>Prompt工程</a>
+    <a href="05-langchain4j.html"><span class="num">05</span>LangChain4j框架详解</a>
+    <a href="06-agent-core.html"><span class="num">06</span>Agent核心概念</a>
+    <a href="07-rag.html"><span class="num">07</span>RAG检索增强生成</a>
+    <a href="08-vector-db.html"><span class="num">08</span>向量数据库与Embedding</a>
+    <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
+    <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
+    <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
+    <a href="12-project-packaging.html" class="active"><span class="num">12</span>项目经验：mall-agent</a>
+    <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
+      <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
+      <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
+      <a href="16-spring-ai.html"><span class="num">16</span>Spring AI对比</a>
+      <a href="17-agent-security.html"><span class="num">17</span>Agent安全</a>
+  </nav>
+</aside>
+
+<main class="main">
+
+<div class="chapter-header">
+  <span class="chapter-num">第12章</span>
+  <h2>项目经验：mall-agent智能客服</h2>
+  <div class="goal"><strong>学习目标：</strong>基于实际项目 mall-agent 源码，掌握矿池智能客服系统的完整架构、核心亮点、技术难点和面试Q&A。内容100%来自源码，不是文档纸上谈兵。</div>
+</div>
+
+<h3>一、项目介绍（面试开场用）</h3>
+
+<p>面试官说"介绍一下你这个项目"时，用以下版本。控制在2分钟左右，有结构、有亮点、有深度。</p>
+
+<div class="one-liner">矿池智能客服系统：统一ReAct Agent架构，缓存快速通道+关键词拦截+LLM自主路由，32个工具+MCP远程工具+RAG知识库预检索+质检门禁。</div>
+
+<h4>30秒版（快速介绍）</h4>
+
+<p>我做的是一个矿池智能客服系统，核心是统一ReAct Agent架构。用户提问后，系统先查缓存和转人工关键词做零成本快速拦截，然后统一进入ReAct循环——LLM自主推理决定调用哪些工具（32个本地工具+MCP远程工具），或者调用searchKnowledgeBase工具检索知识库。</p>
+
+<p>项目有几个做得比较深的点：一是手写ReAct循环（Qwen兼容端点tool calling不稳定，通过Prompt约定格式+字符串解析实现）；二是RAG全链路评估（每小时自动跑Hit Rate/MRR/NDCG/忠实度/相关性五项评估）；三是质检门禁（5维度评分，低于0.6分自动重答最多3次）；四是MCP协议集成（Java实现SSE客户端，远程工具和本地工具统一注册调度）。</p>
+
+<p>技术栈是Spring WebFlux + LangChain4j + Milvus + Redis + MySQL，响应式架构，用户级限流10次/分钟，全局并发100。</p>
+
+<h4>2分钟版（详细展开）</h4>
+
+<p>我做的是一个矿池智能客服系统，解决矿池运营中用户咨询量大、人工客服响应慢的问题。核心架构是<strong>统一ReAct Agent + RAG知识库 + MCP工具调用</strong>。</p>
+
+<p>整体流程是这样的——<strong>没有前置意图分类器</strong>，由LLM在ReAct推理过程中自主决定路由：</p>
+<ol>
+  <li><strong>缓存快速通道</strong>：SimpleQaCache命中且未过期→直接返回缓存答案（~5ms）</li>
+  <li><strong>转人工关键词拦截</strong>：用户明确说"转人工/人工客服"→零成本立即返回转接事件</li>
+  <li><strong>统一ReAct</strong>：问题规范化→加载历史→工具分类（关键词+LLM混合多分类）→KB预检索上下文注入→ReAct循环。LLM自主选择调用searchKnowledgeBase工具检索知识库、transferToHuman工具转人工、或32个业务工具（订单/财务/物流/商品/用户/营销等）</li>
+</ol>
+
+<p>ReAct循环：Thought→Action→Observation→Final Answer，最多3轮，单轮90秒超时。支持并行工具调用（CompletableFuture），工具调用重试限制（MAX_TOOL_CALLS_PER_TOOL=3）。</p>
+
+<p>后置处理：答案→Redis对话记忆→QualityGate质检（5维度评分，&lt;0.6重答3次）→异步写MySQL。质检通过的答案自动缓存。</p>
+
+<p>这个项目我觉得有几个做得比较深的地方：第一是手写ReAct循环，第二是RAG全链路评估，第三是质检门禁，第四是MCP协议集成，第五是从"意图分类三路路由"演进到"统一ReAct"的架构升级——这个演进本身就是亮点。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 700 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="apr2" markerWidth="8" markerHeight="8" refX="6" refY="2" orient="auto">
+      <path d="M0,0 L6,2 L0,4 Z" fill="#1565c0"/>
+    </marker>
+  </defs>
+  <text x="350" y="20" text-anchor="middle" font-size="14" fill="#1565c0" font-weight="bold">mall-agent 整体架构（统一ReAct模式）</text>
+  <rect x="250" y="30" width="200" height="36" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="350" y="52" text-anchor="middle" font-size="12" fill="#1565c0">用户 (EventSource SSE)</text>
+  <line x1="350" y1="66" x2="350" y2="80" stroke="#1565c0" stroke-width="2" marker-end="url(#apr2)"/>
+  <rect x="220" y="80" width="260" height="36" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+  <text x="350" y="103" text-anchor="middle" font-size="11" fill="#ff6f00">TraceWebFilter→RateLimitFilter→AiController</text>
+  <line x1="350" y1="116" x2="350" y2="130" stroke="#1565c0" stroke-width="2" marker-end="url(#apr2)"/>
+  <rect x="250" y="130" width="200" height="36" rx="6" fill="#f3e5f5" stroke="#7b1fa2"/>
+  <text x="350" y="153" text-anchor="middle" font-size="12" fill="#7b1fa2">ChatService (核心编排)</text>
+  <line x1="200" y1="148" x2="100" y2="175" stroke="#1565c0" stroke-width="2" marker-end="url(#apr2)"/>
+  <line x1="280" y1="166" x2="200" y2="175" stroke="#1565c0" stroke-width="2" marker-end="url(#apr2)"/>
+  <line x1="350" y1="166" x2="350" y2="175" stroke="#1565c0" stroke-width="2" marker-end="url(#apr2)"/>
+  <rect x="30" y="175" width="140" height="50" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="100" y="195" text-anchor="middle" font-size="11" fill="#2e7d32" font-weight="bold">①缓存快速通道</text>
+  <text x="100" y="210" text-anchor="middle" font-size="9" fill="#555">命中→直接返回(~5ms)</text>
+  <text x="100" y="222" text-anchor="middle" font-size="9" fill="#555">零成本</text>
+  <rect x="180" y="175" width="140" height="50" rx="6" fill="#ffebee" stroke="#d32f2f"/>
+  <text x="250" y="195" text-anchor="middle" font-size="11" fill="#d32f2f" font-weight="bold">②转人工关键词</text>
+  <text x="250" y="210" text-anchor="middle" font-size="9" fill="#555">"转人工"等明确请求</text>
+  <text x="250" y="222" text-anchor="middle" font-size="9" fill="#555">零成本拦截</text>
+  <rect x="330" y="175" width="280" height="50" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="470" y="195" text-anchor="middle" font-size="11" fill="#1565c0" font-weight="bold">③统一ReAct</text>
+  <text x="470" y="210" text-anchor="middle" font-size="9" fill="#555">LLM自主路由：searchKnowledgeBase</text>
+  <text x="470" y="222" text-anchor="middle" font-size="9" fill="#555">/transferToHuman/32个业务工具</text>
+  <line x1="470" y1="225" x2="470" y2="245" stroke="#1565c0" stroke-width="2" marker-end="url(#apr2)"/>
+  <rect x="290" y="245" width="360" height="100" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+  <text x="470" y="265" text-anchor="middle" font-size="12" fill="#ff6f00" font-weight="bold">ReAct 循环 (最多3轮/单轮90s)</text>
+  <text x="470" y="282" text-anchor="middle" font-size="10" fill="#555">问题规范化→加载历史→工具分类(关键词+LLM多分类)</text>
+  <text x="470" y="296" text-anchor="middle" font-size="10" fill="#555">→KB预检索上下文注入→Thought→Action→Observation</text>
+  <text x="470" y="310" text-anchor="middle" font-size="10" fill="#555">→并行工具调用(CompletableFuture)→Final Answer</text>
+  <text x="470" y="324" text-anchor="middle" font-size="10" fill="#d32f2f">工具重试限制: MAX_TOOL_CALLS_PER_TOOL=3</text>
+  <line x1="470" y1="345" x2="350" y2="345" stroke="#1565c0" stroke-width="2" marker-end="url(#apr2)"/>
+  <rect x="200" y="345" width="300" height="36" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="350" y="367" text-anchor="middle" font-size="11" fill="#2e7d32">后置: Redis记忆→QualityGate质检→MySQL持久化→缓存</text>
+  <text x="100" y="270" text-anchor="middle" font-size="10" fill="#2e7d32">✓ ~5ms返回</text>
+  <text x="250" y="270" text-anchor="middle" font-size="10" fill="#d32f2f">✓ 零成本</text>
+  <text x="350" y="395" text-anchor="middle" font-size="11" fill="#555">技术栈: Spring WebFlux + LangChain4j + Milvus + Redis + MySQL</text>
+</svg>
+<div class="caption">统一ReAct架构：缓存/关键词零成本拦截→统一ReAct由LLM自主路由，无前置意图分类器</div>
+</div>
+
+<h4>讲述技巧</h4>
+<table class="compare-table">
+<tr><th>原则</th><th>说明</th></tr>
+<tr><td>先总后分</td><td>先一句话概括项目，再展开技术细节</td></tr>
+<tr><td>用数字说话</td><td>"32个工具"、"3轮循环"、"90秒超时"、"5维度评分"</td></tr>
+<tr><td>讲"为什么"</td><td>不只说做了什么，说为什么这么做（Qwen tool calling不稳定→手写ReAct）</td></tr>
+<tr><td>留钩子</td><td>每个亮点说一半，等面试官追问（"流式输出有个坑..."等他问"什么坑？"）</td></tr>
+<tr><td>控制节奏</td><td>2分钟说完，不要超过3分钟。面试官会追问细节，那时再展开</td></tr>
+<tr><td>讲架构演进</td><td>"从意图分类三路路由演进到统一ReAct"本身就是亮点，展示架构迭代能力</td></tr>
+</table>
+
+<h3>二、项目六大亮点（面试时的"杀手锏"）</h3>
+
+<div class="concept-card">
+<h4>亮点1：手写ReAct循环（不依赖AiServices）</h4>
+<p><strong>背景</strong>：Qwen的OpenAI兼容端点对原生tool calling支持不稳定，放弃LangChain4j AiServices的自动调用。</p>
+<p><strong>实现</strong>：自己实现Thought→Action→Observation循环。通过系统提示词约定格式（Action:/Final Answer:），用字符串解析提取工具名和JSON参数。流式输出时模型会编造Observation，做了StreamState状态机跟踪已发送位置，等完整响应拿到后确认没有Action才推送Final Answer给用户。</p>
+<p><strong>控制</strong>：最多3轮循环，单轮90秒超时（CompletableFuture+Mono.fromFuture异步等待，不阻塞WebFlux线程池），工具调用重试限制（MAX_TOOL_CALLS_PER_TOOL=3），兜底策略（Final Answer为空但有工具结果时用Observation组装）。</p>
+</div>
+
+<div class="concept-card">
+<h4>亮点2：RAG全链路评估（四阶段自动化）</h4>
+<p><strong>Phase 1 检索层</strong>：算Hit Rate/MRR/NDCG，判断黄金数据对应的chunk是否在top-K中</p>
+<p><strong>Phase 2 Rerank层</strong>：对比Rerank前后NDCG变化，量化Rerank提升效果</p>
+<p><strong>Phase 3 忠实度</strong>：LLM-as-Judge评判回答是否忠实于检索内容（有无幻觉）</p>
+<p><strong>Phase 4 相关性</strong>：LLM-as-Judge评判回答是否切题</p>
+<p><strong>机制</strong>：每小时@Scheduled执行，基于人工审核的黄金数据（rag_golden_data），指标持久化到MySQL可追溯。</p>
+</div>
+
+<div class="concept-card">
+<h4>亮点3：质检门禁+自动重答（QualityGate）</h4>
+<p>每次回答后异步调用QualityJudge（LLM-as-Judge, Qwen）做5维度评分：<strong>准确性(30%)+完整性(25%)+有用性(20%)+简洁性(15%)+安全性(10%)</strong>。</p>
+<p>≥0.8通过，0.6-0.8警告，&lt;0.6自动重答最多3次。重答时传递扣分理由让模型针对性改进（如"准确性不足：回答中订单号错误"）。质检超时或不可用时跳过，直接返回原始答案。质检通过的答案自动缓存。</p>
+</div>
+
+<div class="concept-card">
+<h4>亮点4：MCP协议集成（Java实现客户端）</h4>
+<p>用Java实现MCP客户端，通过SSE长连接+JSON-RPC连接mall-mcp-server。启动时自动发现远程工具（tools/list），McpToolAdapter包装为HardWorkflowTool接口，与本地32个工具统一注册到HardWorkflowToolRegistry。MCP不可用时返回disabled()占位实例，本地工具不受影响。</p>
+</div>
+
+<div class="concept-card">
+<h4>亮点5：工具分类选择性注入（Token降60-80%）</h4>
+<p>ToolRouter做关键词+LLM混合多分类，返回Set&lt;ToolCategory&gt;（如"订单+物流"）。8个分类：ORDER(订单)/FINANCE(财务)/LOGISTICS(物流)/PRODUCT(商品)/USER(用户)/SERVICE(客服政策)/MARKETING(营销)/GENERAL(通用)。根据分类只注入相关工具到系统提示词，<strong>Token消耗降低60-80%</strong>，工具选择准确率显著提升。</p>
+</div>
+
+<div class="concept-card">
+<h4>亮点6：架构演进——从意图分类到统一ReAct</h6>
+<p>项目经历了一次重要架构演进：早期版本用IntentClassifier做意图分类，分知识库/通用/转人工三路。后来发现三路路由维护复杂、KB路径和General路径代码重复、LLM分类3s超时影响响应速度。</p>
+<p>演进后：移除IntentClassifier，改为<strong>统一ReAct模式</strong>——缓存和关键词做零成本快速拦截，其他统一进ReAct。LLM在推理过程中自主决定是否调用searchKnowledgeBase工具（知识库）、transferToHuman工具（转人工）、或业务工具。好处是：代码更简洁、路由更灵活（LLM能处理意图分类无法覆盖的复杂场景）、维护成本更低。</p>
+<p>这个演进本身就是面试亮点——展示你不仅能写代码，还能判断架构什么时候该重构、怎么重构。</p>
+</div>
+
+<h3>三、项目部署架构</h3>
+
+<p>面试官问"项目怎么部署的"时，要展示完整的工程化部署能力。mall-agent采用Docker + K8s + Rancher部署，以下从镜像构建、K8s配置、CI/CD流水线、环境管理四个维度展开。</p>
+
+<h4>1. Docker镜像构建</h4>
+
+<div class="code-block">
+<span class="lang">Dockerfile（多阶段构建）</span>
+<pre><span class="cmt"># Stage 1: 编译</span>
+FROM maven:3.8-openjdk-17-slim AS builder
+WORKDIR /app
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+COPY src ./src
+RUN mvn clean package -DskipTests -Pprod
+
+<span class="cmt"># Stage 2: 运行</span>
+FROM eclipse-temurin:17-jre-alpine
+RUN addgroup -S app && adduser -S appuser -G app
+WORKDIR /app
+COPY --from=builder /app/target/mall-agent-*.jar app.jar
+ENV JAVA_OPTS="-Xms512m -Xmx1024m -XX:+UseG1GC"
+EXPOSE 8080
+USER appuser
+ENTRYPOINT exec java $JAVA_OPTS -jar app.jar</pre>
+</div>
+
+<div class="concept-card">
+<h4>版本Tag策略</h4>
+<p>严格使用语义化版本Tag，<strong>禁止使用:latest</strong>。每次发布打新tag（v2/v3/v4...），构建后推送Docker Hub（jarvan616/mall-agent:v3）。K8s的imagePullPolicy=IfNotPresent配合版本Tag，精确控制每个环境运行哪个版本，Rollback时可直接切回旧Tag。</p>
+</div>
+
+<h4>2. K8s部署配置</h4>
+
+<div class="code-block">
+<span class="lang">Deployment核心配置</span>
+<pre>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mall-agent
+  namespace: mall-prod
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    spec:
+      containers:
+      - name: mall-agent
+        image: jarvan616/mall-agent:v3
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests: {memory: "512Mi", cpu: "500m"}
+          limits:   {memory: "1.5Gi", cpu: "2"}
+        livenessProbe:
+          httpGet: {path: /actuator/health, port: 8080}
+          initialDelaySeconds: 30
+        readinessProbe:
+          httpGet: {path: /actuator/health, port: 8080}
+          initialDelaySeconds: 10
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "prod"</pre>
+</div>
+
+<div class="concept-card">
+<h4>K8s配置要点</h4>
+<ul>
+<li><strong>replicas: 3</strong>——三副本保证高可用，maxUnavailable: 0保证滚动更新时不中断服务</li>
+<li><strong>健康检查</strong>——livenessProbe检测应用是否存活，readinessProbe检测是否就绪接收流量</li>
+<li><strong>资源限制</strong>——requests保证最低资源，limits防止OOM影响同节点其他Pod</li>
+<li><strong>ConfigMap管理配置</strong>——数据库连接、模型端点等环境差异配置通过ConfigMap注入，不硬编码</li>
+</ul>
+</div>
+
+<h4>3. CI/CD流水线</h4>
+
+<p>Git push → Jenkins自动构建 → Maven编译+测试 → Docker build → 推送Docker Hub（jarvan616/mall-agent:vX）→ Rancher更新Deployment镜像版本。整个流程从代码提交到生产部署约15分钟。</p>
+
+<h4>4. 环境管理</h4>
+
+<table class="compare-table">
+<tr><th>环境</th><th>用途</th><th>模型</th><th>资源配置</th></tr>
+<tr><td>dev</td><td>本地开发</td><td>Qwen 7b</td><td>最小，单实例</td></tr>
+<tr><td>staging</td><td>预发布验证</td><td>Qwen 32b</td><td>中等，2副本</td></tr>
+<tr><td>prod</td><td>生产环境</td><td>Qwen 72b + DeepSeek降级</td><td>3副本，资源充足</td></tr>
+</table>
+
+<h3>四、核心代码实现解析</h3>
+
+<p>面试中如果被问到"能看看你写的代码吗"，这一节就是准备好的"代码展示"。精选三个最核心的模块：ReAct循环流式解析、MCP客户端、QualityGate质检门禁。</p>
+
+<h4>4.1 ReAct循环流式解析（StreamState状态机）</h4>
+
+<div class="code-block">
+<span class="lang">Java (StreamState状态机核心逻辑)</span>
+<pre><span class="cmt">// StreamState枚举：跟踪LLM流式输出的当前状态</span>
+<span class="kw">enum</span> StreamState {
+    THOUGHT,       <span class="cmt">// 正在输出Thought</span>
+    ACTION_NAME,   <span class="cmt">// 正在输出Action: 工具名</span>
+    ACTION_JSON,   <span class="cmt">// 正在输出Action的JSON参数</span>
+    FINAL_ANSWER,  <span class="cmt">// 正在输出Final Answer</span>
+    DONE           <span class="cmt">// 输出完成</span>
+}
+
+<span class="cmt">// 核心逻辑：逐token解析，状态机跟踪</span>
+<span class="kw">for</span> (String token : streamTokens) {
+    buffer.append(token);
+    <span class="kw">switch</span> (state) {
+        <span class="kw">case</span> THOUGHT:
+            <span class="kw">if</span> (buffer.contains(<span class="str">"Action:"</span>)) {
+                state = StreamState.ACTION_NAME;
+                <span class="cmt">// 不推送Thought内容给用户</span>
+            }
+            <span class="kw">break</span>;
+        <span class="kw">case</span> ACTION_NAME:
+            <span class="kw">if</span> (buffer.contains(<span class="str">"```json"</span>)) {
+                extractActionName();
+                state = StreamState.ACTION_JSON;
+            }
+            <span class="kw">break</span>;
+        <span class="kw">case</span> ACTION_JSON:
+            <span class="kw">if</span> (buffer.contains(<span class="str">"```"</span>)) {
+                extractActionParams();
+                <span class="cmt">// 执行工具调用，进入下一轮ReAct</span>
+                executeTool(actionName, actionParams);
+                state = StreamState.THOUGHT;  <span class="cmt">// 重置</span>
+            }
+            <span class="kw">break</span>;
+        <span class="kw">case</span> FINAL_ANSWER:
+            <span class="cmt">// 确认没有Action后才推送Final Answer给用户</span>
+            pushToUser(token);
+            <span class="kw">break</span>;
+    }
+}</pre>
+</div>
+
+<div class="warn">
+<p><strong>StreamState的核心价值</strong>：防止LLM在流式输出时编造Observation。LLM可能在Action还没执行时就输出虚构的Observation结果——"流量: 100TH/s"看起来像真的，但实际没调工具。StreamState状态机跟踪已发送位置，等完整响应拿到后确认没有Action才推送Final Answer给用户。代价是牺牲打字机效果，但保证了正确性。</p>
+</div>
+
+<h4>4.2 MCP客户端实现</h4>
+
+<div class="code-block">
+<span class="lang">Java (MCP SSE客户端)</span>
+<pre><span class="kw">public class</span> McpSseClient {
+    <span class="kw">private final</span> WebClient webClient;
+
+    <span class="cmt">// 建立SSE连接</span>
+    <span class="kw">public</span> Flux&lt;String&gt; connect() {
+        <span class="kw">return</span> webClient.get().uri(<span class="str">"/sse"</span>)
+            .accept(MediaType.TEXT_EVENT_STREAM)
+            .retrieve().bodyToFlux(String.class);
+    }
+
+    <span class="cmt">// JSON-RPC请求</span>
+    <span class="kw">public</span> Mono&lt;JsonNode&gt; send(String method, JsonNode params) {
+        <span class="kw">return</span> webClient.post().uri(<span class="str">"/mcp/message"</span>)
+            .bodyValue(Map.of(<span class="str">"jsonrpc"</span>,<span class="str">"2.0"</span>, <span class="str">"method"</span>,method))
+            .retrieve().bodyToMono(JsonNode.class);
+    }
+
+    <span class="cmt">// 工具发现</span>
+    <span class="kw">public</span> List&lt;ToolDef&gt; listTools() {
+        <span class="kw">return</span> send(<span class="str">"tools/list"</span>, <span class="kw">null</span>).map(this::parseTools).block();
+    }
+}
+
+<span class="cmt">// McpToolAdapter：将MCP工具包装为HardWorkflowTool接口</span>
+<span class="kw">public class</span> McpToolAdapter <span class="kw">implements</span> HardWorkflowTool {
+    <span class="kw">private final</span> McpSseClient client;
+    <span class="kw">private final</span> ToolDef toolDef;
+
+    <span class="kw">@Override</span>
+    <span class="kw">public</span> ToolResult execute(Map&lt;String,Object&gt; args) {
+        String json = client.callTool(toolDef.name(), args).block();
+        <span class="kw">return</span> ToolResult.success(json);
+    }
+
+    <span class="kw">public static</span> McpToolAdapter disabled() {
+        <span class="kw">return new</span> McpToolAdapter(<span class="kw">null</span>, <span class="kw">null</span>) {
+            <span class="kw">public</span> ToolResult execute(Map args) {
+                <span class="kw">return</span> ToolResult.error(<span class="str">"MCP服务不可用"</span>);
+            }
+        };
+    }
+}</pre>
+</div>
+
+<h4>4.3 QualityGate质检门禁</h4>
+
+<div class="code-block">
+<span class="lang">QualityGate评分Prompt</span>
+<pre><span class="kw">System:</span> 你是质检裁判，从5个维度评估回答质量：
+1. 准确性(30%): 回答是否基于参考资料，有无编造
+2. 完整性(25%): 是否回答了用户所有问题
+3. 有用性(20%): 回答是否对用户有实际帮助
+4. 简洁性(15%): 是否避免了冗余信息
+5. 安全性(10%): 是否避免了敏感操作和不当内容
+
+输出JSON: {score: 0.0-1.0, reasons: "扣分原因", passed: true/false}
+
+<span class="kw">User:</span>
+参考资料: {{context}}
+用户问题: {{question}}
+助手回答: {{answer}}
+
+<span class="kw">评分逻辑:</span>
+≥0.8 → 通过，缓存答案
+0.6-0.8 → 警告，记录日志
+&lt;0.6 → 重答，传递扣分理由（如"准确性不足: 订单号错误"）</pre>
+</div>
+
+<h3>五、项目八大架构优化（量化数据）</h3>
+
+<table class="compare-table">
+<tr><th>优化项</th><th>问题</th><th>方案</th><th>收益</th></tr>
+<tr><td>统一ReAct架构</td><td>三路路由维护复杂、代码重复</td><td>移除IntentClassifier，LLM自主路由</td><td>代码简化，路由更灵活</td></tr>
+<tr><td>工具分类选择性注入</td><td>所有工具注入Token过高</td><td>关键词+LLM多分类，按需注入</td><td>Token降60-80%</td></tr>
+<tr><td>知识库预检索三保障</td><td>LLM可能忘记调知识库工具</td><td>预检索+系统提示词强化+工具去重</td><td>知识库命中率100%</td></tr>
+<tr><td>质检逻辑冗余修复</td><td>原始答案和质检答案重复保存</td><td>统一保存，只存一份最终答案</td><td>数据库写入减少50%</td></tr>
+<tr><td>工具调用重试机制</td><td>工具失败可能无限重试</td><td>MAX_TOOL_CALLS_PER_TOOL=3</td><td>Token降30-50%</td></tr>
+<tr><td>记忆管理优化</td><td>历史对话格式复杂，无限增长</td><td>简化格式+动态消息限制+大小控制</td><td>Token降33%，内存降60%</td></tr>
+<tr><td>工具调用并行化</td><td>串行调用效率低</td><td>支持一次Action指定多工具，CompletableFuture并行</td><td>速度提升60%，Token降67%</td></tr>
+<tr><td>CompletableFuture异步超时</td><td>CountDownLatch阻塞WebFlux线程</td><td>改用Mono.fromFuture异步等待</td><td>不阻塞事件循环线程池</td></tr>
+</table>
+
+<div class="note">总体收益：Token消耗降至20-30%，响应速度提升2-3倍，数据库写入减少50%，内存占用减少60%，知识库命中率从不稳定到100%。</div>
+
+<h3>六、项目五大难点踩坑（面试官最爱问）</h3>
+
+<div class="warn">
+<p><strong>难点1：Qwen兼容端点tool calling不稳定 → 被迫手写ReAct</strong></p>
+<p>问题：Qwen的OpenAI兼容端点不支持原生tool calling，LangChain4j AiServices自动调用工具不可靠。</p>
+<p>解决：放弃AiServices，自己实现ReAct循环。系统提示词约定Action:/Final Answer:格式，字符串解析提取工具名和参数。兼容所有模型，精细控制流式推送时机。</p>
+</div>
+
+<div class="warn">
+<p><strong>难点2：流式输出时模型编造Observation/Final Answer</strong></p>
+<p>问题：LLM流式输出时，模型可能在Observation位置直接编造工具结果，或在Final Answer还没到时就推送。</p>
+<p>解决：StreamState状态机跟踪已发送位置——流式输出先通过状态机判断，等完整响应拿到后确认没有Action才推送Final Answer给用户。如果有Action，先执行工具再进下一轮。代价是牺牲打字机效果，但保证了正确性。</p>
+</div>
+
+<div class="warn">
+<p><strong>难点3：Rerank超时降级vs用户体验权衡</strong></p>
+<p>问题：DashScope gte-rerank有时超时，降级为向量检索原始顺序会影响精度。</p>
+<p>解决：10秒超时，超时返回null，调用方降级为向量检索原始顺序。onErrorResume确保降级不影响主流程。权衡：Rerank提升精度但增加延迟，生产环境根据P95延迟决定是否启用。</p>
+</div>
+
+<div class="warn">
+<p><strong>难点4：多模型降级时Token消耗累积</strong></p>
+<p>问题：模型降级时，前一个模型已消耗了token（可能已部分输出），切换下一个模型需要重新发送完整prompt，token消耗翻倍。</p>
+<p>解决：降级只在模型调用失败时触发（网络错误/超时），不在"回答质量差"时触发。质检门禁的重答是异步的，不阻塞用户已收到的流式回答。</p>
+</div>
+
+<div class="warn">
+<p><strong>难点5：MCP SSE长连接断线</strong></p>
+<p>问题：mall-mcp-server重启或网络抖动时，SSE连接断开，MCP远程工具不可用。</p>
+<p>解决：启动时连接失败返回disabled()占位实例，本地工具不受影响。运行中断开时工具调用返回错误JSON，ReAct感知失败后尝试其他工具。欠缺：没有自动重连，生产环境应加指数退避重试。</p>
+</div>
+
+<h3>七、面试Q&A（项目深挖）</h3>
+
+<div class="interview-q">
+<div class="question">Q1：你的项目整体架构是什么？</div>
+<div class="interview-answer">
+<p>核心架构是<strong>统一ReAct Agent</strong>——缓存快速通道（SimpleQaCache命中直接返回，~5ms）+ 转人工关键词拦截（"转人工"等零成本）+ 统一ReAct循环。</p>
+<p>没有前置意图分类器。所有非缓存、非关键词拦截的问题统一进入ReAct循环。LLM在ReAct推理中自主决定：调用searchKnowledgeBase工具检索知识库、调用transferToHuman工具转人工、或调用32个业务工具（订单/财务/物流/商品/用户/营销等）。</p>
+<p>ReAct循环：Thought→Action→Observation→Final Answer，最多3轮，单轮90秒超时。支持并行工具调用，工具分类选择性注入（Token降60-80%）。后置：Redis记忆→QualityGate质检→MySQL持久化。</p>
+</div>
+<div class="interview-tip">提"统一ReAct，无前置意图分类器"展示架构演进。提"缓存~5ms"和"关键词零成本"展示快速通道设计。数字要记准：32工具/3轮/90s。</div>
+</div>
+
+<div class="interview-q">
+<div class="question">Q2：你的项目为什么选择手写ReAct而不是用LangChain4j的AiServices？</div>
+<div class="interview-answer">
+<p>项目实际原因：Qwen的OpenAI兼容端点不支持原生tool calling，AiServices的动态代理依赖模型返回tool_calls格式，Qwen不稳定。</p>
+<p>手写ReAct的优势：1）兼容所有模型（Prompt约定格式+字符串解析，不依赖原生function calling）；2）完全控制流式推送时机（StreamState状态机，防止模型编造Observation）；3）精细控制超时（单轮90s）和最大轮次（3轮）；4）完整兜底策略。</p>
+<p>同时我也理解AiServices的原理：底层是JDK动态代理(InvocationHandler)，自动将@Tool方法注册为ToolSpecification，LLM返回tool_calls时自动反序列化参数并调用。但Qwen兼容端点不稳定所以放弃。</p>
+</div>
+<div class="interview-tip">先说"为什么"（Qwen不支持），再展示"我理解AiServices原理但选择不用"的工程判断力。提"StreamState状态机防编造Observation"是亮点。</div>
+</div>
+
+<div class="interview-q">
+<div class="question">Q3：项目最大的技术挑战是什么？怎么解决的？</div>
+<div class="interview-answer">
+<p>最大挑战是<strong>Qwen兼容端点tool calling不稳定</strong>导致LangChain4j AiServices不可用。</p>
+<p>解决：放弃AiServices自动调用，自己实现完整ReAct循环。系统提示词约定Action:/Final Answer:格式，用字符串解析提取工具名和JSON参数。支持多工具并行调用（CompletableFuture执行），工具调用重试限制（MAX_TOOL_CALLS_PER_TOOL=3），兜底策略（Final Answer为空时用Observation组装）。</p>
+<p>落地效果：兼容所有模型不依赖原生function calling，Token消耗降低70-80%（工具分类选择性注入），响应速度提升2-3倍（并行工具调用+记忆管理优化）。</p>
+</div>
+<div class="interview-tip">讲"挑战→解决→效果"三段式。提"Token降70-80%"和"速度提升2-3倍"这些量化数据说明有实际收益。</div>
+</div>
+
+<div class="interview-q">
+<div class="question">Q4：你的项目架构演进过吗？</div>
+<div class="interview-answer">
+<p>是的，项目经历了一次核心架构演进。<strong>早期版本用IntentClassifier做意图分类，分知识库/通用/转人工三路</strong>。后来发现三个问题：1）三路路由维护复杂，KB路径和General路径代码重复；2）LLM意图分类3s超时影响响应速度；3）意图分类是硬编码的，无法处理跨类别的复杂问题。</p>
+<p>演进后：移除IntentClassifier，改为统一ReAct模式——缓存和关键词做零成本快速拦截，其他统一进ReAct。LLM在推理中自主决定路由。好处是：代码更简洁、路由更灵活（LLM能处理意图分类无法覆盖的复杂场景）、维护成本更低。</p>
+<p>这个演进验证了一个设计原则：让LLM做路由决策比硬编码分类更灵活，但前提是你得通过工具分类选择性注入控制Token消耗。</p>
+</div>
+<div class="interview-tip">这是最大的加分项——展示架构迭代能力。讲"为什么改"和"改后好处"三段式。提"让LLM做路由比硬编码更灵活"是设计哲学。</div>
+</div>
+
+<div class="interview-q">
+<div class="question">Q5：你的知识库检索流程是怎样的？</div>
+<div class="interview-answer">
+<p>知识库检索有两层：1）<strong>KB预检索</strong>——ChatService在进入ReAct前，对匹配KB关键词的问题做预检索（KnowledgeBaseService.retrieveContext），将检索结果注入ReAct上下文。2）<strong>LLM自主调用</strong>——ReAct循环中LLM也可以自主调用searchKnowledgeBase工具检索。</p>
+<p>预检索流程：问题→QuestionFormatService规范化（LLM改写口语化问题，temp=0.3）→Qwen Embedding生成向量→Milvus向量检索（minScore=0.7过滤）→DashScope gte-rerank重排→取topK条。预检索结果高于0.65相似度才注入上下文。</p>
+<p>分块策略：DocumentSplitters.recursive(500, 50)，每片500字重叠50字。</p>
+</div>
+<div class="interview-tip">提"两层检索"（预检索+LLM自主）是亮点，展示不是只靠LLM记得调工具。数字要准：500字/50重叠/0.7过滤/0.65注入阈值。</div>
+</div>
+
+<div class="interview-q">
+<div class="question">Q6：为什么向量检索后还要Rerank？</div>
+<div class="interview-answer">
+<p>向量检索用Bi-Encoder（问题和文档各自编码再算余弦相似度），速度快但精度有限——query和doc没有深度交互。Rerank用Cross-Encoder（将query-document拼一起送入模型联合编码），能捕捉细粒度语义交互，精度更高但计算量大。</p>
+<p>两阶段策略：向量检索粗排（快，召回16条）→Rerank精排（准，取top4条）。项目用DashScope gte-rerank，10秒超时，失败降级为向量检索原始顺序。</p>
+</div>
+<div class="interview-tip">Bi-Encoder vs Cross-Encoder是核心知识点。提"10秒超时降级"展示容错。能说出"粗排快+精排准"的两阶段思路。</div>
+</div>
+
+<div class="interview-q">
+<div class="question">Q7：你的ReAct循环是怎么控制死循环的？</div>
+<div class="interview-answer">
+<p>三层控制：1）<strong>最大轮次</strong>：maxRounds=3，超过3轮强制结束；2）<strong>单轮超时</strong>：单轮90秒超时（CompletableFuture+Mono.fromFuture异步等待），防止LLM卡住，不阻塞WebFlux线程池；3）<strong>单工具调用限制</strong>：MAX_TOOL_CALLS_PER_TOOL=3，同一工具最多调用3次。</p>
+<p>兜底策略：3轮后Final Answer为空但有工具结果时，用最近一次Observation组装兜底回答（buildFallbackFromObservations），不会给用户返回空。</p>
+</div>
+<div class="interview-tip">三层控制（轮次/超时/工具次数）展示防御性编程。提"CompletableFuture不阻塞WebFlux"说明你理解响应式编程。</div>
+</div>
+
+<div class="interview-q">
+<div class="question">Q8：MCP协议是什么？你的项目怎么集成的？</div>
+<div class="interview-answer">
+<p>MCP（Model Context Protocol）是Anthropic提出的标准化AI工具调用协议，解决"每个框架自己定义工具接口格式，工具无法跨框架复用"的问题。</p>
+<p>项目实现：Java实现MCP客户端，通过SSE长连接+JSON-RPC连接mall-mcp-server。启动时连接→tools/list发现远程工具→McpToolAdapter包装为HardWorkflowTool接口→与本地32个工具统一注册。客户端GET /sse建立连接，POST /mcp/message发送JSON-RPC请求。MCP不可用时返回disabled()占位实例。</p>
+</div>
+<div class="interview-tip">说"Java实现MCP客户端"是加分项。提"SSE长连接+JSON-RPC"展示实现细节。提"disabled占位实例"展示容错。</div>
+</div>
+
+<div class="interview-q">
+<div class="question">Q9：你的评测链路是怎么做的？</div>
+<div class="interview-answer">
+<p>两层评测：1）<strong>质检门禁(QualityGate)</strong>——每次回答后LLM-as-Judge做5维度评分(准确性/完整性/有用性/简洁性/安全性)，≥0.8通过，&lt;0.6自动重答3次。2）<strong>RAG批量评估(RagEvaluator)</strong>——每小时@Scheduled执行四阶段：检索层(Hit Rate/MRR/NDCG)→Rerank层(前后NDCG对比)→忠实度(LLM-Judge)→相关性(LLM-Judge)。基于人工审核的黄金数据。</p>
+</div>
+<div class="interview-tip">说"四阶段+每小时+黄金数据"展示系统性。提"5维度加权评分"和"重答传递扣分理由"展示工程化。</div>
+</div>
+
+<div class="interview-q">
+<div class="question">Q10：你的系统怎么应对高并发？</div>
+<div class="interview-answer">
+<p>已有的：用户级10次/分钟（滑动窗口算法）+ 全局并发100（AtomicInteger计数）+ WebFlux背压（响应式流天然支持）。</p>
+<p>欠缺的：没有Token级别限流（只限请求次数没限token消耗量）。面试回答策略：先说已有的，再说欠缺的，最后说方案——Token限流用Redis+滑动窗口记录每用户token消耗，超阈值拒绝。LLM调用加Resilience4j RateLimiter按租户限流。</p>
+</div>
+<div class="interview-tip">先说已有再承认欠缺是好的策略。提"Token级限流"和"Resilience4j"展示你知道怎么补。</div>
+</div>
+
+<div class="interview-q">
+<div class="question">Q11：为什么选langchain4j不选Python LangChain？</div>
+<div class="interview-answer">
+<p>四个维度：1）<strong>技术栈统一</strong>——团队是Java后端，复用Spring Boot运维体系(监控/部署/CI/CD/日志)；2）<strong>学习成本低</strong>——Java工程师学langchain4j比学Python快；3）<strong>部署运维一致</strong>——Java jar部署到现有K8s，不需要Python运行环境；4）<strong>权衡</strong>——承认Python生态更成熟，但对Java团队TCO(总拥有成本)更低。</p>
+</div>
+<div class="interview-tip">四维度+承认权衡是标准答法。提"TCO更低"体现工程思维。</div>
+</div>
+
+<div class="interview-q">
+<div class="question">Q12：如果重新做你会怎么改进？</div>
+<div class="interview-answer">
+<p>1）引入Hybrid Search（向量+BM25），当前只有纯向量检索+Rerank，专有名词/订单号精确匹配弱；2）MCP加自动重连（指数退避重试），当前断线只有disabled降级；3）Token级限流，当前只限请求次数；4）流式输出优化，当前StreamState缓冲牺牲了打字机效果，可以探索更精细的流式推送；5）如果模型支持原生function calling（如换DeepSeek），可以回归AiServices方式减少手写维护成本。</p>
+</div>
+<div class="interview-tip">每条改进都要说"当前是什么→缺什么→怎么改"。提"换模型可以回归AiServices"展示你不是为了手写而手写。</div>
+</div>
+
+<div class="interview-q">
+<div class="question">Q13：你的系统部署架构是怎样的？</div>
+<div class="interview-answer">
+<p>Docker多阶段构建 → 推送Docker Hub（jarvan616/mall-agent:vX）→ K8s Deployment（3副本，RollingUpdate，maxUnavailable: 0保证不中断）→ Rancher管理。镜像用版本Tag不用:latest，确保精确回滚。</p>
+<p>CI/CD：Git push → Jenkins → Maven构建+测试 → Docker build+push → Rancher更新镜像。开发/预发/生产三套环境隔离，通过ConfigMap管理差异配置。预发环境用Qwen 32b验证，生产用Qwen 72b+DeepSeek降级。</p>
+</div>
+<div class="interview-tip">说"版本Tag不用:latest"和"maxUnavailable: 0"展示K8s实战经验。提ConfigMap展示配置管理。</div>
+</div>
+
+<div class="interview-q">
+<div class="question">Q14：Tool调用是怎么注册和调度的？</div>
+<div class="interview-answer">
+<p>HardWorkflowToolRegistry管理所有工具，分为两类：<strong>本地工具</strong>（32个，直接实现HardWorkflowTool接口，Spring Bean注册）和<strong>MCP远程工具</strong>（启动时通过McpSseClient连接mall-mcp-server→tools/list发现→McpToolAdapter包装→注册）。</p>
+<p>调度流程：ToolRouter先做关键词+LLM混合多分类（8个分类：ORDER/FINANCE/LOGISTICS/PRODUCT/USER/SERVICE/MARKETING/GENERAL），根据分类结果选择性注入相关工具到系统提示词。LLM在ReAct中输出Action: tool_name → 字符串解析提取工具名和JSON参数 → Registry查找工具 → 执行。MCP不可用时返回disabled()占位实例。</p>
+</div>
+<div class="interview-tip">提"8个分类"和"选择性注入"展示工具管理。说"本地+MCP统一注册"展示架构设计。</div>
+</div>
+
+<div class="interview-q">
+<div class="question">Q15：Token成本怎么控制的？</div>
+<div class="interview-answer">
+<p>五层成本控制：1）<strong>工具分类选择性注入</strong>——不是32个工具全部注入，而是根据关键词+LLM分类只注入4-5个相关工具，系统提示词从2000降到400-800 tokens（降60-80%）；2）<strong>记忆管理</strong>——简化历史格式（user: xxx | assistant: xxx），动态消息限制，Token降33%；3）<strong>工具调用重试限制</strong>——MAX_TOOL_CALLS_PER_TOOL=3，Token降30-50%；4）<strong>并行工具调用</strong>——一次Action多工具并行，减少轮次，Token降67%；5）<strong>多模型梯度</strong>——dev用Qwen 7b（最便宜），staging用32b，生产用72b，按场景分配模型容量。</p>
+</div>
+<div class="interview-tip">五层成本控制层层递进。记住核心数字：工具注入降60-80%、记忆降33%、并行降67%。</div>
+</div>
+
+<h3>八、技术选型深度对比</h3>
+
+<p>面试官问"为什么选A不选B"时，需要展示<strong>技术选型的判断力</strong>。基于当前统一ReAct架构的实际选型：</p>
+
+<table class="compare-table">
+<tr><th>选型</th><th>选择</th><th>核心原因</th></tr>
+<tr><td>框架</td><td>langchain4j（非Spring AI）</td><td>项目启动时langchain4j 0.30+已稳定，Spring AI刚0.8.x。现在不迁移（成本>收益）</td></tr>
+<tr><td>Agent模式</td><td>手写ReAct（非AiServices）</td><td>Qwen tool_calling不稳定，手写ReAct兼容所有模型+完全控制流式推送</td></tr>
+<tr><td>路由方式</td><td>统一ReAct（非IntentClassifier）</td><td>从三路路由演进而来，LLM自主路由更灵活，代码更简洁</td></tr>
+<tr><td>向量库</td><td>Milvus（非ES/PGVector）</td><td>分布式扩展+IVF索引百万级延迟10ms内+langchain4j官方集成</td></tr>
+<tr><td>流式方案</td><td>WebFlux SSE（非SseEmitter）</td><td>NIO高并发，Flux与LangChain4j StreamingResponseHandler天然对接</td></tr>
+<tr><td>模型</td><td>Qwen主力+DeepSeek降级</td><td>国内合规+多模型梯度(7b-72b)+成本可控</td></tr>
+</table>
+
+<h3>九、简历描述模板</h3>
+
+<div class="code-block">
+<span class="lang">简历一句话版</span>
+<pre>mall-agent智能客服系统：基于Spring WebFlux + LangChain4j构建，
+统一ReAct Agent架构，32个工具+MCP远程工具+RAG知识库，
+Token优化70-80%，响应速度提升2-3倍。</pre>
+</div>
+
+<div class="code-block">
+<span class="lang">简历详细版</span>
+<pre>mall-agent 智能客服系统（矿池官网）
+技术栈：Spring WebFlux + LangChain4j + Milvus + Redis + MySQL + MCP
+
+核心职责：
+1. 设计统一ReAct Agent架构（从意图分类三路路由演进为LLM自主路由）
+   缓存快速通道+关键词拦截+ReAct循环，32个本地工具+MCP远程工具
+2. 手写ReAct循环（Qwen tool calling不稳定→Prompt约定+字符串解析）
+   StreamState状态机防编造Observation，最多3轮/单轮90s超时/工具重试限制
+3. 实现RAG全链路评估（Hit Rate/MRR/NDCG/忠实度/相关性，每小时自动执行）
+4. 质检门禁（5维度LLM-as-Judge评分，&lt;0.6自动重答3次，传递扣分理由）
+5. MCP协议集成（Java实现SSE客户端+JSON-RPC，远程工具统一注册）
+6. 多模型降级（Qwen+DeepSeek双厂商），工具分类选择性注入（Token降60-80%）
+
+成果：Token消耗降低70-80%，响应速度提升2-3倍，知识库命中率100%，
+全链路Prometheus指标可观测。</pre>
+</div>
+
+<h3>十、反向提问清单</h3>
+
+<table class="compare-table">
+<tr><th>问题</th><th>展示什么认知</th></tr>
+<tr><td>团队目前的Agent技术栈是什么？</td><td>展示你关注技术选型，判断团队Agent成熟度</td></tr>
+<tr><td>Agent项目的LLM成本预算怎么控制的？</td><td>展示成本意识，知道Token=钱</td></tr>
+<tr><td>团队对Agent的可观测性怎么做的？</td><td>展示你知道Agent监控是难题</td></tr>
+<tr><td>有没有在用MCP或者类似的工具协议？</td><td>展示你关注行业趋势，不是只会调API</td></tr>
+<tr><td>Agent项目的测试和上线流程是怎样的？</td><td>展示工程化思维，Agent测试是难题</td></tr>
+<tr><td>团队在用什么模型？有没有考虑国产模型降本？</td><td>展示你知道国产模型性价比优势</td></tr>
+</table>
+
+<h3>十一、项目复盘与经验总结</h3>
+
+<p>面试官问"如果重新做你会怎么改进"时，不要只说"会做得更好"，要有<strong>具体的反思和可操作的改进点</strong>。</p>
+
+<h4>做对了什么</h4>
+<div class="concept-card">
+<ol>
+<li><strong>从实际约束出发做技术决策</strong>：Qwen tool_calling不稳定→手写ReAct，不是硬上AiServices碰运气</li>
+<li><strong>敢于架构演进</strong>：从IntentClassifier三路路由→统一ReAct，代码更简洁、路由更灵活</li>
+<li><strong>质量保障前置</strong>：质检门禁+RAG评估在项目中期就做了，不是上线后被骂才加</li>
+<li><strong>成本意识贯穿始终</strong>：工具分类注入、多模型梯度、记忆管理——Agent最大的隐性成本就是Token</li>
+<li><strong>拥抱MCP标准</strong>：Java实现MCP客户端，提前卡位行业趋势</li>
+</ol>
+</div>
+
+<h4>踩过的坑</h4>
+<div class="warn">
+<p><strong>坑1：LLM编造Observation</strong>——流式输出时Action还没执行就输出虚构结果。解决：StreamState状态机+缓冲解析。教训：Agent场景正确性优先于体验。</p>
+<p><strong>坑2：Nginx proxy_buffering破坏流式</strong>——本地SSE正常，部署后变批量。解决：proxy_buffering off + K8s Ingress annotation。教训：本地跑通≠部署环境跑通。</p>
+<p><strong>坑3：工具描述太技术化</strong>——"查询算力贡献记录及收益分配明细"→LLM理解为"修改收益分配"。解决：用户视角+只读标注。教训：LLM用自然语言理解工具。</p>
+<p><strong>坑4：IntentClassifier维护成本高</strong>——三路路由代码重复，LLM分类3s超时。解决：演进为统一ReAct。教训：硬编码分类不如让LLM自主路由。</p>
+<p><strong>坑5：CountDownLatch阻塞WebFlux线程</strong>——ReAct超时等待用CountDownLatch.await()，阻塞了事件循环线程。解决：改为CompletableFuture+Mono.fromFuture异步等待。教训：响应式编程中任何阻塞调用都是定时炸弹。</p>
+</div>
+
+<h4>架构反思：如果重来</h4>
+<div class="concept-card">
+<ol>
+<li><strong>模型层抽象</strong>：Qwen/DeepSeek切换逻辑散落各处，应抽象ModelRouter统一管理选择、降级、Token计费</li>
+<li><strong>工具插件化注册</strong>：HardWorkflowToolRegistry硬编码，应改为类似Spring @Bean自动发现</li>
+<li><strong>混合检索</strong>：纯向量检索对专有名词不友好，应引入BM25全文检索做RRF融合排序</li>
+<li><strong>MCP做成Server</strong>：当前是MCP客户端调用远程服务，更合理的架构是mall-agent本身作为MCP Server暴露工具给其他系统复用</li>
+<li><strong>流式双模式</strong>：支持原生tool_calls的模型走流式推送，不支持的走缓冲解析，根据模型能力自动选择</li>
+</ol>
+</div>
+
+<h3>十二、未来优化方向</h3>
+
+<p>面试时被问"下一步打算做什么"，以下是可以讲的优化方向——每个都有<strong>现状→目标→方案</strong>的完整思路。</p>
+
+<table class="compare-table">
+<tr><th>优化方向</th><th>现状</th><th>目标</th><th>方案</th></tr>
+<tr><td><strong>混合检索</strong></td><td>纯Milvus向量检索，专有名词/订单号精确匹配弱</td><td>向量语义+BM25全文双路检索</td><td>引入Elasticsearch做BM25检索，与Milvus结果做RRF融合排序</td></tr>
+<tr><td><strong>MCP自动重连</strong></td><td>断线只返回disabled()降级，无重连</td><td>自动感知断线并指数退避重连</td><td>定时心跳检测+1s→2s→4s→max30s指数退避，重连成功后重新tools/list</td></tr>
+<tr><td><strong>Token级限流</strong></td><td>只限请求次数（10次/分钟），不限Token量</td><td>按Token消耗量做用户级限流</td><td>Redis滑动窗口记录每用户Token消耗，超阈值返回429</td></tr>
+<tr><td><strong>流式双模式</strong></td><td>StreamState缓冲解析，统一牺牲打字机效果</td><td>原生tool_calls模型走流式，不支持的走缓冲</td><td>根据模型能力自动选择模式：Qwen走缓冲，DeepSeek走流式</td></tr>
+<tr><td><strong>ModelRouter抽象</strong></td><td>Qwen/DeepSeek切换逻辑散落各处</td><td>统一模型路由层管理选择/降级/重试/计费</td><td>抽象ModelRouter接口，类似Spring Cloud Gateway路由规则</td></tr>
+<tr><td><strong>工具插件化注册</strong></td><td>HardWorkflowToolRegistry硬编码Map</td><td>新增工具零改动核心代码，类似@Bean自动发现</td><td>自定义@HardWorkflowTool注解+Spring Bean扫描自动注册</td></tr>
+<tr><td><strong>成本归因</strong></td><td>只知道总Token消耗，不知道谁花的</td><td>按用户/场景/模型维度拆分成本</td><td>每次LLM调用记录user+scene+model+token，写入成本归因表</td></tr>
+<tr><td><strong>灰度发布</strong></td><td>Prompt/模型变更直接全量</td><td>渐进式灰度发布+自动回滚</td><td>基于用户ID哈希分流，10%→50%→100%，异常指标自动回滚</td></tr>
+<tr><td><strong>知识库自动更新</strong></td><td>人工导入文档，手动触发重建索引</td><td>文档变更自动同步+增量索引更新</td><td>监听文档源变更事件→自动触发ETL Pipeline→增量更新Milvus</td></tr>
+<tr><td><strong>告警规则</strong></td><td>有Prometheus指标但无告警</td><td>关键指标异常自动告警</td><td>Prometheus AlertManager规则：质检分<0.6持续5min→告警；转人工率骤升→告警</td></tr>
+</table>
+
+<div class="note">面试技巧：挑2-3个最有把握的优化方向讲，每个用"现状→目标→方案"三段式。优先讲混合检索（技术深度）、MCP自动重连（实际价值）、Token级限流（成本意识）这三个。</div>
+
+<div class="review-card">
+<ul>
+<li><strong>项目定位</strong>：矿池智能客服，统一ReAct Agent + RAG + MCP，Spring WebFlux响应式架构</li>
+<li><strong>核心流程</strong>：缓存快速通道(~5ms)→转人工关键词(零成本)→统一ReAct(LLM自主路由32个工具+searchKnowledgeBase+transferToHuman)</li>
+<li><strong>关键演进</strong>：从IntentClassifier三路路由→统一ReAct（移除意图分类器，LLM自主路由更灵活）</li>
+<li><strong>六大亮点</strong>：手写ReAct/RAG四阶段评估/质检门禁/MCP集成/工具分类注入/架构演进</li>
+<li><strong>部署架构</strong>：Docker多阶段构建+K8s(3副本+RollingUpdate+健康检查)+Rancher+Jenkins CI/CD</li>
+<li><strong>代码解析</strong>：StreamState状态机防编造Observation / McpSseClient+McpToolAdapter / QualityGate评分Prompt</li>
+<li><strong>八大优化</strong>：统一ReAct/工具分类注入(Token降60-80%)/KB预检索三保障/重试限制/记忆管理/并行调用/CompletableFuture异步</li>
+<li><strong>五大难点</strong>：Qwen tool calling不稳定/流式编造Observation/Rerank超时降级/多模型Token累积/MCP断线</li>
+<li><strong>技术选型</strong>：langchain4j+MCP+手写ReAct+Milvus+WebFlux SSE+Qwen/DeepSeek</li>
+<li><strong>项目复盘</strong>：5条做对+5个坑+5条架构反思</li>
+<li><strong>未来优化</strong>：混合检索/MCP重连/Token限流/流式双模式/ModelRouter/工具插件化/成本归因/灰度/知识库自动更新/告警</li>
+<li><strong>量化收益</strong>：Token降70-80%，速度提升2-3倍，命中率100%，内存降60%</li>
+<li><strong>面试核心数字</strong>：32个工具/3轮循环/90s超时/5维度评分/10次分钟限流/100并发/8个工具分类</li>
+<li><strong>改进方向</strong>：Hybrid Search/MCP自动重连/Token级限流/流式双模式/ModelRouter抽象</li>
+</ul>
+</div>
+
+<div class="chapter-nav">
+  <a href="11-agent-tools.html" class="prev">← 主流Agent工具生态</a>
+  <a href="13-interview-qa.html" class="next">高频面试题汇总 →</a>
+</div>
+
+</main>
+<script>
+(function(){
+  var btn = document.getElementById("sidebarToggle");
+  var body = document.body;
+  try { if(localStorage.getItem("sb")==="0") body.classList.add("sidebar-collapsed"); } catch(e){}
+  function update(){ btn.textContent = body.classList.contains("sidebar-collapsed") ? "▶" : "◀"; }
+  btn.addEventListener("click", function(){
+    body.classList.toggle("sidebar-collapsed");
+    try { localStorage.setItem("sb", body.classList.contains("sidebar-collapsed")?"0":"1"); } catch(e){}
+    update();
+  });
+  update();
+})();
+</script>
+</body>
+</html>
