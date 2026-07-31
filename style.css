@@ -425,60 +425,41 @@ em { color: var(--primary); font-style: normal; font-weight: 600; }
 .tag-low { background: #e8f5e9; color: #2e7d32; }
 
 /* ===== 侧边栏收起 ===== */
-.sidebar-header {
-  position: relative;
-}
 .sidebar-toggle {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 28px;
-  height: 28px;
+  position: fixed;
+  left: calc(var(--sidebar-w) + 12px);
+  top: 12px;
+  width: auto;
+  height: 30px;
   background: #fff;
-  border: 2px solid var(--primary);
-  border-radius: 50%;
+  border: 1.5px solid var(--primary);
+  border-radius: 6px;
   cursor: pointer;
-  z-index: 10;
+  z-index: 300;
   font-size: 13px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: background 0.2s, box-shadow 0.2s;
-  box-shadow: 0 2px 8px rgba(21,101,192,0.2);
+  gap: 6px;
+  padding: 0 12px;
+  transition: left 0.3s, background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   color: var(--primary);
-  padding: 0;
   line-height: 1;
-  font-weight: 700;
+  font-weight: 600;
   outline: none;
+  white-space: nowrap;
+}
+.sidebar-toggle::before {
+  content: "◀";
+  font-size: 10px;
 }
 .sidebar-toggle:hover {
   background: var(--primary);
   color: #fff;
-  box-shadow: 0 4px 12px rgba(21,101,192,0.35);
-}
-.sidebar-toggle::after {
-  content: "收起菜单";
-  position: absolute;
-  left: 36px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 11px;
-  color: var(--primary);
-  background: #fff;
-  padding: 2px 8px;
-  border-radius: 4px;
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.2s;
-  pointer-events: none;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-}
-.sidebar-toggle:hover::after {
-  opacity: 1;
+  box-shadow: 0 4px 12px rgba(21,101,192,0.3);
 }
 
-/* 收起状态：侧边栏外的小按钮 */
+/* 收起状态 */
 body.sidebar-collapsed .sidebar {
   width: 0;
   overflow: hidden;
@@ -489,18 +470,13 @@ body.sidebar-collapsed .main {
   margin-left: 0;
 }
 body.sidebar-collapsed .sidebar-toggle {
-  position: fixed;
-  left: 8px;
-  top: 12px;
-  right: auto;
-  transform: none;
-  z-index: 300;
+  left: 12px;
 }
-body.sidebar-collapsed .sidebar-toggle::after {
-  content: "展开菜单";
+body.sidebar-collapsed .sidebar-toggle::before {
+  content: "▶";
 }
 
-/* 移动端自动收起 */
+/* 移动端 */
 @media (max-width: 900px) {
   body:not(.sidebar-collapsed) .sidebar {
     box-shadow: 4px 0 16px rgba(0,0,0,0.15);
