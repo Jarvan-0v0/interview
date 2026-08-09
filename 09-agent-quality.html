@@ -27,7 +27,7 @@
     <a href="09-agent-quality.html" class="active"><span class="num">09</span>Agent测试与质量保障</a>
     <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
     <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
-    <a href="12-project-packaging.html"><span class="num">12</span>项目经验包装与表达</a>
+    <a href="12-project-packaging.html"><span class="num">12</span>项目经验：矿池AI客服</a>
     <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
       <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
       <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
@@ -54,14 +54,14 @@
 <div class="diagram">
 <svg viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
   <polygon points="300,20 500,220 100,220" fill="none" stroke="#1565c0" stroke-width="2"/>
-  <text x="300" y="90" text-anchor="middle" font-size="14" fill="#1565c0" font-weight="bold">单元测试</text>
-  <text x="300" y="110" text-anchor="middle" font-size="11" fill="#555">Tool/Prompt级别</text>
-  <text x="300" y="125" text-anchor="middle" font-size="10" fill="#999">Mock LLM，测逻辑</text>
+  <text x="300" y="90" text-anchor="middle" font-size="14" fill="#2e7d32" font-weight="bold">端到端测试</text>
+  <text x="300" y="110" text-anchor="middle" font-size="11" fill="#555">人工/LLM-as-Judge</text>
+  <text x="300" y="125" text-anchor="middle" font-size="10" fill="#999">慢且贵·少</text>
   <text x="300" y="155" text-anchor="middle" font-size="14" fill="#ff6f00" font-weight="bold">集成测试</text>
   <text x="300" y="173" text-anchor="middle" font-size="11" fill="#555">完整Agent流程</text>
   <text x="300" y="188" text-anchor="middle" font-size="10" fill="#999">Golden Set跑回归</text>
-  <text x="300" y="212" text-anchor="middle" font-size="13" fill="#2e7d32" font-weight="bold">端到端测试</text>
-  <text x="300" y="228" text-anchor="middle" font-size="10" fill="#999">人工/LLM-as-Judge</text>
+  <text x="300" y="212" text-anchor="middle" font-size="13" fill="#1565c0" font-weight="bold">单元测试</text>
+  <text x="300" y="228" text-anchor="middle" font-size="10" fill="#999">Tool/Prompt级别·Mock LLM·快且多</text>
 </svg>
 <div class="caption">Agent测试金字塔：底层多（单元测试快且多），顶层少（端到端慢且贵）</div>
 </div>
@@ -131,11 +131,11 @@
 <tr><td>关键词包含</td><td>assertContains(output, "退款")</td><td>简单问答</td><td>关键词不全则漏判</td></tr>
 <tr><td>正则匹配</td><td>assertMatches(output, regex)</td><td>格式验证</td><td>不验证语义</td></tr>
 <tr><td>语义相似度</td><td>cosineSim(output, expected) > 0.8</td><td>开放式问答</td><td>需要Embedding模型</td></tr>
-<tr><td>LLM-as-Judge</td><td>用GPT-4评判输出质量打分</td><td>复杂Agent评测</td><td>贵+裁判本身可能不准</td></tr>
+<tr><td>LLM-as-Judge</td><td>用旗舰模型(如GPT-5系/Claude Sonnet 5)评判输出质量打分</td><td>复杂Agent评测</td><td>贵+裁判本身可能不准</td></tr>
 <tr><td>多次运行取多数</td><td>跑5次取多数结果</td><td>需要稳定性的场景</td><td>成本×5</td></tr>
 </table>
 
-<div class="warn">LLM-as-Judge的陷阱：用同一个模型当裁判评自己的输出会有偏见。最好用更强的模型评弱模型的输出（如GPT-4评判GLM-4的输出）。</div>
+<div class="warn">LLM-as-Judge的陷阱：用同一个模型当裁判评自己的输出会有偏见。最好用更强的模型评弱模型的输出（如旗舰模型GPT-5系/Claude Sonnet 5评中端模型GLM-5/Qwen3的输出）。</div>
 
 <h4>1.3.1 为什么LLM输出不确定？——非确定性的根因</h4>
 
@@ -234,7 +234,7 @@ assertEquals(<span class="str">"你好，有什么可以帮你"</span>, result);
 
 <table class="compare-table">
 <tr><th>指标</th><th>含义</th><th>怎么算</th></tr>
-<tr><td>Recall@K</td><td>前K条检索结果中有相关内容的比例</td><td>有相关=1，无=0</td></tr>
+<tr><td>Recall@K</td><td>前K条检索结果中相关文档的召回比例</td><td>标准定义=命中相关文档数/全部相关文档数；实践中常用<strong>Hit Rate@K</strong>（前K条中是否存在至少一条相关=1/0）作为简化口径，二者常被混用，注意区分</td></tr>
 <tr><td>MRR</td><td>相关结果排第几（越前越好）</td><td>1/排名</td></tr>
 <tr><td>Faithfulness</td><td>回答是否基于检索内容（没编造）</td><td>逐句验证是否可溯源</td></tr>
 <tr><td>Answer Relevance</td><td>回答是否切题</td><td>LLM-as-Judge打分</td></tr>
@@ -257,7 +257,7 @@ assertEquals(<span class="str">"你好，有什么可以帮你"</span>, result);
 
 <table class="compare-table">
 <tr><th>方法</th><th>做法</th><th>优点</th><th>缺点</th></tr>
-<tr><td>LLM-as-Judge</td><td>用GPT-4当裁判给回答打分</td><td>快、可规模化</td><td>贵、有偏见</td></tr>
+<tr><td>LLM-as-Judge</td><td>用旗舰模型(GPT-5系/Claude Sonnet 5)当裁判给回答打分</td><td>快、可规模化</td><td>贵、有偏见</td></tr>
 <tr><td>人工评估</td><td>标注团队抽样打分</td><td>最准确</td><td>慢、贵</td></tr>
 <tr><td>用户反馈</td><td>线上thumb up/down</td><td>真实场景</td><td>用户懒得点、有偏差</td></tr>
 <tr><td>对比评测</td><td>A/B两组对比指标</td><td>可比性强</td><td>需要流量和时间</td></tr>
@@ -267,9 +267,9 @@ assertEquals(<span class="str">"你好，有什么可以帮你"</span>, result);
 
 <table class="compare-table">
 <tr><th>框架</th><th>定位</th><th>特点</th><th>适合场景</th></tr>
-<tr><td>RAGAS</td><td>RAG专项评测</td><td>4大指标(Faithfulness/Relevance/Context Precision/Recall)</td><td>RAG质量评测</td></tr>
+<tr><td>RAGAS</td><td>RAG专项评测</td><td>已迭代至v0.3，原4大指标(Faithfulness/Answer Relevance/Context Precision/Context Recall)有改名与新增(如Context Entity Recall/Noise Sensitivity)，使用前以官方文档为准</td><td>RAG质量评测</td></tr>
 <tr><td>LangSmith</td><td>Agent全链路追踪</td><td>LangChain官方，可视化Agent决策链路</td><td>调试+监控</td></tr>
-<tr><td>LangFuse</td><td>开源可观测+评测</td><td>自托管，API兼容LangSmith</td><td>数据隐私要求</td></tr>
+<tr><td>Langfuse</td><td>开源可观测+评测</td><td>自托管；是LangSmith的开源替代而非严格API兼容(可自建后端、SDK独立)</td><td>数据隐私要求</td></tr>
 <tr><td>DeepEval</td><td>LLM测试框架</td><td>类似JUnit的@Test，断言式API</td><td>CI/CD集成</td></tr>
 <tr><td>Promptfoo</td><td>Prompt对比测试</td><td>多个Prompt跑同一测试集对比</td><td>Prompt选型</td></tr>
 </table>
@@ -366,7 +366,7 @@ CustomerService agent = AiServices.builder(CustomerService.<span class="kw">clas
 
 <div class="warn">Agent线上最常见的质量退化原因：
 <ul>
-<li><strong>上游模型升级</strong>：GPT-4/Claude偷偷更新，你的Prompt可能不再适配</li>
+<li><strong>上游模型升级</strong>：GPT-5系/Claude Sonnet 5等偷偷更新，你的Prompt可能不再适配</li>
 <li><strong>用户输入分布变化</strong>：新类型问题增多，原来没覆盖的case出现了</li>
 <li><strong>知识库过期</strong>：RAG检索到的信息过时了</li>
 <li><strong>上下文污染</strong>：多轮对话中早期错误信息影响后续生成</li>
@@ -375,9 +375,9 @@ CustomerService agent = AiServices.builder(CustomerService.<span class="kw">clas
 
 <h4>4.2.1 上游模型更新：为什么"没动代码效果就变差了"</h4>
 
-<p>这是Agent线上最隐蔽的退化原因。OpenAI/Anthropic等模型供应商会<strong>不定期静默更新</strong>模型权重（如gpt-4-0613到gpt-4-1106），版本号变了但API名字不变，你的代码一行没改效果可能就退化了。原因有三个：①<strong>Tokenization变化</strong>——新版分词器可能把同一句话切成不同token，导致Prompt的实际输入变了；②<strong>对齐偏移</strong>——模型RLHF对齐调整后，对同一Prompt的"偏好回答风格"变了，如更保守/更冗长/更倾向拒答；③<strong>指令遵循敏感度</strong>——你精心调的Prompt（如"用一句话回答"）在新版模型上可能不再被严格遵守。</p>
+<p>这是Agent线上最隐蔽的退化原因。OpenAI/Anthropic等模型供应商会<strong>不定期静默更新</strong>模型权重（如同一API名下从GPT-4o迭代到4.1再到5系、Claude从3.5迭代到Sonnet 4.x再到Sonnet 5），代号变了但API名字不变，你的代码一行没改效果可能就退化了。原因有三个：①<strong>Tokenization变化</strong>——新版分词器可能把同一句话切成不同token，导致Prompt的实际输入变了；②<strong>对齐偏移</strong>——模型RLHF对齐调整后，对同一Prompt的"偏好回答风格"变了，如更保守/更冗长/更倾向拒答；③<strong>指令遵循敏感度</strong>——你精心调的Prompt（如"用一句话回答"）在新版模型上可能不再被严格遵守。</p>
 
-<p>应对策略：①<strong>版本钉死</strong>——API调用时指定具体版本号（如gpt-4-0613而非gpt-4），不跟随latest，升级时主动测试再切；②<strong>版本追踪</strong>——日志记录每次请求的实际模型版本，效果退化时能定位是哪次更新引起的；③<strong>自动回归触发</strong>——订阅模型供应商的更新公告，或在每次请求response里检查model字段是否变化，发现变化立即自动跑Golden Set回归；④<strong>多模型备选</strong>——langchain4j的ChatLanguageModel接口可切换底层实现，主模型退化时临时切到备选模型（如GPT-4退化就临时切Claude）。这和Java里"依赖版本锁定+升级跑回归测试"是同一套思路。</p>
+<p>应对策略：①<strong>版本钉死</strong>——API调用时指定具体版本号(如gpt-4o-2024-08-06而非latest别名)，不跟随latest，升级时主动测试再切；②<strong>版本追踪</strong>——日志记录每次请求的实际模型版本，效果退化时能定位是哪次更新引起的；③<strong>自动回归触发</strong>——订阅模型供应商的更新公告，或在每次请求response里检查model字段是否变化，发现变化立即自动跑Golden Set回归；④<strong>多模型备选</strong>——langchain4j的ChatLanguageModel接口可切换底层实现，主模型退化时临时切到备选模型（如GPT-5系退化就临时切Claude Sonnet 5，或切国产DeepSeek-V4/GLM-5）。这和Java里"依赖版本锁定+升级跑回归测试"是同一套思路。</p>
 
 <h4>4.2.2 用户输入分布变化：怎么检测"新类型问题"</h4>
 
@@ -445,6 +445,12 @@ CustomerService agent = AiServices.builder(CustomerService.<span class="kw">clas
 
 <div class="java-analogy">线上Agent监控 ≈ Spring Boot Actuator + Prometheus + Grafana，但监控的是"AI质量"而非"系统指标"。系统监控看CPU/内存/QPS，Agent监控看幻觉率/满意度/完成率。</div>
 
+<h4>4.4 在线评估数据飞轮与轨迹级评估</h4>
+
+<p>离线Golden Set再大也只是历史快照，真正持续提升Agent质量靠的是<strong>在线评估数据飞轮</strong>——把线上反馈闭环回流到训练/评测资产里。完整飞轮四步：①<strong>反馈采集</strong>——线上thumb up/down、转人工、用户追问(同一会话连续追问往往意味着上一轮没答好)、停留时长等隐式反馈，加上质检团队主动巡检；②<strong>标注</strong>——把Bad Case和难例送人工标注(纠正答案/标注意图/标注是否幻觉)，形成高质量标注样本；③<strong>回流</strong>——标注样本回流到Golden Set扩充回归集，同时按意图分桶保证覆盖均衡；对频发错误可沉淀为SFT/偏好微调数据，用自部署模型(如Qwen3/GLM-5)做领域微调；④<strong>再发布</strong>——新模型/Prompt先在扩充后的Golden Set上回归，通过后灰度上线，线上指标再进入下一轮飞轮。这和推荐系统/搜索的"曝光→点击→标注→模型迭代"飞轮是同一套数据驱动方法论。</p>
+
+<p>多步Agent还要补<strong>轨迹级评估(trajectory/step-wise eval)</strong>：只评最终答案不够——一个ReAct Agent可能最终答对了但中间走了5步冗余工具调用，或第2步选错工具后第3步侥幸绕回来了。轨迹级评估把整条执行轨迹(Thought₁→Action₁→Observation₁→…→Final Answer)作为评估对象，逐step评分：工具选择是否合理、参数是否正确、是否有多余/重复步骤、是否在Observation撒谎(编造工具返回)。实现上可用LLM-as-Judge按rubric逐step打分，或用规则校验(如"调了退款Tool但用户只问查询"判负)。轨迹级指标(平均步数、工具选择准确率、冗余步比例)能定位最终答案评估发现不了的问题，是多步Agent质量保障的必备维度。</p>
+
 <!-- ==================== 5. AB测试与灰度发布 ==================== -->
 <h3>五、AB测试与灰度发布 <span class="difficulty">⭐⭐</span></h3>
 
@@ -452,7 +458,8 @@ CustomerService agent = AiServices.builder(CustomerService.<span class="kw">clas
 <span class="lang">Java (Agent AB测试逻辑)</span>
 <pre><span class="cmt">// 按用户ID hash分流</span>
 <span class="kw">public</span> CustomerService getAgent(String userId) {
-    <span class="kw">int</span> bucket = Math.abs(userId.hashCode()) % 100;
+    <span class="cmt">// 用位掩码避开 Math.abs(Integer.MIN_VALUE) 仍为负数的经典坑</span>
+    <span class="kw">int</span> bucket = (userId.hashCode() & 0x7fffffff) % 100;
     
     <span class="kw">if</span> (bucket < 10) {
         <span class="cmt">// 10%流量用新版本prompt</span>
@@ -530,7 +537,7 @@ CustomerService agent = AiServices.builder(CustomerService.<span class="kw">clas
 
 <h4>开发阶段</h4>
 <ul>
-  <li>✅ 先用强模型(GPT-4)验证可行性，再换便宜模型(GLM-4/DeepSeek)降成本</li>
+  <li>✅ 先用旗舰模型(GPT-5系/Claude Sonnet 5)验证可行性，再换中端模型(GLM-5/Qwen3/DeepSeek-V4)降成本</li>
   <li>✅ Prompt先简单后复杂：先zero-shot → 不行加few-shot → 再不行加CoT</li>
   <li>✅ Tool从少到多：先验证核心2-3个Tool，再加辅助工具</li>
   <li>✅ Prompt集中管理，不硬编码在代码里</li>
@@ -579,7 +586,7 @@ CustomerService agent = AiServices.builder(CustomerService.<span class="kw">clas
   <div class="question">怎么评价一个Agent开发的好不好？</div>
   <div class="interview-answer">
     <p>四个维度评价：1）<strong>RAG指标</strong>——检索质量(Recall@K/MRR)和生成质量(Faithfulness/Answer Relevance)；2）<strong>Agent指标</strong>——任务完成率(≥85%)、工具调用准确率(≥95%)、平均对话轮数(≤3轮)、幻觉率(≤5%)；3）<strong>用户指标</strong>——满意度(thumb up率≥80%)、转人工率(≤15%)；4）<strong>成本指标</strong>——平均token消耗和每次对话成本。</p>
-    <p>评测方法用LLM-as-Judge(GPT-4当裁判)做规模化评测+人工抽样标注做校准+线上用户反馈做真实验证。评测框架推荐RAGAS(RAG专项)+LangFuse(全链路追踪)。</p>
+    <p>评测方法用LLM-as-Judge(旗舰模型GPT-5系/Claude Sonnet 5当裁判)做规模化评测+人工抽样标注做校准+线上用户反馈做真实验证。评测框架推荐RAGAS(RAG专项)+Langfuse(全链路追踪)。</p>
   </div>
   <div class="interview-tip">给出具体目标值(85%/95%/5%)说明你有工程标准。提RAGAS和LangFuse说明你知道行业工具。四维度框架(质量/Agent/用户/成本)展示系统性思维。</div>
 </div>
@@ -587,7 +594,7 @@ CustomerService agent = AiServices.builder(CustomerService.<span class="kw">clas
 <div class="interview-q">
   <div class="question">LLM输出不确定，怎么写断言？</div>
   <div class="interview-answer">
-    <p>五种策略按场景选：1）<strong>关键词包含</strong>——assertTrue(output.contains("退款"))，简单case够用；2）<strong>正则匹配</strong>——验证格式；3）<strong>语义相似度</strong>——用Embedding算cosine similarity > 0.8，适合开放式问答；4）<strong>LLM-as-Judge</strong>——用GPT-4评判输出质量打分，适合复杂Agent评测；5）<strong>多次运行取多数</strong>——跑5次取majority vote，验证稳定性。</p>
+    <p>五种策略按场景选：1）<strong>关键词包含</strong>——assertTrue(output.contains("退款"))，简单case够用；2）<strong>正则匹配</strong>——验证格式；3）<strong>语义相似度</strong>——用Embedding算cosine similarity > 0.8，适合开放式问答；4）<strong>LLM-as-Judge</strong>——用旗舰模型(GPT-5系/Claude Sonnet 5)评判输出质量打分，适合复杂Agent评测；5）<strong>多次运行取多数</strong>——跑5次取majority vote，验证稳定性。</p>
     <p>注意LLM-as-Judge别用同一个模型评自己，用更强模型评弱模型输出。生产中我一般用关键词+语义相似度做快速回归，LLM-as-Judge做深度评测。</p>
   </div>
   <div class="interview-tip">提"别用同一个模型评自己"说明你踩过坑。给出"快速回归用关键词，深度评测用LLM-Judge"的分层策略展示工程化思维。</div>
@@ -623,7 +630,7 @@ CustomerService agent = AiServices.builder(CustomerService.<span class="kw">clas
 <div class="interview-q">
   <div class="question">模型偷偷更新了导致效果变差怎么办？</div>
   <div class="interview-answer">
-    <p>这是模型漂移(Model Drift)最常见的形式。应对方案：1）<strong>版本追踪</strong>——记录每次请求的模型版本(如gpt-4-0613 vs gpt-4-1106)，发现模型变了立即跑Golden Set回归；2）<strong>定期回归</strong>——不管模型有没有变，每天/每周自动跑golden set，通过率下降就告警；3）<strong>多模型备选</strong>——不绑死一个模型，langchain4j支持多模型切换，出问题可以临时切到备选模型；4）<strong>自托管模型兜底</strong>——关键场景用自部署的开源模型(如Qwen2)做兜底，不受上游更新影响。</p>
+    <p>这是模型漂移(Model Drift)最常见的形式。应对方案：1）<strong>版本追踪</strong>——记录每次请求的模型版本(如gpt-4o-2024-08-06 vs 新快照)，发现模型变了立即跑Golden Set回归；2）<strong>定期回归</strong>——不管模型有没有变，每天/每周自动跑golden set，通过率下降就告警；3）<strong>多模型备选</strong>——不绑死一个模型，langchain4j支持多模型切换，出问题可以临时切到备选模型；4）<strong>自托管模型兜底</strong>——关键场景用自部署的开源模型(如Qwen3/GLM-5)做兜底，不受上游更新影响。</p>
   </div>
   <div class="interview-tip">"记录模型版本"这个细节说明你真的踩过坑。提"自托管模型兜底"是高级架构思维。</div>
 </div>

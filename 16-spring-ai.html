@@ -26,20 +26,21 @@
       <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
       <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
       <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
-      <a href="12-project-packaging.html"><span class="num">12</span>项目经验：mall-agent</a>
+      <a href="12-project-packaging.html"><span class="num">12</span>项目经验：矿池AI客服</a>
       <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
       <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
       <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
       <a href="16-spring-ai.html" class="active"><span class="num">16</span>Spring AI对比</a>
+      <a href="17-agent-security.html"><span class="num">17</span>Agent安全</a>
   </nav>
   </aside>
 
   <main class="main">
     <header class="chapter-header">
-      <span class="chapter-num">专题</span>
+      <span class="chapter-num">第16章</span>
       <h2>Spring AI vs LangChain4j <span class="tag tag-hot">高频</span></h2>
       <div class="goal">
-        <strong>🎯 学习目标：</strong>掌握Spring AI的定位、核心概念（ChatClient/FunctionCallback/VectorStore/ETL Pipeline）、与langchain4j的全面对比（架构/API风格/生态/成熟度），能在面试中清晰回答"为什么选langchain4j不选Spring AI"以及"什么时候应该选Spring AI"。
+        <strong>🎯 学习目标：</strong>掌握Spring AI的定位、核心概念（ChatClient/ToolCallback/VectorStore/ETL Pipeline）、与langchain4j的全面对比（架构/API风格/生态/成熟度），能在面试中清晰回答"为什么选langchain4j不选Spring AI"以及"什么时候应该选Spring AI"。
       </div>
     </header>
 
@@ -52,8 +53,9 @@
 
     <div class="concept-card">
       <h4>Spring AI的定位</h4>
-      <p>Spring AI不是要"重新发明"AI框架，而是把AI能力融入Spring生态。它的设计哲学是：<strong>如果你会Spring Boot，你就会Spring AI</strong>。ChatClient就像RestTemplate，VectorStore就像JdbcTemplate，FunctionCallback就像@EventListener。</p>
-      <p>版本历程：2024年中0.8.x（里程碑版，API不稳）→ 2025年初1.0.0-M1 → 2025年下半年1.0.0正式版 → 2026年1.x持续迭代。当前（2026年中）已进入稳定期。</p>
+      <p>Spring AI不是要"重新发明"AI框架，而是把AI能力融入Spring生态。它的设计哲学是：<strong>如果你会Spring Boot，你就会Spring AI</strong>。ChatClient就像RestTemplate，VectorStore就像JdbcTemplate，ToolCallback就像@EventListener（1.0-M6起取代旧FunctionCallback）。</p>
+      <p>注：FunctionCallback自1.0-M6废弃，1.0 GA起由ToolCallback/@Tool/@ToolParam体系取代，官方提供迁移指南。</p>
+      <p>版本历程：2024-09 1.0.0-M1 → 2025-05-20 1.0.0 GA → 2025-11-12 1.1 GA（MCP集成、prompt caching）→ 2026-06 2.0 GA（配Spring Boot 4/Spring Framework 7）；1.x 配 Spring Boot 3.5，2.0 配 Boot 4。</p>
     </div>
 
     <div class="java-analogy">Spring AI之于AI开发 ≈ Spring Data之于数据库访问。Spring Data让你用@Repository注解操作MongoDB/Redis/MySQL，不需要写原生驱动代码。Spring AI让你用@Tool注解定义工具、用ChatClient调用LLM，不需要手写HTTP请求和JSON解析。</div>
@@ -64,11 +66,11 @@
     <table class="compare-table">
       <tr><th>Spring AI概念</th><th>对应langchain4j</th><th>作用</th></tr>
       <tr><td><strong>ChatClient</strong></td><td>ChatLanguageModel / AiServices</td><td>调用LLM的入口，支持流式+同步+异步</td></tr>
-      <tr><td><strong>@Tool + FunctionCallback</strong></td><td>@Tool + AiServices自动</td><td>定义LLM可调用的工具</td></tr>
+      <tr><td><strong>@Tool + ToolCallback</strong></td><td>@Tool + AiServices自动</td><td>定义LLM可调用的工具</td></tr>
       <tr><td><strong>VectorStore</strong></td><td>EmbeddingStore</td><td>向量存储抽象，支持Milvus/PGVector/Chroma等</td></tr>
       <tr><td><strong>ETL Pipeline</strong></td><td>DocumentLoader + DocumentSplitter</td><td>文档加载→分块→向量化→存储的离线管道</td></tr>
       <tr><td><strong>Advisors</strong></td><td>ContentRetriever + ChatMemory</td><td>增强LLM调用的拦截器链（RAG注入/记忆管理/安全过滤）</td></tr>
-      <tr><td><strong>Observability</strong></td><td>AiMetricsService</td><td>内置Micrometer指标+OpenTelemetry追踪</td></tr>
+      <tr><td><strong>Observability</strong></td><td>ChatModelListener（+ Spring Boot Starter 的 Micrometer 集成）</td><td>内置Micrometer指标+OpenTelemetry追踪</td></tr>
     </table>
 
     <div class="code-block">
@@ -123,12 +125,13 @@
       <tr><td>设计哲学</td><td>独立框架，模仿Python LangChain</td><td>Spring原生，融入Spring生态</td></tr>
       <tr><td>架构层次</td><td>三层：应用层(@AiService) + 核心层(接口) + 集成层(模块)</td><td>Spring Boot自动配置 + Starter依赖</td></tr>
       <tr><td>API风格</td><td>Builder模式 + 声明式注解</td><td>Fluent API + Spring注解</td></tr>
-      <tr><td>Agent支持</td><td>✅ AiServices自动Agent + 手写ReAct</td><td>⚠ 需手动编排（ChatClient + Tool循环）</td></tr>
+      <tr><td>Agent支持</td><td>✅ AiServices自动Agent + 手写ReAct</td><td>✅ ChatClient/ChatModel注册工具后自动执行工具回调并循环重调模型直到最终响应，无需手写ReAct；缺的是声明式Agent接口抽象（1.1.x起补充Agent API）</td></tr>
       <tr><td>RAG支持</td><td>EasyRAG + ContentRetriever + EmbeddingStore</td><td>ETL Pipeline + VectorStore + Advisors</td></tr>
       <tr><td>记忆管理</td><td>ChatMemory（MessageWindow/TokenWindow）</td><td>ChatMemory（内置Advisor）</td></tr>
       <tr><td>流式输出</td><td>StreamingChatModel + TokenStream</td><td>ChatClient.stream() → Flux&lt;String&gt;</td></tr>
       <tr><td>可观测性</td><td>需手动集成Prometheus</td><td>✅ 内置Micrometer + OpenTelemetry</td></tr>
       <tr><td>Spring集成深度</td><td>兼容Spring Boot（非强依赖）</td><td>✅ 深度集成（Spring原生）</td></tr>
+      <tr><td>MCP支持</td><td colspan="2">两者均有官方集成：LangChain4j langchain4j-mcp；Spring AI spring-ai-starter-mcp-client/-server（2025随1.0里程碑发布）</td></tr>
     </table>
 
     <h4>3.2 生态与成熟度</h4>
@@ -137,10 +140,10 @@
       <tr><th>对比维度</th><th>LangChain4j</th><th>Spring AI</th></tr>
       <tr><td>模型支持</td><td>OpenAI / Azure / Ollama / 通义千问 / Claude / Gemini / DeepSeek 等15+</td><td>OpenAI / Azure / Ollama / 通义千问 / Claude / Gemini 等10+</td></tr>
       <tr><td>向量库支持</td><td>Milvus / Chroma / Pinecone / Weaviate / Qdrant / PgVector / Elasticsearch 等10+</td><td>Milvus / Chroma / Pinecone / PgVector / Cassandra / Neo4j 等8+</td></tr>
-      <tr><td>版本稳定</td><td>0.30+（2024年已稳定）</td><td>1.0（2025年下半年才稳定）</td></tr>
-      <tr><td>社区活跃度</td><td>活跃（GitHub 5k+ stars）</td><td>活跃（Spring官方维护，GitHub 3k+ stars）</td></tr>
+      <tr><td>版本稳定</td><td>1.0 GA（2025-05），现1.18.x</td><td>1.0 GA（2025-05-20），现2.0 GA（2026-06）</td></tr>
+      <tr><td>社区活跃度</td><td>活跃（LangChain4j 约8k+ stars）</td><td>活跃（Spring官方维护，Spring AI 约6k+ stars；数据变动快，以官方为准）</td></tr>
       <tr><td>文档质量</td><td>中等（官方文档+社区示例）</td><td>中上（Spring风格文档，但部分模块文档不全）</td></tr>
-      <tr><td>企业支持</td><td>社区驱动</td><td>✅ VMware/Spring官方支持</td></tr>
+      <tr><td>企业支持</td><td>社区驱动</td><td>✅ Broadcom/VMware（Spring）官方支持</td></tr>
     </table>
 
     <h4>3.3 关键差异：Agent能力</h4>
@@ -148,8 +151,8 @@
     <div class="concept-card">
       <h4>这是两框架最核心的差异</h4>
       <p><strong>LangChain4j的AiServices</strong>：声明式Agent。定义接口+@AiService注解→框架自动生成实现类→LLM决定调用哪个@Tool方法→自动循环直到完成。一行代码一个Agent。</p>
-      <p><strong>Spring AI的ChatClient</strong>：调用式Agent。ChatClient是调用入口，但你得自己写ReAct循环——调LLM→解析响应→判断是否需要工具→调用工具→把结果拼回Prompt→再调LLM。工具调用循环需要手动编排。</p>
-      <p><strong>结论</strong>：如果要做复杂Agent（多工具+多轮循环），langchain4j的AiServices更省事。如果只是"调LLM回答问题"或"RAG检索+生成"，两者差别不大。但Spring AI可以手动实现ReAct循环（和mall-agent手写ReAct一样），控制粒度更细。</p>
+      <p><strong>Spring AI的ChatClient</strong>：调用式Agent。Spring AI的ChatClient/ChatModel注册工具后，模型返回tool_call时框架自动执行工具回调并把结果回灌模型、循环重调直到无更多工具调用，即工具循环是自动的，无需手写ReAct；Spring AI相对LangChain4j真正缺的是声明式Agent接口抽象（AiServices式），而非工具循环能力。1.1.x起补充了Agent相关API。</p>
+      <p><strong>结论</strong>：如果要做声明式Agent（定义接口即得实现），langchain4j的AiServices更省事。如果只是"调LLM回答问题"或"RAG检索+生成"或"工具循环"，两者差别不大——Spring AI的工具循环同样自动。Spring AI控制粒度更细（可手动介入循环、加Advisor切面）。</p>
     </div>
 
     <!-- ===================== 4. 选型建议 ===================== -->
@@ -167,7 +170,7 @@
       <tr><td>需要对接Python生态</td><td>LangChain4j</td><td>与Python LangChain概念对齐，团队协作更顺畅</td></tr>
     </table>
 
-    <div class="note">mall-agent选择langchain4j的原因：项目启动于2024年中，当时Spring AI还在0.8.x里程碑版本，API不稳定。langchain4j已经0.30+，有完整的Agent支持（AiServices）。如果现在（2026年）启动新项目，会重新评估Spring AI——它已经1.0+，成熟度大幅提升。</div>
+    <div class="note">矿池AI客服选择langchain4j的原因：项目启动于2024年中，当时Spring AI还在0.8.x里程碑版本，API不稳定。langchain4j已经0.30+，有完整的Agent支持（AiServices）。项目当前用langchain4j 1.13.0（最新1.18.1）。如果现在（2026年）启动新项目，会重新评估Spring AI——它已2.0 GA（2026-06），成熟度大幅提升。</div>
 
     <!-- ===================== 5. 迁移策略 ===================== -->
     <h3>5. 迁移策略：langchain4j → Spring AI <span class="difficulty">★★★☆☆</span></h3>
@@ -177,7 +180,7 @@
     <div class="concept-card">
       <h4>迁移代价评估</h4>
       <ul>
-        <li><strong>@AiService → ChatClient + 手动循环</strong>：迁移量最大。AiServices的声明式Agent需要改为手动ReAct循环。如果项目已经手写ReAct（如mall-agent），迁移成本低——循环逻辑不变，只需换API调用方式。</li>
+        <li><strong>@AiService声明式接口 → Spring AI无直接对应</strong>（需用ChatClient+Advisor组合或1.1 Agent API），这部分迁移量最大。AiServices的声明式Agent在Spring AI中无等价注解，需手写ChatClient调用+Advisor编排或采用1.1.x的Agent API。注：Spring AI的工具循环本身是自动的，无需手写ReAct。</li>
         <li><strong>@Tool → @Tool (Spring AI)</strong>：注解名相同但包不同，方法签名基本一致。迁移成本低，主要是改import。</li>
         <li><strong>ChatMemory → ChatMemory (Spring AI)</strong>：接口相似，迁移成本中等。</li>
         <li><strong>EmbeddingStore → VectorStore</strong>：抽象层不同，需要重写检索逻辑。迁移成本高。</li>
@@ -187,7 +190,7 @@
 
     <div class="warn">
       <p><strong>迁移建议</strong>：不要全量迁移。采用<strong>绞杀者模式</strong>——新功能用Spring AI写，旧功能保持langchain4j。两个框架可以在同一个Spring Boot项目中共存（依赖不冲突），通过配置切换。等langchain4j部分逐渐被替换完后，再移除依赖。</p>
-      <p>mall-agent的评估：当前深度绑定langchain4j的@AiService和ChatMemory，迁移成本>收益，<strong>不建议迁移</strong>。但新项目启动会优先考虑Spring AI。</p>
+      <p>矿池AI客服的评估：当前深度绑定langchain4j的@AiService和ChatMemory，迁移成本>收益，<strong>不建议迁移</strong>。但新项目启动会优先考虑Spring AI。</p>
     </div>
 
     <!-- ===================== 6. 面试Q&A ===================== -->
@@ -196,8 +199,8 @@
     <div class="interview-q">
       <div class="question">为什么选langchain4j而不是Spring AI？</div>
       <div class="interview-answer">
-        <p>项目启动时（2024年中）Spring AI还在0.8.x里程碑版本，API不稳定，文档缺失严重。langchain4j已经0.30+版本，有完整的三层架构、声明式Agent（AiServices）、丰富的集成模块。从工程稳定性角度，选langchain4j是稳妥的选择。</p>
-        <p>现在Spring AI已经1.0+，成熟度大幅提升。但mall-agent已深度绑定langchain4j的AiServices、ChatMemory、StreamingChatModel等接口，迁移成本高，ROI不划算。新项目启动会重新评估——如果团队是纯Spring Boot技术栈，Spring AI是更自然的选择。</p>
+        <p>项目启动时（2024年中）Spring AI还在0.8.x里程碑版本，API不稳定，文档缺失严重。langchain4j已经0.30+版本，有完整的三层架构、声明式Agent（AiServices）、丰富的集成模块。项目当前已升级到langchain4j 1.13.0。从工程稳定性角度，选langchain4j是稳妥的选择。</p>
+        <p>现在Spring AI已经1.0+，成熟度大幅提升。但矿池AI客服已深度绑定langchain4j的AiServices、ChatMemory、StreamingChatModel等接口，迁移成本高，ROI不划算。新项目启动会重新评估——如果团队是纯Spring Boot技术栈，Spring AI是更自然的选择。</p>
       </div>
       <div class="interview-tip">关键：说清楚"为什么当时选"和"现在怎么看"两个维度。展示你的技术判断有历史视角，不是"始终选一个"。</div>
     </div>
@@ -207,10 +210,10 @@
       <div class="interview-answer">
         <p>核心区别三个：</p>
         <p>1）<strong>设计哲学</strong>：langchain4j是独立框架（模仿Python LangChain），Spring AI是Spring原生（融入Spring生态）。Spring AI的ChatClient就像RestTemplate，VectorStore就像JdbcTemplate——Spring开发者零学习成本。</p>
-        <p>2）<strong>Agent能力</strong>：langchain4j的AiServices是声明式Agent——定义接口→框架自动生成实现→LLM决定调用工具→自动循环。Spring AI的ChatClient需要手动编排ReAct循环。做复杂Agent，langchain4j更省事。</p>
+        <p>2）<strong>Agent能力</strong>：langchain4j的AiServices是声明式Agent——定义接口→框架自动生成实现→LLM决定调用工具→自动循环。Spring AI的ChatClient/ChatModel注册工具后，模型返回tool_call时框架自动执行工具回调并把结果回灌模型、循环重调直到无更多工具调用，工具循环是自动的，无需手写ReAct；Spring AI相对LangChain4j真正缺的是声明式Agent接口抽象（AiServices式），1.1.x起补充了Agent相关API。做声明式Agent，langchain4j更省事。</p>
         <p>3）<strong>可观测性</strong>：Spring AI内置Micrometer+OpenTelemetry，零配置。langchain4j需要手动集成Prometheus。</p>
       </div>
-      <div class="interview-tip">三个维度对比要清晰。说"Spring AI需要手动编排ReAct"是核心差异，展示你真的理解两个框架。</div>
+      <div class="interview-tip">三个维度对比要清晰。核心差异是"声明式Agent接口抽象（AiServices）"而非工具循环——Spring AI工具循环同样自动，展示你真的理解两个框架。</div>
     </div>
 
     <div class="interview-q">
@@ -238,18 +241,18 @@
     <div class="review-card">
       <ul>
         <li><strong>Spring AI定位</strong>：Spring官方的AI框架，将AI能力Spring化——ChatClient如RestTemplate，VectorStore如JdbcTemplate</li>
-        <li><strong>核心差异</strong>：设计哲学（独立框架 vs Spring原生）+ Agent能力（AiServices声明式 vs ChatClient手动编排）+ 可观测性（手动 vs 内置）</li>
-        <li><strong>Agent关键区别</strong>：langchain4j的AiServices自动生成Agent实现，Spring AI需手动写ReAct循环</li>
+        <li><strong>核心差异</strong>：设计哲学（独立框架 vs Spring原生）+ Agent能力（AiServices声明式接口 vs ChatClient无声明式对应，工具循环两者都自动）+ 可观测性（手动 vs 内置）</li>
+        <li><strong>Agent关键区别</strong>：langchain4j的AiServices自动生成Agent实现（声明式接口）；Spring AI工具循环自动，但缺声明式Agent接口抽象（1.1.x起补充Agent API）</li>
         <li><strong>选型建议</strong>：纯Spring团队+企业级→Spring AI；复杂Agent+快速验证→langchain4j；已有项目→不迁移</li>
         <li><strong>迁移策略</strong>：绞杀者模式，新功能用Spring AI，旧功能保持langchain4j，两个框架可共存</li>
-        <li><strong>mall-agent选择</strong>：2024年启动，langchain4j更成熟。现在不迁移（成本>收益）。新项目会重新评估</li>
+        <li><strong>矿池AI客服选择</strong>：2024年启动，langchain4j更成熟。现在不迁移（成本>收益）。新项目会重新评估</li>
         <li><strong>面试要点</strong>：说清"当时为什么选"+"现在怎么看"+"什么条件下选什么"三个维度</li>
       </ul>
     </div>
 
     <div class="chapter-nav">
       <a href="15-mcp-protocol.html" class="prev">← MCP协议深度</a>
-      <a href="index.html" class="next">返回首页 →</a>
+      <a href="17-agent-security.html" class="next">Agent安全 →</a>
     </div>
 
   </main>

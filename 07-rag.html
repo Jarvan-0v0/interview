@@ -27,7 +27,7 @@
       <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
       <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
       <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
-      <a href="12-project-packaging.html"><span class="num">12</span>项目经验包装与表达</a>
+      <a href="12-project-packaging.html"><span class="num">12</span>项目经验：矿池AI客服</a>
       <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
       <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
       <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
@@ -40,7 +40,7 @@
   <main class="main">
     <!-- 章节标题 -->
     <header class="chapter-header">
-      <span class="chapter-num">CHAPTER 06</span>
+      <span class="chapter-num">第07章</span>
       <h2>RAG 检索增强生成</h2>
       <div class="goal">
         <strong>🎯 学习目标：</strong>理解RAG解决的核心问题（知识截止/私有数据/幻觉），掌握离线+在线两阶段完整流程，能讲清楚Chunking策略、Embedding模型、检索策略（向量/关键词/混合/Reranking）和Advanced RAG技术，并结合客服助手项目说清自己的RAG实战与优化经验。
@@ -57,7 +57,7 @@
     <div class="concept-card">
       <h4>LLM的三大知识痛点</h4>
       <ol>
-        <li><strong>知识截止日期</strong>：模型训练有截止点，之后的新知识它不知道。问"2024年新出的API"它会答不上来或编一个旧的。</li>
+        <li><strong>知识截止日期</strong>：模型训练有截止点，之后的新知识它不知道。问"2026年新出的API"它会答不上来或编一个旧的。</li>
         <li><strong>私有数据未训练</strong>：公司的订单系统、客服话术、内部文档，模型从来没见过，不可能"记"得住。</li>
         <li><strong>幻觉问题</strong>：不知道也硬答，编造看起来合理但错误的内容——客服场景里这是灾难。</li>
       </ol>
@@ -66,6 +66,9 @@
     <div class="java-analogy">RAG ≈ 在Service层<strong>先查数据库再调外部API</strong>。传统Service调外部API前会先查本地库补全上下文，RAG就是让LLM"调API生成答案"前先查向量库补全资料——让模型<strong>"看着资料回答"</strong>而不是"凭记忆回答"。把检索结果塞进Prompt，等于给Service方法传了一个额外的上下文参数。</div>
 
     <div class="note">RAG vs 微调：私有知识更新频繁、量大、需要可追溯来源——用RAG；知识相对稳定、风格/格式定制——用微调。企业客服场景几乎都是RAG胜出，因为话术和商品库天天在变。</div>
+
+    <h4>长上下文（1M+ token）会取代RAG吗？</h4>
+    <p>不会，二者互补：① <strong>成本</strong>——1M上下文每次调用全量计费，RAG只检索注入相关片段，便宜得多；② <strong>时效性</strong>——知识库更新只重建索引，不用重新"喂"给模型；③ <strong>可溯源</strong>——RAG能标注来源供核验，长上下文难以定位依据；④ <strong>有效窗口≠标称窗口</strong>——长上下文存在Lost in the Middle/衰减。结论：<strong>长上下文降低了对RAG的依赖度，但生产仍以RAG为主</strong>，二者常组合（粗筛用长上下文，精排用RAG）。</p>
 
     <!-- ===================== 2. RAG完整流程 ===================== -->
     <h3>2. RAG完整流程 <span class="difficulty">★★★★★ 必考</span></h3>
@@ -148,7 +151,7 @@
           </marker>
         </defs>
       </svg>
-      <div class="caption">图6-1 RAG完整流程：离线建库（加载→分块→向量化→入库） + 在线检索生成（提问→向量化→检索→拼Prompt→LLM生成）</div>
+      <div class="caption">图7-1 RAG完整流程：离线建库（加载→分块→向量化→入库） + 在线检索生成（提问→向量化→检索→拼Prompt→LLM生成）</div>
     </div>
 
     <div class="note">面试要点：离线阶段只跑一次（或定期增量更新），在线阶段每次查询都跑。向量化用的是<strong>同一个Embedding模型</strong>——离线把文档转向量，在线把问题转向量，才能在同一向量空间算相似度。</div>
@@ -157,6 +160,12 @@
     <h3>3. 文档分块（Chunking）策略 <span class="difficulty">★★★★☆</span></h3>
 
     <p>分块是RAG效果好坏的<strong>第一道关卡</strong>。文档太大塞不进Prompt，太小又丢失上下文。怎么切直接决定检索质量。</p>
+
+    <div class="concept-card">
+      <h4>文档解析（分块前的第一步，实际项目RAG第一瓶颈）</h4>
+      <p>分块之前还有一道更前置、却最容易被忽视的工序——<strong>文档解析</strong>。真实语料不是干净的txt，而是PDF/Word/扫描件/HTML/带表格的报表，直接按字符切会把版面结构切碎。常见做法：①<strong>PDF解析</strong>——用pdfplumber/PyMuPDF/unstructured抽取文本与版面坐标；②<strong>版面分析</strong>——区分标题/段落/页眉页脚/图注（LayoutLM、PaddleOCR的版面分析模型），避免把页眉页脚混进正文块；③<strong>表格处理</strong>——把表格转成Markdown或HTML保留行列结构，而不是拍平成一行文本（"退货政策表"转成Markdown表格后LLM能正确理解"7天""原包装"对应关系）；④<strong>扫描件/图片</strong>——先OCR（PaddleOCR/Tesseract）再解析，OCR质量直接决定下游RAG上限。</p>
+      <p><strong>经验</strong>：很多团队RAG效果差，根因不在分块或Embedding，而在解析阶段就把版面和表格结构丢了，后面再怎么调块大小都是亡羊补牢。面试提到"我先看了解析质量再调分块"会显得有实战。</p>
+    </div>
 
     <table class="compare-table">
       <thead>
@@ -253,7 +262,7 @@
         <text x="805" y="300" text-anchor="middle" font-size="10" fill="#555">分隔符递归细分</text>
         <text x="805" y="320" text-anchor="middle" font-size="10" fill="#555">["\n\n","\n","。"]</text>
       </svg>
-      <div class="caption">图6-3 四种分块策略对比：固定大小(硬切风险) / 语义(完整但大小不一) / 滑动窗口(overlap防丢) / 递归(按层级细分)</div>
+      <div class="caption">图7-2 四种分块策略对比：固定大小(硬切风险) / 语义(完整但大小不一) / 滑动窗口(overlap防丢) / 递归(按层级细分)</div>
     </div>
 
     <div class="java-analogy">Chunking ≈ 数据库的<strong>分页查询</strong>，但这里是对文档内容"分页"。区别在于：分页是运行时按limit/offset切，Chunking是离线预处理时切好存库。选块大小就像选pageSize——太大返回冗余、太小丢失上下文，需要按业务语料调试。</div>
@@ -266,6 +275,14 @@
     </ul>
 
     <div class="warn">分块是RAG最容易踩坑、也最容易被忽视的环节。面试时如果说"我就随便切了下"，基本凉。要讲清"我试了几种大小，对比检索准确率选的"。</div>
+
+    <h4>进阶：Late Chunking 与 Contextual Retrieval</h4>
+    <p>传统分块"先切后编"：每块独立Embedding，块内信息有但<strong>全文上下文丢了</strong>——一个块里的"他"指代谁、本块属于哪一章节，模型不知道。两种较新的改进思路：</p>
+    <ul>
+      <li><strong>Late Chunking（延迟分块）</strong>：先用支持长上下文的Embedding模型<strong>编码整篇文档</strong>得到token级向量序列，<strong>再</strong>按边界切块并对每块的token向量做均值池化得到块向量。本质是"先编码全文再切块"，让每个块向量都隐式携带了全文上下文，召回更准。代价是要求Embedding模型能输出token级向量（如jina-embeddings-v3的late_chunking）。</li>
+      <li><strong>Anthropic Contextual Retrieval（上下文化检索）</strong>：给每个块<strong> prepend一段由LLM生成的"本文档语境摘要"</strong>再Embedding入库（如"本块出自《退货政策》第3节，讨论7天无理由退货的适用商品范围"）。这样块向量编码的不只是孤立片段，而是带文档语境的片段，显著降低跨块指代歧义。代价是建库时多一次LLM调用（可批量缓存Prompt降本），Anthropic官方实测可降低检索失败率近一半。</li>
+    </ul>
+    <div class="interview-tip">"传统分块为什么丢上下文" + "Late Chunking/Contextual Retrieval怎么补"是2025-2026的高频进阶题，能讲清原理和代价立刻拉开档次。</div>
 
     <!-- ===================== 4. Embedding模型 ===================== -->
     <h3>4. Embedding模型 <span class="difficulty">★★★★☆</span></h3>
@@ -281,14 +298,20 @@
         <tr><th>模型</th><th>来源</th><th>维度</th><th>特点</th></tr>
       </thead>
       <tbody>
-        <tr><td>text-embedding-ada-002</td><td>OpenAI</td><td>1536</td><td>闭源、效果好、英文强、要付费调API</td></tr>
+        <tr><td>text-embedding-3-large</td><td>OpenAI</td><td>3072(可降维)</td><td><strong>安全默认首选</strong>、闭源、英文强、支持Matryoshka可变维度</td></tr>
+        <tr><td>text-embedding-3-small</td><td>OpenAI</td><td>1536</td><td>便宜快、性价比高（注：2026将退役，新项目建议直接上3-large）</td></tr>
+        <tr><td>text-embedding-ada-002</td><td>OpenAI</td><td>1536</td><td><strong>已过时</strong>（被3-small/large取代多年），新项目不要选</td></tr>
+        <tr><td>Qwen3-Embedding</td><td>阿里</td><td>可变</td><td>开源、中文/多语言强、可本地部署、2026中文场景热门</td></tr>
+        <tr><td>bge-m3</td><td>智源</td><td>1024</td><td>开源、多语言/多粒度、支持稀疏+稠密+多向量</td></tr>
         <tr><td>BGE（bge-large-zh）</td><td>智源</td><td>1024</td><td>开源、中文效果好、可本地部署</td></tr>
-        <tr><td>M3E</td><td>社区</td><td>768</td><td>开源、中英均衡、轻量</td></tr>
-        <tr><td>bge-m3</td><td>智源</td><td>1024</td><td>多语言/多粒度，支持稀疏+稠密</td></tr>
+        <tr><td>jina-embeddings-v3</td><td>Jina</td><td>1024</td><td>开源、长文本强、支持Late Chunking、多语言</td></tr>
+        <tr><td>Voyage（voyage-3）</td><td>Voyage AI</td><td>1024</td><td>闭源API、检索专精、RAG基准表现领先</td></tr>
+        <tr><td>Cohere embed</td><td>Cohere</td><td>1024</td><td>闭源API、多语言强、配合Cohere Rerank效果好</td></tr>
+        <tr><td>M3E</td><td>社区</td><td>768</td><td><strong>已停更</strong>（约2023后无维护），不建议作现役推荐</td></tr>
       </tbody>
     </table>
 
-    <p><strong>维度与效果</strong>：并非维度越高越好。高维度信息更丰富但计算更慢、存储更占；关键看模型训练质量和与语料的匹配。中文场景BGE/M3E往往比OpenAI的更懂中文语义。</p>
+    <p><strong>维度与效果</strong>：并非维度越高越好。高维度信息更丰富但计算更慢、存储更占；关键看模型训练质量和与语料的匹配。中文场景Qwen3-Embedding/BGE/bge-m3往往比OpenAI的更懂中文语义。新项目选型：<strong>闭源走text-embedding-3-large，开源中文走Qwen3-Embedding或bge-m3</strong>。</p>
 
     <div class="note">工程要点：离线建库和在线检索<strong>必须用同一个Embedding模型</strong>，否则向量空间不一致，相似度无意义。换模型=全部重新向量化入库。</div>
 
@@ -316,7 +339,7 @@
         <text x="355" y="100" text-anchor="middle" font-size="12" fill="#555">词频权重打分</text>
         <text x="355" y="135" text-anchor="middle" font-size="12" fill="#2e7d32">✓ 精确词强召回</text>
         <text x="355" y="158" text-anchor="middle" font-size="12" fill="#d32f2f">✗ 不懂同义/语义</text>
-        <text x="355" y="185" text-anchor="middle" font-size="12" fill="#555">查"订单号20230801"精准</text>
+        <text x="355" y="185" text-anchor="middle" font-size="12" fill="#555">查"订单号SO20260807"精准</text>
         <text x="355" y="210" text-anchor="middle" font-size="12" fill="#999" font-style="italic">精确匹配场景</text>
 
         <!-- 混合 -->
@@ -339,12 +362,13 @@
         <text x="805" y="185" text-anchor="middle" font-size="12" fill="#555">先粗排100→精排10</text>
         <text x="805" y="210" text-anchor="middle" font-size="12" fill="#999" font-style="italic">质量优化层</text>
       </svg>
-      <div class="caption">图6-2 四种检索策略对比：向量(语义) / 关键词(精确) / 混合(兼顾) / Reranking(精排)</div>
+      <div class="caption">图7-3 四种检索策略对比：向量(语义) / 关键词(精确) / 混合(兼顾) / Reranking(精排)</div>
     </div>
 
     <div class="concept-card">
       <h4>为什么需要Reranking</h4>
       <p>向量检索用Bi-Encoder（问题和文档各自编码再算距离），<strong>快但粗</strong>；Reranking用Cross-Encoder（问题和文档拼一起送入模型），<strong>慢但准</strong>。生产套路：<strong>向量/混合检索粗召回Top-100 → Cross-Encoder精排Top-10</strong>。</p>
+      <p><strong>现役Reranker（2026）</strong>：① <strong>bge-reranker-v2-m3</strong>——智源开源、多语言、可本地部署、中文RAG最常用；② <strong>Cohere Rerank</strong>——闭源API、效果稳、配合Cohere embed体验最佳；③ <strong>jina-reranker</strong>——开源、长文本友好；④ <strong>LLM-as-reranker（RankGPT）</strong>——直接用大模型对候选文档打分/重排，无需训练reranker，灵活但贵且慢，适合离线精排或对质量要求极高的场景。选型：本地部署优先bge-reranker-v2-m3，云上要省事用Cohere Rerank。</p>
     </div>
 
     <!-- ===================== 6. Advanced RAG ===================== -->
@@ -452,7 +476,7 @@
         <text x="805" y="305" text-anchor="middle" font-size="10" fill="#d32f2f">⚠ 3倍检索成本</text>
         <text x="805" y="335" text-anchor="middle" font-size="10" fill="#555">延迟: +1LLM+3检索 | 效果: ↑</text>
       </svg>
-      <div class="caption">图6-4 Advanced RAG四种技术对比：基础RAG(直查) / 查询改写(问题翻译) / HyDE(假答案检索) / Multi-Query(多角度召回)</div>
+      <div class="caption">图7-4 Advanced RAG四种技术对比：基础RAG(直查) / 查询改写(问题翻译) / HyDE(假答案检索) / Multi-Query(多角度召回)</div>
     </div>
 
     <div class="concept-card">
@@ -470,6 +494,11 @@
       <p>让LLM把一个问题拆成多个角度的子问题，分别检索后合并结果。例："这个产品怎么样" → 拆成"价格""质量""售后"三个子问题分别检索，召回更全。</p>
     </div>
 
+    <h3>6.5 Agentic RAG 与 GraphRAG <span class="difficulty">★★★</span></h3>
+    <p><strong>Agentic RAG</strong>：把检索从固定流水线升级为Agent的<strong>自主决策</strong>——LLM判断是否需要检索、检索几次、检索后是否需改写重查、是否要查别的源。变体：Self-RAG（自评检索结果质量决定是否重检索）、CRAG（纠正式检索，检索质量低时触发web搜索兜底）。本质是"检索作为Agent的一个工具"。</p>
+    <p><strong>GraphRAG</strong>：用知识图谱增强检索。先从文档抽取实体/关系建图，检索时既走向量语义召回也走图谱关联扩展，适合<strong>多跳推理</strong>问题（"A公司的CEO毕业的学校在哪座城市"需跨多实体）。代价是建图成本高、维护复杂。</p>
+    <div class="interview-tip">"传统RAG vs Agentic RAG"是高频题：传统=固定pipeline，Agentic=检索由Agent自主决定（是否查/查几次/改写重查）。补一句"长上下文不取代RAG"见§1。</div>
+
     <!-- ===================== 7. RAG效果评估 ===================== -->
     <h3>7. RAG效果评估 <span class="difficulty">★★★☆☆</span></h3>
 
@@ -480,7 +509,7 @@
         <tr><th>评估层</th><th>指标</th><th>含义</th></tr>
       </thead>
       <tbody>
-        <tr><td>检索质量</td><td>Recall@K</td><td>Top-K结果里是否包含正确文档，含了算召回</td></tr>
+        <tr><td>检索质量</td><td>Recall@K / Hit Rate@K</td><td>Top-K结果里是否包含相关文档（见下方口径辨析）</td></tr>
         <tr><td>检索质量</td><td>MRR</td><td>正确结果的排名倒数均值，越靠前分越高</td></tr>
         <tr><td>生成质量</td><td>Faithfulness 忠实度</td><td>回答是否忠于检索资料，有没有"编"</td></tr>
         <tr><td>生成质量</td><td>Answer Relevance</td><td>回答是否切题、是否解决了用户问题</td></tr>
@@ -490,10 +519,15 @@
 
     <div class="note">Ragas、TruLens是常用的RAG评估框架，能自动算上述指标。面试提到这些工具会显得有实战经验。</div>
 
-    <h4>Recall@K 的计算方法</h4>
-    <p><strong>定义</strong>：对于一个查询，如果在检索返回的Top-K个结果中<strong>包含至少一个相关文档</strong>，则算"命中"，得分为1；否则为0。对所有查询的命中率取平均，就是Recall@K。</p>
-    <p><strong>公式</strong>：Recall@K = (命中查询数) / (总查询数) = (1/N) × Σ 1[相关文档 ∈ TopK(qᵢ)]，其中 1[...] 是指示函数，条件成立取1否则取0，N是查询总数。</p>
-    <p><strong>计算示例</strong>：假设有5个测试查询，K=5。查询1的Top-5含相关文档→命中；查询2不含→未命中；查询3、4、5都命中。则 Recall@5 = 4/5 = 0.8（80%）。<strong>注意</strong>：Recall@K只关心"是否召回到"，不关心排在第几位——排在第1和第5都算命中。如果想体现排名质量，用 MRR = (1/N) × Σ 1/rank(qᵢ)，rank是第一个相关文档的排名位置，越靠前MRR越接近1。</p>
+    <h4>Recall@K 的计算方法（含 Hit Rate 口径辨析）</h4>
+    <p><strong>口径辨析</strong>：很多RAG教程（含本文早期版本）把"Top-K里含至少一个相关文档"称为Recall@K，但严格意义上这其实是<strong>Hit Rate@K</strong>（命中率）。二者的标准定义差异在<strong>多相关文档</strong>场景才会显现：</p>
+    <ul>
+      <li><strong>Hit Rate@K</strong> = (1/N) × Σ 1[TopK(qᵢ) ∩ 相关(qᵢ) ≠ ∅]——只看"有没有命中至少一个"，二值。</li>
+      <li><strong>Recall@K</strong> = (1/N) × Σ |TopK(qᵢ) ∩ 相关(qᵢ)| / |相关(qᵢ)|——看"召回了多少比例的相关文档"，连续值。</li>
+    </ul>
+    <p>当每个查询<strong>只有一个相关文档</strong>时（如FAQ单标注场景），二者数值相等；多相关文档时Recall@K ≤ Hit Rate@K。下文示例沿用"每题1个相关文档"的简化假设，此时二者等价，工程上常混用——但面试被追问时要能讲清这个区别。</p>
+    <p><strong>公式（Hit Rate@K，单相关文档假设下=Recall@K）</strong>：= (命中查询数) / (总查询数) = (1/N) × Σ 1[相关文档 ∈ TopK(qᵢ)]，其中 1[...] 是指示函数，条件成立取1否则取0，N是查询总数。</p>
+    <p><strong>计算示例</strong>：假设有5个测试查询，K=5，每题1个相关文档。查询1的Top-5含相关文档→命中；查询2不含→未命中；查询3、4、5都命中。则 Hit Rate@5 = Recall@5 = 4/5 = 0.8（80%）。<strong>注意</strong>：该指标只关心"是否召回到"，不关心排在第几位——排在第1和第5都算命中。如果想体现排名质量，用 MRR = (1/N) × Σ 1/rank(qᵢ)，rank是第一个相关文档的排名位置，越靠前MRR越接近1。</p>
     <p><strong>工程意义</strong>：Recall@K是RAG的<strong>检索层天花板</strong>——如果正确文档没进Top-K，后面LLM再强也答不对。一般要求 Recall@5 ≥ 0.9 才算检索合格。调试时分桶看：哪些类型的问题召回低？往往是分块不合理或Embedding对该类语义不敏感，针对性优化。</p>
 
     <h4>Faithfulness 忠实度的计算方法</h4>
@@ -506,12 +540,12 @@
     <h3>langchain4j RAG 代码示例</h3>
 
     <div class="code-block">
-      <span class="lang">Java · langchain4j RAG实现</span>
-<pre><span class="cmt">// 1. RAG增强的AiService——把检索到的资料通过{{info}}注入SystemMessage</span>
+      <span class="lang">Java · langchain4j RAG实现（ContentRetriever 自动注入，推荐）</span>
+<pre><span class="cmt">// 1. RAG增强的AiService——contentRetriever 会自动检索并把结果拼到 SystemMessage 的 {{retriever_documents}} 占位符</span>
 <span class="kw">interface</span> <span class="fn">RagAssistant</span> {
     @SystemMessage(<span class="str">"你是一个客服助手。请严格根据以下检索到的资料回答用户问题，"
-            + "资料中没有的内容请说明'暂无相关信息'，不要编造。资料：{{info}}"</span>)
-    String <span class="fn">chat</span>(@UserMessage String question, @V(<span class="str">"info"</span>) String info);
+            + "资料中没有的内容请说明'暂无相关信息'，不要编造。资料：{{retriever_documents}}"</span>)
+    String <span class="fn">chat</span>(@UserMessage String question);
 }
 
 <span class="cmt">// 2. 检索器——从向量库取Top-K相关文档</span>
@@ -525,10 +559,11 @@ ContentRetriever retriever = EmbeddingStoreContentRetriever.builder()
 <span class="cmt">// 3. 组装RAG链：检索 → 拼接 → 生成</span>
 RagAssistant assistant = AiServices.builder(RagAssistant.<span class="kw">class</span>)
     .chatLanguageModel(model)
-    .contentRetriever(retriever)       <span class="cmt">// langchain4j自动检索并注入info</span>
+    .contentRetriever(retriever)       <span class="cmt">// langchain4j 自动检索并注入 {{retriever_documents}}</span>
     .build();
 
 <span class="cmt">// 用户提问，框架自动：向量化问题→检索→拼Prompt→调LLM</span>
+<span class="cmt">// 注意：chat() 只传 question，不要再手动 @V 注入 info——两套注入机制不要混用</span>
 String answer = assistant.chat(<span class="str">"你们的退货政策是什么？"</span>);</pre>
     </div>
 
@@ -550,7 +585,7 @@ String answer = assistant.chat(<span class="str">"你们的退货政策是什么
       <div class="question">Q2：文档分块有什么策略，怎么选？</div>
       <div class="interview-answer">
         <p>主要有四种：固定大小（按字符数硬切）、语义分块（按段落/句子）、滑动窗口（固定大小+overlap重叠避免割裂）、递归分块（先按大结构再细分）。选择要看语料：结构化文档（手册/FAQ）用语义或递归；无结构长文用滑动窗口。</p>
-        <p>块大小是关键调参点——太大语义混杂检索不准、太小上下文丢失，中文一般300-500字起步，靠A/B测检索准确率定。我项目里对比过200/400/800字三档，400字召回率最好。</p>
+        <p>块大小是关键调参点——太大语义混杂检索不准、太小上下文丢失，中文一般300-500字起步，靠A/B测检索准确率定。我项目里对比过200/300/500字三档，300字召回率最好（kb-chunk-size=300，重叠50字）。</p>
       </div>
       <div class="interview-tip">类比Java分页查询；强调"我试过几档对比了召回率"——立刻显得有实战，不是背书的。</div>
     </div>
@@ -558,7 +593,7 @@ String answer = assistant.chat(<span class="str">"你们的退货政策是什么
     <div class="interview-q">
       <div class="question">Q3：向量检索和关键词检索有什么区别？</div>
       <div class="interview-answer">
-        <p>向量检索基于<strong>语义相似</strong>，问题和文档各自编码成向量算余弦距离，能识别同义词（"退款"召回"退货"）但精确词召回弱。关键词检索（BM25）基于<strong>词频权重</strong>，精确匹配强（查订单号20230801精准）但不懂语义。</p>
+        <p>向量检索基于<strong>语义相似</strong>，问题和文档各自编码成向量算余弦距离，能识别同义词（"退款"召回"退货"）但精确词召回弱。关键词检索（BM25）基于<strong>词频权重</strong>，精确匹配强（查订单号SO20260807001精准）但不懂语义。</p>
         <p>生产上通常用<strong>混合检索</strong>——两路并行召回再用RRF融合，兼顾语义和精确。客服场景里订单号查询靠关键词、政策类问题靠向量，混合最稳。</p>
       </div>
       <div class="interview-tip">举一个"订单号用关键词、退货政策用向量"的具体例子，立刻把抽象概念落地。</div>
@@ -599,9 +634,10 @@ String answer = assistant.chat(<span class="str">"你们的退货政策是什么
         <li>完整流程：<strong>离线</strong>加载→分块→向量化→入库；<strong>在线</strong>提问→向量化→检索→拼Prompt→生成</li>
         <li>离线和在线必须用<strong>同一个Embedding模型</strong>，换模型=全部重新入库</li>
         <li>Chunking四种策略：固定/语义/滑动窗口/递归，块大小需A/B测，中文300-500字起步</li>
-        <li>Embedding模型：OpenAI(1536维)/BGE(中文强、开源)/M3E——维度非越高越好，看训练质量与语料匹配</li>
-        <li>检索策略：向量(语义) vs BM25(精确) vs 混合(兼顾) vs Reranking(Cross-Encoder精排)——生产首选混合+Reranking</li>
+        <li>Embedding模型：text-embedding-3-large(安全默认)/Qwen3-Embedding/bge-m3(中文开源)/jina-v3/Voyage/Cohere——ada-002已过时、M3E已停更</li>
+        <li>检索策略：向量(语义) vs BM25(精确) vs 混合(兼顾) vs Reranking(Cross-Encoder精排)——生产首选混合+Reranking（bge-reranker-v2-m3/Cohere Rerank）</li>
         <li>Advanced RAG：查询改写/HyDE/Parent-Child(小块检大块返)/Multi-Query</li>
+        <li>进阶：Agentic RAG（检索作为Agent工具）/ GraphRAG（知识图谱多跳）；Late Chunking与Contextual Retrieval补全文上下文</li>
         <li>评估三层：检索(Recall@K/MRR) + 生成(Faithfulness/Relevance) + 端到端准确率，工具用Ragas/TruLens</li>
       </ul>
     </div>

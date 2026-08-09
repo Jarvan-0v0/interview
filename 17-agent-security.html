@@ -26,7 +26,7 @@
       <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
       <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
       <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
-      <a href="12-project-packaging.html"><span class="num">12</span>项目经验：mall-agent</a>
+      <a href="12-project-packaging.html"><span class="num">12</span>项目经验：矿池AI客服</a>
       <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
       <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
       <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
@@ -37,7 +37,7 @@
 
   <main class="main">
     <header class="chapter-header">
-      <span class="chapter-num">专题</span>
+      <span class="chapter-num">第17章</span>
       <h2>Agent安全 <span class="tag tag-hot">必考</span></h2>
       <div class="goal">
         <strong>🎯 学习目标：</strong>掌握Agent安全的核心威胁（Prompt注入/工具滥用/数据泄露/幻觉危害）、防御策略（分层防护/最小权限/输入输出过滤/人工兜底），能用Java后端的"安全思维"（类比SQL注入/CSRF/权限控制）讲清楚Agent安全的设计原则，面试中展示你的安全意识。
@@ -166,6 +166,8 @@
 
     <div class="java-analogy">Prompt注入防御 ≈ SQL注入防御的<strong>参数化查询</strong>思路。SQL注入用PreparedStatement把数据和SQL分离；Prompt注入用分层Prompt把"用户输入数据"和"系统指令"分离。原理一致：<strong>不要让用户输入混入指令执行层</strong>。</div>
 
+    <p>另需关注的攻击面：① <strong>间接注入</strong>（工具返回内容/网页/检索文档中藏注入，对Agent尤其致命）；② <strong>成本耗尽攻击（Denial of Wallet）</strong>对应LLM10，靠配额/限流防御；③ <strong>MCP/工具供应链攻击</strong>（恶意MCP Server、工具投毒、版本rug pull），靠来源审计与签名校验；④ <strong>向量与嵌入层攻击</strong>（embedding反演、检索投毒）对应LLM08。</p>
+
     <!-- ===================== 3. 工具安全 ===================== -->
     <h3>3. 工具调用安全与最小权限 <span class="difficulty">★★★★☆</span></h3>
 
@@ -185,6 +187,7 @@
     <div class="code-block">
       <span class="lang">Java (工具安全实现示例)</span>
 <pre><span class="cmt">// 工具安全注解</span>
+<span class="cmt">// 示意伪代码：langchain4j的@Tool无security属性，需自行实现拦截层</span>
 <span class="kw">@Tool</span>(value = <span class="str">"删除订单（危险操作，需要人工确认）"</span>,
       security = SecurityLevel.DANGEROUS)
 <span class="kw">public</span> OrderDTO deleteOrder(
@@ -203,9 +206,11 @@
 
 <span class="cmt">// 频率限制</span>
 <span class="kw">@Tool</span>(<span class="str">"发送邮件（只读模板，不修改数据）"</span>)
-<span class="kw">@RateLimit</span>(maxPerMinute = <span class="num">1</span>)  <span class="cmt">// 每分钟最多1次</span>
+<span class="kw">@RateLimit</span>(maxPerMinute = <span class="num">1</span>)  <span class="cmt">// 每分钟最多1次；@RateLimit为示意伪代码，需自行实现（如Bucket4j/Resilience4j）</span>
 <span class="kw">public</span> <span class="kw">void</span> sendEmail(String to, String template) { ... }</pre>
     </div>
+
+    <p>常用安全工具：Llama Guard / NeMo Guardrails / Guardrails AI（输入输出护栏）、Lakera Guard（注入检测）、promptfoo（红队测试）。关键词过滤对注入效果有限，应作为纵深防御的一层而非主力。</p>
 
     <!-- ===================== 4. 数据安全 ===================== -->
     <h3>4. 数据安全与隐私保护 <span class="difficulty">★★★☆☆</span></h3>
@@ -218,6 +223,24 @@
       <tr><td>对话历史泄露</td><td>用户A通过注入看到用户B的对话</td><td>会话隔离（每个用户独立ChatMemory）；用户认证绑定</td></tr>
       <tr><td>PII泄露</td><td>LLM输出中包含真实姓名/手机号/身份证</td><td>后处理正则检测+脱敏；Prompt中禁止输出PII</td></tr>
     </table>
+
+    <!-- ===================== OWASP LLM Top 10（2025）对照 ===================== -->
+    <h3>OWASP LLM Top 10（2025版）对照 <span class="difficulty">★必考</span></h3>
+    <p>OWASP于2025年发布LLM应用Top 10风险，是Agent安全面试的权威框架。本章四大威胁与五原则可映射其上：</p>
+    <table class="cmp-table">
+    <tr><th>编号</th><th>风险</th><th>本章对应</th></tr>
+    <tr><td>LLM01</td><td>Prompt Injection（提示注入）</td><td>§2 直接/间接/越狱/多轮注入</td></tr>
+    <tr><td>LLM02</td><td>Sensitive Information Disclosure（敏感信息泄露）</td><td>§4 数据安全/PII</td></tr>
+    <tr><td>LLM03</td><td>Supply Chain Vulnerabilities（供应链）</td><td>第三方模型/组件/MCP Server来源审计</td></tr>
+    <tr><td>LLM04</td><td>Data and Model Poisoning（数据/模型投毒）</td><td>训练数据与知识库内容治理</td></tr>
+    <tr><td>LLM05</td><td>Improper Output Handling（输出处理不当）</td><td>§4 工具返回泄露、输出门控</td></tr>
+    <tr><td>LLM06</td><td>Excessive Agency（过度授权）</td><td>§3 最小权限/操作确认/频率限制</td></tr>
+    <tr><td>LLM07</td><td>System Prompt Leakage（系统提示泄露，2025新增）</td><td>§4 System Prompt泄露</td></tr>
+    <tr><td>LLM08</td><td>Vector and Embedding Weaknesses（向量与嵌入弱点，2025新增）</td><td>embedding反演、检索投毒</td></tr>
+    <tr><td>LLM09</td><td>Misinformation（错误信息）</td><td>幻觉危害与事实校验</td></tr>
+    <tr><td>LLM10</td><td>Unbounded Consumption（无界消耗，2025由Model DoS扩展）</td><td>成本耗尽/DoS防护、配额控制</td></tr>
+    </table>
+    <div class="interview-tip">2025版相对2023版的关键变化：新增System Prompt Leakage(LLM07)、Vector and Embedding Weaknesses(LLM08)，Insecure Plugin Design并入Excessive Agency，Model DoS扩展为Unbounded Consumption。能说出这些变化展示跟进。</div>
 
     <!-- ===================== 5. 面试Q&A ===================== -->
     <h3>5. 面试Q&A <span class="difficulty">★★★★★</span></h3>
@@ -245,7 +268,7 @@
       <div class="question">Agent的工具安全怎么做？</div>
       <div class="interview-answer">
         <p>五原则：1）<strong>最小权限</strong>——只给Agent必要的工具，不暴露危险工具。每个工具标注安全级别（只读/可写/危险）。2）<strong>参数校验</strong>——不信任LLM传的参数，在工具执行前做格式校验（正则）、范围校验（金额上限）、业务校验（订单是否存在）。3）<strong>操作确认</strong>——危险操作需要人工确认码。4）<strong>频率限制</strong>——防止LLM被诱导大量调用同一工具。5）<strong>审计日志</strong>——记录每次工具调用，出问题能回溯。</p>
-        <p>mall-agent实践：所有工具默认只读，"发送邮件"加了频率限制，"删除订单"需要人工确认码。工具描述中明确标注"只读，不修改"。</p>
+        <p>矿池AI客服实践：所有工具默认只读，对外通知类工具加频率限制，涉及写操作的工具（如创建工单/转人工）需人工确认码。工具描述中明确标注"只读，不修改"。</p>
       </div>
       <div class="interview-tip">五原则+实际例子。说"不信任LLM的参数"展示安全思维的核心——零信任。</div>
     </div>

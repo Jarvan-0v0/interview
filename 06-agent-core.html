@@ -27,7 +27,7 @@
       <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
       <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
       <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
-      <a href="12-project-packaging.html"><span class="num">12</span>项目经验包装与表达</a>
+      <a href="12-project-packaging.html"><span class="num">12</span>项目经验：矿池AI客服</a>
       <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
       <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
       <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
@@ -40,7 +40,7 @@
   <main class="main">
     <!-- 章节标题 -->
     <header class="chapter-header">
-      <span class="chapter-num">CHAPTER 06</span>
+      <span class="chapter-num">第06章</span>
       <h2>Agent核心概念</h2>
       <div class="goal">
         <strong>🎯 学习目标：</strong>理解Agent的本质（感知->决策->行动->观察的自主系统），掌握ReAct、Planning、Tool Use、Multi-Agent协作等核心机制，能用Java工程师熟悉的概念类比讲清楚Agent与传统chatbot/workflow的区别，从容应对转行面试的核心问题。
@@ -94,7 +94,7 @@
         <text x="450" y="135" text-anchor="middle" font-size="12" fill="#555">LLM动态决定调用哪个工具</text>
         <text x="450" y="160" text-anchor="middle" font-size="12" fill="#555">循环执行，自主调整路径</text>
         <text x="450" y="185" text-anchor="middle" font-size="12" fill="#555">能获取真实信息，避免幻觉</text>
-        <text x="450" y="220" text-anchor="middle" font-size="12" fill="#999" font-style="italic">例：AutoGPT、客服Agent</text>
+        <text x="450" y="220" text-anchor="middle" font-size="12" fill="#999" font-style="italic">例：编码Agent、客服Agent、浏览器/计算机操作Agent</text>
 
         <!-- Workflow -->
         <rect x="610" y="20" width="270" height="220" rx="10" fill="#fff3e0" stroke="#ff6f00" stroke-width="2"/>
@@ -189,6 +189,8 @@
 
     <p>这个循环会一直进行，直到LLM判断<strong>任务已完成</strong>（输出Finish）或达到<strong>最大迭代次数</strong>上限。这就是为什么Agent需要设置maxIterations参数——防止它陷入死循环。</p>
 
+    <div class="warn"><strong>推理模型对Agent循环的影响（重要）</strong>：2024年底起的推理模型（OpenAI o系列、DeepSeek-R1、Claude extended thinking、GLM-5推理、Qwen3思考模式）<strong>内置思考</strong>，会取代/弱化ReAct里外显的Thought——模型在工具调用前后自动做内部推理，不再需要Prompt里手写"Let's think step by step"。但带来三个工程影响：①<strong>单步成本上升</strong>——每步的思考token按输出价计费，一个Agent循环多步下来思考成本可能远超答案本身；②<strong>延迟上升</strong>——每步思考可能数千token，多步循环延迟显著放大；③<strong>maxIterations需配预算双控</strong>——只限迭代次数不够，还要配<strong>token预算/时间预算</strong>上限，否则推理模型可能在少数几步里把预算烧光。工程实践：推理模型Agent建议maxIterations取较小值（如5-8），叠加总token预算和单步时间上限做双重保护。</div>
+
     <div class="code-block">
       <span class="lang">Java · langchain4j ReAct Agent</span>
 <pre><span class="cmt">// langchain4j 对ReAct的封装：AiServices + Tools</span>
@@ -211,7 +213,7 @@
     }
 }
 
-<span class="cmt">// 组装Agent——框架底层就是ReAct循环</span>
+<span class="cmt">// 组装Agent——思想上是ReAct循环，实现上是原生Function Calling（结构化tool_use往返）</span>
 CustomerServiceAgent agent = AiServices.builder(CustomerServiceAgent.<span class="kw">class</span>)
     .chatLanguageModel(model)
     .tools(<span class="kw">new</span> OrderTools())
@@ -254,6 +256,8 @@ String answer = agent.chat(<span class="str">"我的订单20230801到哪了"</sp
     </table>
 
     <div class="java-analogy">Planning ≈ 工作流引擎（Camunda/Activiti）的BPMN任务分解。Camunda里你画一张流程图，引擎按节点推进；Plan-and-Execute就是让LLM<strong>动态画出这张流程图</strong>再执行——Planner生成计划相当于生成BPMN定义，Executor按节点推进。ReAct则更像事件驱动——没有预定义流程，每一步都根据上一步结果现场决定，类似复杂事件处理（CEP）。</div>
+
+    <div class="note"><strong>推理模型与Planning</strong>：推理模型内置思考，单步推理质量更高，对纯ReAct是利好（少跑偏）；但<strong>单步成本和延迟上升</strong>，让"边走边想"的token代价更高。权衡上：推理模型时代Plan-and-Execute的"先规划后执行"更有吸引力——一次规划省掉多步反复推理的思考成本；同时maxIterations/预算双控更显重要（见§2）。</div>
 
     <!-- ===================== 4. Tool Use ===================== -->
     <h3>4. Tool Use（工具使用） <span class="difficulty">★★★★★ 必考</span></h3>
@@ -351,6 +355,13 @@ String answer = agent.chat(<span class="str">"我的订单20230801到哪了"</sp
     </ul>
     <p>这种"按需串联"就是多工具编排的本质——<strong>没有硬编码调用顺序</strong>，全靠LLM根据上下文决定。这也是Agent比固定Workflow灵活的根本原因。</p>
 
+    <h4>进阶：并行工具调用、错误回传、工具规模化</h4>
+    <ul>
+      <li><strong>并行工具调用（parallel tool calling）</strong>：当多个工具调用互不依赖时（如同时查订单和查余额），主流API允许LLM在<strong>一轮里输出多个ToolExecutionRequest</strong>，框架并行执行后一起回传。延迟从串行的N倍降到1倍，是Agent提速的关键。注意只对<strong>无依赖</strong>的调用并行，有依赖的仍需串行。</li>
+      <li><strong>工具结果is_error回传让模型自我纠正</strong>：工具执行失败时，不要抛异常中断循环，而是把结果标记为<code>is_error=true</code>连同错误信息回传给LLM——LLM看到"该工具调用失败，原因是xxx"后能<strong>自我纠正</strong>（换参数重试、换工具、或转人工）。这是Agent鲁棒性的关键设计，比硬失败重试更优雅。</li>
+      <li><strong>工具规模化（&gt;20个）的检索/按需加载</strong>：工具一多，把所有工具描述全塞进prompt既费token又互相干扰（LLM选错率上升）。工程做法：①<strong>工具检索</strong>——根据用户问题先检索出最相关的几个工具，只把这几个的描述发给LLM；②<strong>按需加载/分组</strong>——按领域把工具分组，Router先选组再加载组内工具；③<strong>MCP等工具协议</strong>把工具做成可发现的服务。本质是对工具也做一次"RAG"。</li>
+    </ul>
+
     <!-- ===================== 5. Multi-Agent ===================== -->
     <h3>5. Multi-Agent协作 <span class="difficulty">★★★☆☆</span></h3>
 
@@ -428,6 +439,17 @@ String answer = agent.chat(<span class="str">"我的订单20230801到哪了"</sp
     <div class="java-analogy">Multi-Agent ≈ 微服务架构中的服务编排。<strong>Supervisor-Worker</strong>就是<strong>API网关 + 后端微服务</strong>模式——网关（Supervisor）做路由分发，各微服务（Worker）独立处理。<strong>Pipeline</strong>像消息驱动的事件链——Kafka里topic A的消费者处理完发到topic B。<strong>Router</strong>就是纯粹的API网关路由——根据请求路径分发到不同后端。区别在于：微服务用代码做路由，Multi-Agent用LLM做路由决策。</div>
 
     <div class="note">工程经验：Supervisor-Worker最常用因为可控——Supervisor能看到所有Worker的状态，可以兜底。Pipeline适合步骤明确的分析类任务。Router适合意图分类明确的客服场景。Peer-to-Peer（无中心节点，Agent互调）灵活但难调试，实际工程中很少用。</div>
+
+    <!-- ===================== 5.5 Agent记忆 ===================== -->
+    <h3>5.5 Agent记忆 <span class="difficulty">★★★ 必考</span></h3>
+
+    <p>Agent四要素是<strong>LLM / 工具 / 规划 / 记忆</strong>，前三者常被讲到，<strong>记忆却最常被忽略</strong>。没有记忆，Agent每次都从零开始，无法积累用户偏好和未决事项。</p>
+
+    <p>Agent记忆分两层：<strong>短期记忆</strong>（工作记忆，当前对话上下文窗口内，超窗用截断/摘要/检索注入管理——见第04章多轮对话策略）；<strong>长期记忆</strong>（跨会话持久化，外置存储：向量库/记忆库/文件式记忆，按需检索注入当前上下文，类似给Agent配"私人知识库+历史笔记本"）。</p>
+
+    <p><strong>与RAG的分工</strong>：RAG检索的是<strong>知识库</strong>（业务文档），长期记忆检索的是<strong>该用户/会话的历史交互</strong>（偏好、未决事项）。两者机制相似（都是检索注入），但数据源不同。矿池AI客服的SimpleQaCache是高频答案缓存（短期加速），对话历史摘要+Redis是短期记忆持久化。</p>
+
+    <div class="interview-tip">Agent四要素(LLM/工具/规划/记忆)记忆常被忽略。答"短期用上下文窗口+截断摘要，长期外置存储+检索注入，与RAG区分在数据源是历史交互而非知识库"展示完整认知。</div>
 
     <!-- ===================== 6. Agent vs Chain vs Workflow ===================== -->
     <h3>6. Agent vs Chain vs Workflow <span class="difficulty">★★★★☆</span></h3>
@@ -523,9 +545,11 @@ String answer = agent.chat(<span class="str">"我的订单20230801到哪了"</sp
       <ul>
         <li>Agent = 感知->决策->行动->观察的自主系统，核心是<strong>LLM动态决策</strong>，不是"会聊天"。能调用工具获取真实信息，避免幻觉</li>
         <li>Chatbot无工具（只会说）、Agent有工具且自主调用（会做事）、Workflow路径预先编排（可控但不灵活）——三者区别在<strong>决策权归谁</strong></li>
-        <li>ReAct = Think->Act->Observe循环，强制先推理再行动避免盲目调工具。需配maxIterations（通常10）防死循环</li>
-        <li>Planning：ReAct边走边想（灵活但易跑偏）vs Plan-and-Execute先规划后执行（结构清晰但固化）。类比Camunda工作流引擎</li>
-        <li>Tool Use靠<strong>description</strong>选工具——描述要含功能+输入+输出+触发场景，写不好就选错。多工具编排靠ReAct循环，无硬编码调用顺序</li>
+        <li>ReAct = Think->Act->Observe循环，强制先推理再行动避免盲目调工具。需配maxIterations（通常10）防死循环。<strong>推理模型内置思考取代外显Thought，单步成本上升，maxIterations需配token/时间预算双控</strong></li>
+        <li>Planning：ReAct边走边想（灵活但易跑偏）vs Plan-and-Execute先规划后执行（结构清晰但固化）。类比Camunda工作流引擎。推理模型时代Plan-and-Execute更有吸引力（省多步思考成本）</li>
+        <li>Tool Use靠<strong>description</strong>选工具——描述要含功能+输入+输出+触发场景，写不好就选错。多工具编排靠ReAct循环，无硬编码调用顺序。进阶：并行工具调用（无依赖时一轮多调）、is_error回传让模型自我纠正、工具规模化(>20个)用工具检索/按需加载/MCP</li>
+        <li>langchain4j AiServices：思想上是ReAct循环，实现上是原生Function Calling（结构化tool_use往返）</li>
+        <li><strong>Agent记忆</strong>：四要素(LLM/工具/规划/记忆)中记忆最常被忽略。短期=上下文窗口+截断摘要；长期=外置存储+检索注入。与RAG区分在数据源：记忆检索历史交互，RAG检索知识库</li>
         <li>Function Calling流程：注册工具Schema->LLM输出ToolExecutionRequest->框架反射执行->结果回传->LLM整合（可循环）</li>
         <li>Multi-Agent三种模式：Supervisor-Worker（工程常用，可控）、Pipeline（流水线串联）、Router（意图分类路由）。类比微服务编排</li>
         <li>选型原则：流程能穷举用Workflow，开放任务用Agent，最佳实践是主干Workflow+节点Agent混合（90%场景够用）</li>

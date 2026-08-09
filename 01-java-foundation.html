@@ -27,7 +27,7 @@
     <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
     <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
     <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
-    <a href="12-project-packaging.html"><span class="num">12</span>项目经验包装与表达</a>
+    <a href="12-project-packaging.html"><span class="num">12</span>项目经验：矿池AI客服</a>
     <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
       <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
       <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
@@ -42,6 +42,7 @@
   <span class="chapter-num">第01章</span>
   <h2>Java后端核心复习</h2>
   <div class="goal"><strong>学习目标：</strong>系统复习并发编程、JVM、Spring生态、数据库、消息队列五大核心领域。每个知识点先讲原理再给面试Q&A，以4年Java存量优势为底座，为转AI Agent打好基础。</div>
+  <div class="note">⚠️ 版本现状（2026-08）：当前LTS为<strong>Java 25</strong>（2025-09-16发布，继Java 21之后的新LTS，代表特性含虚拟线程synchronized不再pin、分代ZGC亚毫秒停顿、结构化并发）。Spring Boot最新为<strong>4.x</strong>（2025-11 GA，配Spring Framework 7），3.5.x为3.x最后维护线。面试按Java 21/25 + Spring Boot 3.x/4.x作答。</div>
 </div>
 
 <!-- ==================== 1. 并发编程 ==================== -->
@@ -184,6 +185,8 @@ ThreadPoolExecutor executor = <span class="kw">new</span> ThreadPoolExecutor(
 <p>两者都是Java实现线程同步的手段，但实现原理和功能差异很大。</p>
 
 <p><strong>synchronized的锁升级过程</strong>（JDK 6后优化）：synchronized不是一开始就是重量级锁，而是根据竞争激烈程度逐步升级，这是JDK6的重大优化。</p>
+
+<div class="note">偏向锁自JDK 15默认禁用（JEP 374）、JDK 18移除相关参数，现代JDK实际为无锁→轻量级→重量级，"偏向锁"仅作历史演进了解。</div>
 
 <div class="diagram">
 <svg viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
@@ -444,6 +447,23 @@ future.exceptionally(ex -> {
 
 <p>常用API：<strong>supplyAsync</strong>(异步执行有返回值) → <strong>thenApply</strong>(转换结果) → <strong>thenCombine</strong>(合并两个) → <strong>whenComplete</strong>(完成回调) → <strong>exceptionally</strong>(异常兜底)。注意默认用ForkJoinPool.commonPool()，生产环境建议传自定义线程池。</p>
 
+<h4>1.7 虚拟线程（Virtual Threads） <span class="difficulty">★★★ 必考</span></h4>
+<p>虚拟线程是Java 21 LTS正式特性（JEP 444），由JVM在少量平台线程（载体线程）上调度大量虚拟线程，<strong>面向IO密集场景的革命性并发模型</strong>。对Agent开发尤其关键——LLM调用是典型长阻塞IO，正是虚拟线程的主战场。</p>
+<p><strong>核心对比</strong>：平台线程（传统Thread）≈1MB栈+OS线程，受限于内存（千级）；虚拟线程≈几KB+JVM调度，可轻松创建百万级。<code>Executors.newVirtualThreadPerTaskExecutor()</code>为每任务一个虚拟线程。</p>
+<div class="code-block"><span class="lang">Java</span>
+<pre><span class="cmt">// 虚拟线程：长阻塞IO场景用虚拟线程而非线程池调优</span>
+<span class="kw">try</span> (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+    IntStream.range(0, 10_000).forEach(i ->
+        executor.submit(() -> {
+            <span class="cmt">// 调LLM、查数据库、调远程API——阻塞时虚拟线程让出载体线程</span>
+            <span class="kw">return</span> callLlm(question);
+        })
+    );
+}</pre></div>
+<p><strong>何时用虚拟线程 vs 线程池</strong>：① <strong>虚拟线程</strong>：IO密集、任务数大、阻塞时间长（LLM调用、DB查询、HTTP）——不要用线程池调优，直接每任务一虚拟线程；② <strong>平台线程池</strong>：CPU密集计算（仍用线程池限流）；③ <strong>Spring Boot</strong>：<code>spring.threads.virtual.enabled=true</code>让Tomcat/任务执行器用虚拟线程。</p>
+<div class="java-analogy">虚拟线程 ≈ Go的goroutine / Kotlin协程：用户态轻量、阻塞不浪费OS线程。区别是Java虚拟线程用同步阻塞式API写出非阻塞效果——<strong>不要在虚拟线程里用synchronized</strong>（Java 21会pin住载体线程；Java 25已修复此pinning问题，synchronized也可安全使用）。</div>
+<div class="interview-tip">Agent岗被问"LLM调用并发怎么设计"——答"长阻塞IO用虚拟线程而非调线程池参数，Java 21起原生支持"，展示对Java新特性的跟进。Java 25 LTS进一步修复虚拟线程在synchronized块pinning载体线程的问题。</div>
+
 <!-- ==================== 2. JVM ==================== -->
 <h3>二、JVM虚拟机 <span class="difficulty">⭐⭐⭐ 必考</span></h3>
 
@@ -515,7 +535,7 @@ future.exceptionally(ex -> {
 
 <p><strong>G1收集器</strong>：JDK9默认。打破物理分代，将堆划分为2048个Region(每个1-32MB)，每个Region可以是Eden/Survivor/Old/Humongous。G1通过<strong>记录每个Region的垃圾价值(回收可获得的空间)</strong>，在有限停顿时间内优先回收价值最高的Region(Garbage First)。SATB标记存活对象，可预测停顿(-XX:MaxGCPauseMillis)。</p>
 
-<p><strong>ZGC</strong>：JDK11+。染色指针技术(在64位指针的几位标记对象状态)，读屏障(在读引用时更新指针)，实现&lt;10ms停顿，支持TB级堆。</p>
+<p><strong>ZGC</strong>：JDK 11实验性、JDK 15生产可用、JDK 21起分代ZGC（JEP 439）实现<strong>亚毫秒级</strong>停顿、支持TB级堆。染色指针技术(在64位指针的几位标记对象状态)，读屏障(在读引用时更新指针)。</p>
 
 <div class="interview-q">
   <div class="question">G1和CMS有什么区别？为什么JDK9默认用G1？</div>
@@ -531,7 +551,7 @@ future.exceptionally(ex -> {
 
 <p><strong>类加载过程</strong>：加载(读取class文件到内存)→验证(格式/元数据/字节码/符号引用验证)→准备(为静态变量分配内存赋默认值0)→解析(符号引用→直接引用)→初始化(执行&lt;clinit&gt;静态代码块和静态变量赋值)。使用→卸载。</p>
 
-<p><strong>双亲委派模型</strong>：收到类加载请求时先委派给父加载器，父加载不到才自己加载。层级：Bootstrap(C++加载rt.jar)→Extension(ext目录)→Application(classpath)→Custom(自定义)。作用：①安全性(防止核心类被篡改，java.lang.String只能Bootstrap加载)；②唯一性(同一类只加载一次)。</p>
+<p><strong>双亲委派模型</strong>：收到类加载请求时先委派给父加载器，父加载不到才自己加载。层级：Bootstrap→Platform（JDK 9起由Extension更名）→Application(classpath)→Custom(自定义)；JDK 9模块化后已无rt.jar。作用：①安全性(防止核心类被篡改，java.lang.String只能Bootstrap加载)；②唯一性(同一类只加载一次)。注：Platform ClassLoader即原Extension。</p>
 
 <p><strong>打破双亲委派的场景</strong>：</p>
 <ul>
@@ -640,7 +660,7 @@ Proxy.newProxyInstance(classLoader, <span class="kw">new</span> Class[]{UserServ
 
 <h4>3.2 SpringBoot自动配置原理</h4>
 
-<p>@SpringBootApplication = @Configuration + @EnableAutoConfiguration + @ComponentScan。自动配置的核心是@EnableAutoConfiguration里的@Import(AutoConfigurationImportSelector.class)，它读取所有jar包中META-INF/spring.factories文件里EnableAutoConfiguration对应的类，然后通过@ConditionalOnXxx条件注解判断是否需要装配。</p>
+<p>@SpringBootApplication = @Configuration + @EnableAutoConfiguration + @ComponentScan。自动配置的核心是@EnableAutoConfiguration里的@Import(AutoConfigurationImportSelector.class)，Spring Boot 3.x/4.x读取所有jar包中META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports（spring.factories在2.7弃用、3.0移除）里对应的类，然后通过@ConditionalOnXxx条件注解判断是否需要装配。</p>
 
 <div class="code-block">
 <span class="lang">Java</span>

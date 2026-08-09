@@ -28,7 +28,7 @@
       <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
       <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
       <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
-      <a href="12-project-packaging.html"><span class="num">12</span>项目经验包装与表达</a>
+      <a href="12-project-packaging.html"><span class="num">12</span>项目经验：矿池AI客服</a>
       <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
       <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
       <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
@@ -58,12 +58,14 @@
 <table class="compare-table">
 <tr><th>类型</th><th>底层结构</th><th>典型场景</th><th>面试考点</th></tr>
 <tr><td>String</td><td>SDS (简单动态字符串)</td><td>缓存、计数器、分布式锁</td><td>预分配策略、二进制安全</td></tr>
-<tr><td>List</td><td>quicklist (ziplist + linkedlist)</td><td>消息队列、最新列表</td><td>LPUSH/RPOP vs RPOPLPUSH</td></tr>
-<tr><td>Hash</td><td>ziplist / hashtable</td><td>对象存储(用户信息)</td><td>field数少用ziplist省内存</td></tr>
+<tr><td>List</td><td>quicklist (listpack + linkedlist)</td><td>消息队列、最新列表</td><td>LPUSH/RPOP vs RPOPLPUSH</td></tr>
+<tr><td>Hash</td><td>listpack / hashtable</td><td>对象存储(用户信息)</td><td>field数少用listpack省内存</td></tr>
 <tr><td>Set</td><td>intset / hashtable</td><td>去重、标签、共同好友</td><td>SINTER求交集O(N)</td></tr>
-<tr><td>ZSet</td><td>ziplist / skiplist+hashtable</td><td>排行榜、延时队列</td><td>跳表原理(多层链表)</td></tr>
+<tr><td>ZSet</td><td>listpack / skiplist+hashtable</td><td>排行榜、延时队列</td><td>跳表原理(多层链表)</td></tr>
 <tr><td>Stream</td><td>radix tree</td><td>消息队列(5.0+)</td><td>消费者组、ACK机制</td></tr>
 </table>
+
+<div class="note">Redis 7.0起ziplist被listpack取代（listpack不再存储上一个节点末尾偏移，避免连锁更新问题，更省内存更安全）。老版本资料里的ziplist即对应新版的listpack。</div>
 
 <h4>1.2 缓存三大问题</h4>
 
@@ -146,8 +148,8 @@
 <pre><span class="cmt">// SET key value NX PX 30000 — 原子性加锁+设置过期</span>
 RLock lock = redissonClient.getLock("order:lock:" + orderId);
 <span class="kw">try</span> {
-    <span class="cmt">// 尝试加锁，等待5秒，锁30秒自动释放</span>
-    <span class="kw">boolean</span> locked = lock.tryLock(5, 30, TimeUnit.SECONDS);
+    <span class="cmt">// 尝试加锁，最多等5秒拿锁；不传leaseTime→启用看门狗自动续期</span>
+    <span class="kw">boolean</span> locked = lock.tryLock(5, TimeUnit.SECONDS);
     <span class="kw">if</span> (!locked) {
         <span class="kw">throw new</span> RuntimeException(<span class="str">"获取锁失败"</span>);
     }
@@ -163,7 +165,7 @@ RLock lock = redissonClient.getLock("order:lock:" + orderId);
 <ul>
   <li><strong>加锁原子性</strong>：SET key value NX PX 30000，一步完成加锁+设过期</li>
   <li><strong>防误删</strong>：value存唯一UUID，释放锁时先检查是不是自己的锁</li>
-  <li><strong>锁续期(看门狗)</strong>：如果业务执行超过30秒，看门狗线程每10秒续期</li>
+  <li><strong>锁续期(看门狗)</strong>：Redisson看门狗（Watchdog）仅在<strong>未指定leaseTime</strong>时启动，默认每 lockWatchdogTimeout/3=10s 续期一次（默认30s租约续到30s）；若显式指定leaseTime（如tryLock(5,30,SECONDS)）则不续期，到期自动释放。面试被问"指定了leaseTime还会续期吗"答"不会"</li>
   <li><strong>可重入</strong>：用Hash结构记录重入次数，同一线程可多次获取</li>
 </ul>
 
@@ -267,7 +269,7 @@ RLock lock = redissonClient.getLock("order:lock:" + orderId);
   <li><strong>Consumer Group</strong>：同组内每个Consumer消费不同Partition（实现并行），不同组各自独立消费全量</li>
   <li><strong>副本机制</strong>：每个Partition有Leader+Follower副本。Leader处理读写，Follower同步。Leader挂了选新Leader</li>
   <li><strong>ISR (In-Sync Replicas)</strong>：和Leader保持同步的副本集合。只有ISR中的副本才有资格被选为新Leader</li>
-  <li><strong>acks参数</strong>：acks=0不等确认 / acks=1 Leader确认(默认) / acks=all 所有ISR确认(最安全)</li>
+  <li><strong>acks参数</strong>：acks=0不等确认 / acks=1 Leader确认 / acks=all 所有ISR确认(最安全)。Kafka 3.0起生产者默认acks=all+幂等生产(enable.idempotence=true)，更早版本默认acks=1</li>
 </ul>
 
 <h4>2.4 消息可靠性三保证</h4>
@@ -388,7 +390,7 @@ RLock lock = redissonClient.getLock("order:lock:" + orderId);
 <div class="interview-q">
   <div class="question">Redis为什么快？单线程为什么也快？</div>
   <div class="interview-answer">
-    <p>Redis快的原因：1）<strong>纯内存操作</strong>，数据在内存中读写，没有磁盘IO；2）<strong>单线程+IO多路复用</strong>，epoll实现一个线程处理大量连接，避免多线程的锁竞争和上下文切换；3）<strong>数据结构高度优化</strong>，如SDS预分配、ziplist压缩、跳表等。</p>
+    <p>Redis快的原因：1）<strong>纯内存操作</strong>，数据在内存中读写，没有磁盘IO；2）<strong>单线程+IO多路复用</strong>，epoll实现一个线程处理大量连接，避免多线程的锁竞争和上下文切换；3）<strong>数据结构高度优化</strong>，如SDS预分配、listpack压缩、跳表等。</p>
     <p>单线程也快是因为：瓶颈不在CPU计算，而在IO。单线程+epoll = 没有锁开销 + 高效IO，反而比多线程更快。而且Redis 6.0引入多线程处理IO，命令执行仍单线程。</p>
   </div>
   <div class="interview-tip">提到Redis 6.0多线程IO是加分项。能说"瓶颈不在CPU"说明理解了本质。</div>
@@ -812,7 +814,7 @@ server {
 <!-- ==================== 重点回顾 ==================== -->
 <div class="review-card">
   <ul>
-    <li><strong>Redis快的原因：</strong>纯内存 + 单线程避免锁竞争 + IO多路复用epoll + 优化的数据结构(SDS/跳表/ziplist)</li>
+    <li><strong>Redis快的原因：</strong>纯内存 + 单线程避免锁竞争 + IO多路复用epoll + 优化的数据结构(SDS/跳表/listpack)</li>
     <li><strong>缓存三大问题：</strong>穿透(查不存在→布隆过滤器/空值缓存)、击穿(热点过期→互斥锁/永不过期)、雪崩(批量过期→随机TTL/多级缓存)</li>
     <li><strong>分布式锁三要素：</strong>原子加锁(SET NX PX) + UUID防误删 + 看门狗续期。注意主从切换丢锁问题</li>
     <li><strong>RDB vs AOF：</strong>RDB全量快照恢复快但可能丢数据，AOF命令日志更安全但恢复慢，生产混用</li>

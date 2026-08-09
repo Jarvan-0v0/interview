@@ -26,19 +26,21 @@
       <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
       <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
       <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
-      <a href="12-project-packaging.html"><span class="num">12</span>项目经验：mall-agent</a>
+      <a href="12-project-packaging.html"><span class="num">12</span>项目经验：矿池AI客服</a>
       <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
       <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
       <a href="15-mcp-protocol.html" class="active"><span class="num">15</span>MCP协议深度</a>
+      <a href="16-spring-ai.html"><span class="num">16</span>Spring AI对比</a>
+      <a href="17-agent-security.html"><span class="num">17</span>Agent安全</a>
   </nav>
   </aside>
 
   <main class="main">
     <header class="chapter-header">
-      <span class="chapter-num">专题</span>
+      <span class="chapter-num">第15章</span>
       <h2>MCP协议深度 <span class="tag tag-hot">必考</span></h2>
       <div class="goal">
-        <strong>🎯 学习目标：</strong>掌握MCP（Model Context Protocol）协议原理、Client-Server架构、Transport层（SSE/stdio）、Tools/Resources/Prompts三大核心概念、Java实现MCP客户端（SSE+JSON-RPC）、mall-agent中的MCP实战集成，能在面试中清晰阐述MCP的设计理念和工程价值。
+        <strong>🎯 学习目标：</strong>掌握MCP（Model Context Protocol）协议原理、Client-Server架构、Transport层（Streamable HTTP/stdio）、Tools/Resources/Prompts三大核心概念、基于langchain4j MCP SDK集成（Streamable HTTP+JSON-RPC）、矿池AI客服中的MCP实战集成，能在面试中清晰阐述MCP的设计理念和工程价值。
       </div>
     </header>
 
@@ -116,12 +118,13 @@
       </ul>
     </div>
 
-    <h4>Transport层：SSE vs stdio</h4>
+    <h4>Transport层：Streamable HTTP vs stdio</h4>
 
     <table class="compare-table">
-      <tr><th>Transport</th><th>通信方式</th><th>适用场景</th><th>mall-agent使用</th></tr>
-      <tr><td>SSE（Server-Sent Events）</td><td>HTTP长连接：GET /sse建立连接，POST /mcp/message发送JSON-RPC请求</td><td>远程Server，跨网络通信</td><td>✅ mall-agent连接远程mall-mcp-server</td></tr>
-      <tr><td>stdio</td><td>标准输入输出：启动子进程，通过stdin/stdout通信</td><td>本地Server，同机进程通信</td><td>—</td></tr>
+      <tr><th>Transport</th><th>通信方式</th><th>适用场景</th><th>矿池AI客服使用</th></tr>
+      <tr><td>Streamable HTTP（现行）</td><td>单一HTTP端点：POST发送JSON-RPC，响应可为普通JSON或SSE流；支持会话ID与断点恢复</td><td>远程Server，跨网络通信（2025-03-26规范起取代旧HTTP+SSE）</td><td>✅ 矿池AI客服连接远程mall-mcp-server</td></tr>
+      <tr><td>stdio</td><td>标准输入输出承载JSON-RPC</td><td>本地工具，同机进程通信</td><td>—</td></tr>
+      <tr><td>HTTP+SSE（已弃用）</td><td>GET /sse建事件通道，POST /message发请求</td><td>早期远程方案，2025-03-26起被Streamable HTTP取代</td><td>—</td></tr>
     </table>
 
     <div class="code-block">
@@ -169,6 +172,16 @@ Content-Type: application/json
 }</pre>
     </div>
 
+    <h3>规范版本时间线 <span class="difficulty">★必知</span></h3>
+    <p>MCP规范持续演进，面试讲MCP要带版本：</p>
+    <ul>
+      <li><strong>2024-11-05</strong>：初始版本，定义Client-Server架构、Tools/Resources/Prompts、JSON-RPC、stdio与HTTP+SSE传输。</li>
+      <li><strong>2025-03-26</strong>：引入<strong>Streamable HTTP</strong>传输取代HTTP+SSE（后者标记弃用）；新增基于<strong>OAuth 2.1</strong>的授权框架（RFC 9728 Protected Resource Metadata）。</li>
+      <li><strong>2025-06-18</strong>：新增<strong>Elicitation</strong>（服务器中途向用户请求补充信息）、结构化工具输出（structuredContent/outputSchema）、Sampling（服务器请求客户端侧LLM生成）、Roots能力、安全章节强化。</li>
+      <li><strong>2025-11-25</strong>：新增异步<strong>Tasks</strong>原语（长任务call-now/fetch-later）、URL模式Elicitation、OIDC/CIMD/XAA授权增强、Icons、Extensions扩展框架。</li>
+    </ul>
+    <div class="interview-tip">能说出"2025-03-26起Streamable HTTP取代SSE并引入OAuth 2.1"展示跟进规范演进，而非停留在2024年底初版。</div>
+
     <!-- ===================== 3. MCP核心概念 ===================== -->
     <h3>3. MCP三大核心概念：Tools/Resources/Prompts <span class="difficulty">★★★★☆</span></h3>
 
@@ -183,7 +196,7 @@ Content-Type: application/json
       <h4>Tools vs Resources的核心区别</h4>
       <p><strong>Tools是动作</strong>：LLM决定"我要调用这个工具"→执行操作→返回结果。如"查订单"、"发邮件"、"创建工单"。</p>
       <p><strong>Resources是数据</strong>：LLM可以读取这些数据作为上下文，但不能修改。如"知识库文档"、"用户手册"、"API文档"。Resources更像RAG中的"检索结果"——给LLM提供背景信息，但LLM不能对它们执行操作。</p>
-      <p><strong>mall-agent主要用Tools</strong>（32个本地工具+MCP远程工具），Resources目前通过RAG的向量检索实现，没有走MCP的Resources机制。</p>
+      <p><strong>矿池AI客服主要用Tools</strong>（29个本地工具+MCP远程工具），Resources目前通过RAG的向量检索实现，没有走MCP的Resources机制。</p>
     </div>
 
     <!-- ===================== 4. MCP生命周期 ===================== -->
@@ -251,56 +264,60 @@ Content-Type: application/json
       <div class="caption">MCP生命周期：建立连接→初始化→能力协商→工具调用循环</div>
     </div>
 
-    <!-- ===================== 5. Java实现MCP客户端 ===================== -->
-    <h3>5. Java实现MCP客户端（SSE+JSON-RPC） <span class="difficulty">★★★★★ 必考</span></h3>
+    <!-- ===================== 5. 基于langchain4j MCP SDK集成 ===================== -->
+    <h3>5. 基于langchain4j MCP SDK集成（SSE+JSON-RPC） <span class="difficulty">★★★★★ 必考</span></h3>
 
-    <p>这是mall-agent的技术亮点——<strong>Java实现MCP客户端</strong>。大部分MCP客户端是Python/TS写的，Java实现展示了你的底层协议理解能力。</p>
+    <p>这是矿池AI客服的技术亮点——<strong>基于langchain4j MCP SDK集成</strong>。大部分MCP客户端是Python/TS写的，Java集成展示了你的框架熟练度和协议理解能力。</p>
+
+    <p>注：项目使用LangChain4j的langchain4j-mcp模块（HttpMcpTransport+DefaultMcpClient），封装了SSE连接管理和JSON-RPC协议细节。MCP不可用时返回disabled()占位实例，不影响本地工具。</p>
 
     <div class="code-block">
-      <span class="lang">Java (MCP客户端核心实现)</span>
-<pre><span class="kw">public class</span> McpSseClient {
-    <span class="kw">private final</span> WebClient webClient;  <span class="cmt">// WebFlux HTTP客户端</span>
-    <span class="kw">private final</span> String baseUrl;
+      <span class="lang">Java (基于langchain4j MCP SDK的核心实现)</span>
+<pre><span class="cmt">// 1. McpClientConfig：启动时建立SSE连接+发现远程工具</span>
+<span class="kw">@Configuration</span>
+<span class="kw">public class</span> McpClientConfig {
 
-    <span class="cmt">// 1. 建立SSE连接，持续接收Server推送的事件</span>
-    <span class="kw">public</span> Flux&lt;String&gt; connect() {
-        <span class="kw">return</span> webClient.get()
-            .uri(baseUrl + <span class="str">"/sse"</span>)
-            .accept(MediaType.TEXT_EVENT_STREAM)
-            .retrieve()
-            .bodyToFlux(String.class);
+    <span class="kw">@Bean</span>
+    <span class="kw">public</span> McpToolExecutor mcpToolExecutor() {
+        <span class="kw">if</span> (!enabled) <span class="kw">return</span> McpToolExecutor.disabled();
+
+        <span class="cmt">// HttpMcpTransport：封装SSE长连接</span>
+        HttpMcpTransport transport = <span class="kw">new</span> HttpMcpTransport.Builder()
+            .sseUrl(serverUrl + <span class="str">"/sse"</span>)
+            .timeout(Duration.ofSeconds(0))  <span class="cmt">// 长连接无读取超时</span>
+            .logRequests(<span class="kw">true</span>)
+            .logResponses(<span class="kw">true</span>)
+            .build();
+
+        <span class="cmt">// DefaultMcpClient：建立连接+initialize握手</span>
+        DefaultMcpClient client = <span class="kw">new</span> DefaultMcpClient.Builder()
+            .transport(transport)
+            .build();
+
+        <span class="cmt">// tools/list 发现远程工具</span>
+        List&lt;ToolSpecification&gt; tools = client.listTools();
+        <span class="kw">return new</span> McpToolExecutor(client, tools);
+    }
+}
+
+<span class="cmt">// 2. McpToolExecutor：封装MCP工具调用</span>
+<span class="kw">public class</span> McpToolExecutor {
+    <span class="kw">private final</span> McpClient client;
+    <span class="kw">private final</span> List&lt;ToolSpecification&gt; toolSpecs;
+
+    <span class="cmt">// 执行远程工具：通过McpClient.executeTool()发送tools/call</span>
+    <span class="kw">public</span> String executeTool(String toolName, Map&lt;String, Object&gt; args) {
+        ToolExecutionRequest request = ToolExecutionRequest.builder()
+            .name(toolName)
+            .arguments(objectMapper.writeValueAsString(args))
+            .build();
+        ToolExecutionResult result = client.executeTool(request);
+        <span class="kw">return</span> result.resultText();
     }
 
-    <span class="cmt">// 2. 发送JSON-RPC请求</span>
-    <span class="kw">public</span> Mono&lt;JsonNode&gt; sendRequest(String method, JsonNode params) {
-        JsonNode request = objectMapper.createObjectNode()
-            .put(<span class="str">"jsonrpc"</span>, <span class="str">"2.0"</span>)
-            .put(<span class="str">"id"</span>, UUID.randomUUID().toString())
-            .put(<span class="str">"method"</span>, method)
-            .set(<span class="str">"params"</span>, params);
-
-        <span class="kw">return</span> webClient.post()
-            .uri(baseUrl + <span class="str">"/mcp/message"</span>)
-            .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(request)
-            .retrieve()
-            .bodyToMono(JsonNode.class);
-    }
-
-    <span class="cmt">// 3. 发现工具列表</span>
-    <span class="kw">public</span> Mono&lt;List&lt;ToolDefinition&gt;&gt; listTools() {
-        <span class="kw">return</span> sendRequest(<span class="str">"tools/list"</span>, <span class="kw">null</span>)
-            .map(resp -> parseToolList(resp.get(<span class="str">"result"</span>)));
-    }
-
-    <span class="cmt">// 4. 调用工具</span>
-    <span class="kw">public</span> Mono&lt;String&gt; callTool(String toolName, Map&lt;String, Object&gt; args) {
-        JsonNode params = objectMapper.createObjectNode()
-            .put(<span class="str">"name"</span>, toolName)
-            .set(<span class="str">"arguments"</span>, objectMapper.valueToTree(args));
-
-        <span class="kw">return</span> sendRequest(<span class="str">"tools/call"</span>, params)
-            .map(resp -> resp.get(<span class="str">"result"</span>).toString());
+    <span class="cmt">// MCP不可用的占位实例</span>
+    <span class="kw">public static</span> McpToolExecutor disabled() {
+        <span class="kw">return new</span> McpToolExecutor(<span class="kw">null</span>, Collections.emptyList());
     }
 }</pre>
     </div>
@@ -310,7 +327,7 @@ Content-Type: application/json
       <p>MCP返回的工具是JSON Schema格式，需要适配为langchain4j的Tool接口。McpToolAdapter做这个转换：</p>
       <ul>
         <li>inputSchema → 转换为Tool的参数定义（name + type + description）</li>
-        <li>工具调用 → 通过McpSseClient.callTool()发送JSON-RPC请求</li>
+        <li>工具调用 → 通过McpToolExecutor.executeTool()发送tools/call请求</li>
         <li>返回值 → 包装为HardWorkflowTool的标准返回格式</li>
       </ul>
       <p>这样本地工具和MCP远程工具在ReAct循环中<strong>统一调度</strong>——LLM不需要知道工具是本地的还是远程的，它只需要知道"有一个工具叫query_order，参数是orderId"。</p>
@@ -321,14 +338,14 @@ Content-Type: application/json
       <p>当前欠缺：没有自动重连。生产环境应加指数退避重试（1s→2s→4s→8s→max 30s）。</p>
     </div>
 
-    <!-- ===================== 6. mall-agent MCP实战 ===================== -->
-    <h3>6. mall-agent中的MCP实战 <span class="difficulty">★★★★★</span></h3>
+    <!-- ===================== 6. 矿池AI客服 MCP实战 ===================== -->
+    <h3>6. 矿池AI客服中的MCP实战 <span class="difficulty">★★★★★</span></h3>
 
     <div class="concept-card">
       <h4>架构设计：本地工具 + MCP远程工具统一注册</h4>
-      <p>mall-agent的HardWorkflowToolRegistry管理两类工具：</p>
+      <p>矿池AI客服的HardWorkflowToolRegistry管理两类工具：</p>
       <ol>
-        <li><strong>本地工具</strong>（32个）：直接实现HardWorkflowTool接口，注册在Spring容器中。如query_order、track_logistics、check_balance。</li>
+        <li><strong>本地工具</strong>（29个）：直接实现HardWorkflowTool接口，注册在Spring容器中。如query_order、track_logistics、check_balance。</li>
         <li><strong>MCP远程工具</strong>：启动时通过MCP Client连接mall-mcp-server → tools/list获取工具列表 → McpToolAdapter包装为HardWorkflowTool → 注册到Registry。</li>
       </ol>
       <p>LLM看到的是一个统一的工具列表，不区分本地/远程。工具分类选择性注入对两者同样生效。</p>
@@ -341,7 +358,7 @@ Content-Type: application/json
             <path d="M0,0 L6,2 L0,4 Z" fill="#1565c0"/>
           </marker>
         </defs>
-        <text x="400" y="18" text-anchor="middle" font-size="14" font-weight="700" fill="#1565c0">mall-agent MCP集成架构</text>
+        <text x="400" y="18" text-anchor="middle" font-size="14" font-weight="700" fill="#1565c0">矿池AI客服 MCP集成架构</text>
 
         <!-- ReAct循环 -->
         <rect x="300" y="35" width="200" height="40" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
@@ -358,7 +375,7 @@ Content-Type: application/json
 
         <!-- 本地工具 -->
         <rect x="60" y="167" width="240" height="80" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>
-        <text x="180" y="190" text-anchor="middle" font-size="12" font-weight="600" fill="#2e7d32">本地工具 (32个)</text>
+        <text x="180" y="190" text-anchor="middle" font-size="12" font-weight="600" fill="#2e7d32">本地工具 (29个)</text>
         <text x="180" y="210" text-anchor="middle" font-size="9" fill="#555">query_order / track_logistics</text>
         <text x="180" y="225" text-anchor="middle" font-size="9" fill="#555">check_balance / search_kb</text>
         <text x="180" y="240" text-anchor="middle" font-size="9" fill="#555">直接实现HardWorkflowTool</text>
@@ -387,9 +404,9 @@ Content-Type: application/json
       <tr><td>接口格式</td><td>每个工具不同（REST/GraphQL/gRPC）</td><td>统一JSON-RPC 2.0</td></tr>
       <tr><td>参数Schema</td><td>手动定义/文档里找</td><td>inputSchema自动获取</td></tr>
       <tr><td>跨框架复用</td><td>每个框架写一次适配</td><td>一次实现，所有框架可用</td></tr>
-      <tr><td>认证</td><td>每个工具不同（API Key/OAuth/Basic）</td><td>MCP层统一管理</td></tr>
+      <tr><td>认证</td><td>每个工具不同（API Key/OAuth/Basic）</td><td>远程Server走OAuth 2.1授权框架（2025-03-26规范标准化，支持PKCE、资源服务器元数据）</td></tr>
       <tr><td>版本兼容</td><td>API改了就断</td><td>协议版本协商</td></tr>
-      <tr><td>mall-agent选择</td><td>本地工具用传统方式（Spring Bean）</td><td>远程工具用MCP</td></tr>
+      <tr><td>矿池AI客服选择</td><td>本地工具用传统方式（Spring Bean）</td><td>远程工具用MCP</td></tr>
     </table>
 
     <div class="java-analogy">MCP ≈ <strong>JDBC之于数据库</strong>。JDBC之前：每个数据库有自己的一套API（Oracle OCI、MySQL C API）→ 换数据库要重写所有数据访问代码。JDBC之后：统一的Connection/Statement/ResultSet接口 → 换数据库只改驱动。MCP同理：统一Tools/Resources/Prompts接口 → 换工具只改Server，Client代码不变。</div>
@@ -409,25 +426,25 @@ Content-Type: application/json
     <div class="interview-q">
       <div class="question">你的项目怎么集成MCP的？Java怎么实现的？</div>
       <div class="interview-answer">
-        <p>Java实现MCP客户端：用Spring WebFlux的WebClient连接mall-mcp-server。SSE长连接接收事件（GET /sse），JSON-RPC发送请求（POST /mcp/message）。启动时调用tools/list自动发现远程工具，McpToolAdapter包装为HardWorkflowTool接口，与本地32个工具统一注册到HardWorkflowToolRegistry。</p>
+        <p>基于langchain4j MCP SDK集成：用HttpMcpTransport+DefaultMcpClient连接mall-mcp-server。SSE长连接接收事件（GET /sse），JSON-RPC发送请求（POST /mcp/message）。启动时调用tools/list自动发现远程工具，McpToolAdapter包装为HardWorkflowTool接口，与本地29个工具统一注册到HardWorkflowToolRegistry。</p>
         <p>关键设计：1）MCP不可用时返回disabled()占位，本地工具不受影响；2）LLM看到统一工具列表，不区分本地/远程；3）工具分类选择性注入对两者同样生效。</p>
       </div>
-      <div class="interview-tip">说"Java实现MCP客户端"是加分项。提"disabled()降级"和"统一注册"展示工程设计。</div>
+      <div class="interview-tip">说"基于langchain4j MCP SDK集成"是加分项。提"disabled()降级"和"统一注册"展示工程设计。</div>
     </div>
 
     <div class="interview-q">
       <div class="question">MCP的Tools和Resources有什么区别？</div>
       <div class="interview-answer">
         <p>Tools是<strong>动作</strong>：模型可调用的操作（查订单、发邮件、调API）。LLM决定是否调用、传什么参数。Resources是<strong>数据</strong>：模型可读取的数据（文档、数据库记录、文件）。LLM只能读取不能修改。</p>
-        <p>类比：Tools ≈ Service方法（有副作用），Resources ≈ 配置文件/数据库查询（只读）。mall-agent主要用Tools，Resources通过RAG向量检索实现。</p>
+        <p>类比：Tools ≈ Service方法（有副作用），Resources ≈ 配置文件/数据库查询（只读）。矿池AI客服主要用Tools，Resources通过RAG向量检索实现。</p>
       </div>
-      <div class="interview-tip">"动作vs数据"的区分要清楚。说"mall-agent主要用Tools"展示实际经验。</div>
+      <div class="interview-tip">"动作vs数据"的区分要清楚。说"矿池AI客服主要用Tools"展示实际经验。</div>
     </div>
 
     <div class="interview-q">
       <div class="question">MCP的SSE Transport和stdio Transport怎么选？</div>
       <div class="interview-answer">
-        <p>SSE（HTTP长连接）：适合远程Server，跨网络通信。GET /sse建立事件通道，POST /mcp/message发送请求。需要处理断线重连。mall-agent用这个连接远程mall-mcp-server。</p>
+        <p>SSE（HTTP长连接）：适合远程Server，跨网络通信。GET /sse建立事件通道，POST /mcp/message发送请求。需要处理断线重连。矿池AI客服用这个连接远程mall-mcp-server。</p>
         <p>stdio（标准输入输出）：适合本地Server，启动子进程通过stdin/stdout通信。更简单、延迟更低，但只限同机。适合本地工具（如文件系统操作、本地数据库查询）。</p>
         <p>选择原则：远程服务用SSE，本地工具用stdio。如果工具需要跨机器共享，用SSE。</p>
       </div>
@@ -442,21 +459,29 @@ Content-Type: application/json
       <div class="interview-tip">能说出局限说明你不是盲目吹捧。提"协议演进中"和"安全"展示批判性思维。</div>
     </div>
 
+    <div class="interview-q">
+      <div class="question">MCP除了Tools/Resources/Prompts还有哪些能力？</div>
+      <div class="interview-answer">
+        <p><strong>Sampling</strong>：服务器可请求客户端侧LLM生成（Server→Client反向调用LLM，让Server也能借力宿主的大模型）。<strong>Roots</strong>：客户端向服务器暴露文件系统根（告诉Server"我能访问这些目录"，Server据此限定操作范围）。<strong>Elicitation</strong>：服务器中途向用户要补充信息（工具执行到一半发现缺参数，通过Client弹窗问用户）。这三个是2025-06-18规范新增的核心能力。</p>
+      </div>
+      <div class="interview-tip">提"Sampling/Roots/Elicitation"展示跟进2025-06-18规范，区分于停留在初版的人。</div>
+    </div>
+
     <div class="review-card">
       <ul>
         <li><strong>MCP是什么</strong>：标准化AI工具调用协议，Client-Server架构，JSON-RPC 2.0 + SSE/stdio</li>
         <li><strong>核心概念</strong>：Tools（动作/模型可调用）+ Resources（数据/模型可读取）+ Prompts（模板/用户可见）</li>
-        <li><strong>Transport</strong>：SSE（远程/HTTP长连接）vs stdio（本地/标准输入输出）。mall-agent用SSE</li>
-        <li><strong>Java实现</strong>：WebClient + SSE + JSON-RPC，McpToolAdapter适配，HardWorkflowToolRegistry统一注册</li>
+        <li><strong>Transport</strong>：SSE（远程/HTTP长连接）vs stdio（本地/标准输入输出）。矿池AI客服用SSE</li>
+        <li><strong>Java集成</strong>：langchain4j HttpMcpTransport+DefaultMcpClient，McpToolAdapter适配，HardWorkflowToolRegistry统一注册</li>
         <li><strong>降级策略</strong>：MCP不可用→disabled()占位，本地工具不受影响。欠缺：自动重连</li>
         <li><strong>类比JDBC</strong>：MCP统一工具调用接口，就像JDBC统一数据库访问接口</li>
-        <li><strong>面试要点</strong>："USB-C"类比 + N×M→N+M + Java实现MCP客户端 + 统一注册 + 降级策略</li>
+        <li><strong>面试要点</strong>："USB-C"类比 + N×M→N+M + 基于langchain4j MCP SDK集成 + 统一注册 + 降级策略</li>
       </ul>
     </div>
 
     <div class="chapter-nav">
       <a href="14-sse-streaming.html" class="prev">← SSE流式输出专题</a>
-      <a href="index.html" class="next">返回首页 →</a>
+      <a href="16-spring-ai.html" class="next">Spring AI对比 →</a>
     </div>
 
   </main>

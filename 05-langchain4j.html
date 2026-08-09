@@ -28,7 +28,7 @@
       <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
       <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
       <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
-      <a href="12-project-packaging.html"><span class="num">12</span>项目经验包装与表达</a>
+      <a href="12-project-packaging.html"><span class="num">12</span>项目经验：矿池AI客服</a>
       <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
       <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
       <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
@@ -42,11 +42,12 @@
 
   <!-- 章节标题 -->
   <div class="chapter-header">
-    <span class="chapter-num">第 05 章</span>
+    <span class="chapter-num">第05章</span>
     <h2>LangChain4j框架详解 <span class="tag tag-hot">面试重点</span></h2>
     <div class="goal">
       <strong>🎯 学习目标：</strong>掌握LangChain4j整体架构、同步与流式模型、@AiService声明式接口、Tools工具调用机制、ChatMemory对话记忆、RAG支持及高级特性，能在面试中清晰阐述框架设计原理与底层机制。
     </div>
+    <div class="note">⚠️ 版本说明：LangChain4j 1.0 GA（2025-05）起对核心接口做了破坏性改名（ChatLanguageModel→ChatModel、StreamingChatLanguageModel→StreamingChatModel、AiServices.builder().chatLanguageModel()→.chatModel()、流式回调 StreamingResponseHandler→StreamingChatResponseHandler 且 onNext/onComplete 改为 onPartialResponse/onCompleteResponse）。本章代码已按 1.x 命名（现最新 1.18.x）。若用 0.3x 旧版需反向对照。</div>
   </div>
 
   <!-- ===== 1. LangChain4j整体架构 ===== -->
@@ -54,7 +55,7 @@
 
   <p>LangChain4j是Java生态的LLM应用开发框架，对标Python的LangChain。它采用经典的三层架构设计，借鉴了Spring的分层思想，让Java开发者能用熟悉的注解和接口方式构建AI应用。</p>
 
-  <p><strong>三层架构的职责划分：</strong>最上层是<strong>应用层</strong>，开发者通过<code>@AiService</code>注解或<code>AiServices</code> Builder声明Agent接口，框架生成实现类，这一层屏蔽了所有底层细节。中间是<strong>核心层</strong>（langchain4j-core），它定义了所有能力的接口契约——<code>ChatLanguageModel</code>、<code>EmbeddingModel</code>、<code>ChatMemory</code>、<code>EmbeddingStore</code>、<code>ContentRetriever</code>、<code>DocumentLoader</code>等，核心层本身不依赖任何具体模型厂商。最底层是<strong>集成层</strong>，各种独立的模块（langchain4j-open-ai、langchain4j-ollama、langchain4j-milvus等）实现核心层接口，对接具体的模型、向量库和文档解析器。</p>
+  <p><strong>三层架构的职责划分：</strong>最上层是<strong>应用层</strong>，开发者通过<code>@AiService</code>注解或<code>AiServices</code> Builder声明Agent接口，框架生成实现类，这一层屏蔽了所有底层细节。中间是<strong>核心层</strong>（langchain4j-core），它定义了所有能力的接口契约——<code>ChatModel</code>、<code>EmbeddingModel</code>、<code>ChatMemory</code>、<code>EmbeddingStore</code>、<code>ContentRetriever</code>、<code>DocumentLoader</code>等，核心层本身不依赖任何具体模型厂商。最底层是<strong>集成层</strong>，各种独立的模块（langchain4j-open-ai、langchain4j-ollama、langchain4j-milvus等）实现核心层接口，对接具体的模型、向量库和文档解析器。</p>
 
   <p>这种分层带来两个工程价值：一是<strong>可替换性</strong>——换模型只换集成层的依赖和Builder，业务代码完全不动；二是<strong>可测试性</strong>——核心层是纯接口，可以用Mock实现做单测，不依赖真实LLM API。</p>
 
@@ -73,13 +74,13 @@
       <!-- 核心层 -->
       <rect x="20" y="110" width="580" height="80" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>
       <text x="40" y="130" font-size="12" fill="#2e7d32" font-weight="bold">核心层 (langchain4j-core) —— 纯接口契约，无厂商依赖</text>
-      <text x="40" y="150" font-size="11" fill="#555">ChatLanguageModel  |  StreamingChatLanguageModel  |  EmbeddingModel</text>
+      <text x="40" y="150" font-size="11" fill="#555">ChatModel  |  StreamingChatModel  |  EmbeddingModel</text>
       <text x="40" y="168" font-size="11" fill="#555">ChatMemory  |  EmbeddingStore  |  DocumentLoader  |  ContentRetriever</text>
 
       <!-- 集成层 - 模型 -->
       <rect x="20" y="210" width="185" height="150" rx="8" fill="#fff3e0" stroke="#ff6f00" stroke-width="2"/>
       <text x="40" y="230" font-size="12" fill="#ff6f00" font-weight="bold">模型集成</text>
-      <text x="35" y="252" font-size="11" fill="#555">• OpenAI (GPT-4/3.5)</text>
+      <text x="35" y="252" font-size="11" fill="#555">• OpenAI (GPT-5/4o)</text>
       <text x="35" y="272" font-size="11" fill="#555">• Anthropic (Claude)</text>
       <text x="35" y="292" font-size="11" fill="#555">• Ollama (本地模型)</text>
       <text x="35" y="312" font-size="11" fill="#555">• 通义千问</text>
@@ -140,14 +141,14 @@
     <strong>无GIL优势</strong>：Python有GIL（全局解释器锁），多线程无法真正并行CPU任务；JVM没有这个限制。在Agent场景下——多个用户并发请求、同时调用多个Tool、并行检索多个向量库——Java的多线程能力是真实的生产优势，不是噱头。
   </div>
 
-  <!-- ===== 2. ChatLanguageModel vs StreamingChatLanguageModel ===== -->
-  <h3>2. ChatLanguageModel vs StreamingChatLanguageModel <span class="difficulty">★★★☆☆</span></h3>
+  <!-- ===== 2. ChatModel vs StreamingChatModel ===== -->
+  <h3>2. ChatModel vs StreamingChatModel <span class="difficulty">★★★☆☆</span></h3>
 
-  <p>核心层提供两种调用LLM的接口：<code>ChatLanguageModel</code>（同步）和<code>StreamingChatLanguageModel</code>（流式）。它们对应同一套能力（生成对话），但返回机制完全不同。</p>
+  <p>核心层提供两种调用LLM的接口：<code>ChatModel</code>（同步）和<code>StreamingChatModel</code>（流式）。它们对应同一套能力（生成对话），但返回机制完全不同。</p>
 
-  <p><strong>同步模式</strong>：<code>ChatLanguageModel.generate()</code>是阻塞调用——发起HTTP请求后线程挂起，等待LLM把整个回答生成完毕，再一次性返回完整的<code>Response&lt;AiMessage&gt;</code>。这就像调用普通REST API，简单直接，但首字延迟高（3-10秒），用户体验差——用户盯着空白页面等待。</p>
+  <p><strong>同步模式</strong>：<code>ChatModel.chat()</code>是阻塞调用——发起HTTP请求后线程挂起，等待LLM把整个回答生成完毕，再一次性返回完整的<code>Response&lt;AiMessage&gt;</code>。这就像调用普通REST API，简单直接，但首字延迟高（3-10秒），用户体验差——用户盯着空白页面等待。</p>
 
-  <p><strong>流式模式</strong>：<code>StreamingChatLanguageModel.generate()</code>是非阻塞回调——发起请求后立即返回，LLM每生成一个Token就通过<code>StreamingResponseHandler</code>回调推送。三个回调方法：<code>onPartialResponse(String token)</code>每来一个Token触发一次，<code>onComplete(Response&lt;AiMessage&gt;)</code>全部生成完触发，<code>onError(Throwable)</code>异常时触发。底层用的是HTTP的SSE（Server-Sent Events）或chunked transfer，连接保持打开，服务端持续推送。</p>
+  <p><strong>流式模式</strong>：<code>StreamingChatModel.chat()</code>是非阻塞回调——发起请求后立即返回，LLM每生成一个Token就通过<code>StreamingChatResponseHandler</code>回调推送。三个回调方法：<code>onPartialResponse(String token)</code>每来一个Token触发一次，<code>onCompleteResponse(Response&lt;AiMessage&gt;)</code>全部生成完触发，<code>onError(Throwable)</code>异常时触发。底层用的是HTTP的SSE（Server-Sent Events）或chunked transfer，连接保持打开，服务端持续推送。</p>
 
   <p><strong>为什么需要流式</strong>：人眼对延迟敏感，3秒空白会觉得"卡住了"，但3秒内逐字出现会觉得"正在思考"。所有主流ChatBot（ChatGPT、Claude、通义千问）都用流式输出，这是用户体验的刚需。</p>
 
@@ -161,9 +162,9 @@
         </marker>
       </defs>
       <!-- 同步 -->
-      <text x="155" y="20" text-anchor="middle" font-size="13" fill="#1565c0" font-weight="bold">同步 ChatLanguageModel</text>
+      <text x="155" y="20" text-anchor="middle" font-size="13" fill="#1565c0" font-weight="bold">同步 ChatModel</text>
       <rect x="40" y="35" width="80" height="40" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
-      <text x="80" y="60" text-anchor="middle" font-size="11" fill="#1565c0">调用generate()</text>
+      <text x="80" y="60" text-anchor="middle" font-size="11" fill="#1565c0">调用chat()</text>
       <rect x="140" y="35" width="120" height="40" rx="6" fill="#ffebee" stroke="#c62828"/>
       <text x="200" y="55" text-anchor="middle" font-size="11" fill="#c62828">阻塞等待</text>
       <text x="200" y="70" text-anchor="middle" font-size="9" fill="#555">3-10秒...</text>
@@ -175,9 +176,9 @@
       <text x="155" y="100" text-anchor="middle" font-size="10" fill="#999">首字延迟=总生成时间，用户等空白</text>
 
       <!-- 流式 -->
-      <text x="155" y="135" text-anchor="middle" font-size="13" fill="#ff6f00" font-weight="bold">流式 StreamingChatLanguageModel</text>
+      <text x="155" y="135" text-anchor="middle" font-size="13" fill="#ff6f00" font-weight="bold">流式 StreamingChatModel</text>
       <rect x="40" y="150" width="80" height="40" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
-      <text x="80" y="175" text-anchor="middle" font-size="11" fill="#ff6f00">调用generate()</text>
+      <text x="80" y="175" text-anchor="middle" font-size="11" fill="#ff6f00">调用chat()</text>
       <rect x="140" y="150" width="40" height="40" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
       <text x="160" y="172" text-anchor="middle" font-size="9" fill="#2e7d32">tok</text>
       <rect x="185" y="150" width="40" height="40" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
@@ -187,7 +188,7 @@
       <rect x="275" y="150" width="40" height="40" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
       <text x="295" y="172" text-anchor="middle" font-size="9" fill="#2e7d32">...</text>
       <rect x="320" y="150" width="80" height="40" rx="6" fill="#f3e5f5" stroke="#7b1fa2"/>
-      <text x="360" y="172" text-anchor="middle" font-size="10" fill="#7b1fa2">onComplete</text>
+      <text x="360" y="172" text-anchor="middle" font-size="10" fill="#7b1fa2">onCompleteResponse</text>
       <text x="360" y="185" text-anchor="middle" font-size="9" fill="#555">结束</text>
       <line x1="120" y1="170" x2="138" y2="170" stroke="#555" stroke-width="2" marker-end="url(#ar_s)"/>
       <text x="155" y="215" text-anchor="middle" font-size="10" fill="#999">首字延迟≈0.3秒，逐字回调onPartialResponse</text>
@@ -199,25 +200,25 @@
   <div class="code-block">
     <span class="lang">Java / langchain4j</span>
 <pre><span class="cmt">// 1. 同步模式——阻塞等待完整回复</span>
-ChatLanguageModel model = OpenAiChatModel.builder()
+ChatModel model = OpenAiChatModel.builder()
         .apiKey(System.getenv(<span class="str">"OPENAI_API_KEY"</span>))
         .build();
 
-String answer = model.generate(<span class="str">"什么是Spring Boot？"</span>);
+String answer = model.chat(<span class="str">"什么是Spring Boot？"</span>);
 <span class="cmt">// 等待3-10秒后，一次性拿到完整回答</span>
 
 <span class="cmt">// 2. 流式模式——逐Token回调，实时显示</span>
-StreamingChatLanguageModel streamingModel = OpenAiStreamingChatModel.builder()
+StreamingChatModel streamingModel = OpenAiStreamingChatModel.builder()
         .apiKey(System.getenv(<span class="str">"OPENAI_API_KEY"</span>))
         .build();
 
-streamingModel.generate(<span class="str">"什么是Spring Boot？"</span>, <span class="kw">new</span> StreamingResponseHandler() {
+streamingModel.chat(<span class="str">"什么是Spring Boot？"</span>, <span class="kw">new</span> StreamingChatResponseHandler() {
     @Override
     <span class="kw">public void</span> onPartialResponse(String token) {
         System.out.print(token);  <span class="cmt">// 逐Token输出</span>
     }
     @Override
-    <span class="kw">public void</span> onComplete(Response&lt;AiMessage&gt; response) {
+    <span class="kw">public void</span> onCompleteResponse(Response&lt;AiMessage&gt; response) {
         System.out.println(<span class="str">"\n--- 完成 ---"</span>);
     }
     @Override
@@ -230,7 +231,7 @@ streamingModel.generate(<span class="str">"什么是Spring Boot？"</span>, <spa
   <div class="concept-card">
     <h4>同步 vs 流式 对比</h4>
     <table class="compare-table">
-      <tr><th>特性</th><th>ChatLanguageModel（同步）</th><th>StreamingChatLanguageModel（流式）</th></tr>
+      <tr><th>特性</th><th>ChatModel（同步）</th><th>StreamingChatModel（流式）</th></tr>
       <tr><td>响应方式</td><td>阻塞等待，一次性返回</td><td>逐Token回调，实时推送</td></tr>
       <tr><td>首字延迟</td><td>高（等待全部生成）</td><td>低（立即开始返回）</td></tr>
       <tr><td>用户体验</td><td>等待->突然出现</td><td>打字机效果，更像人类</td></tr>
@@ -292,7 +293,7 @@ data: [DONE]\n\n    <span class="cmt"># 结束标记</span></pre>
     
     <span class="cmt">// 异步调用流式模型</span>
     CompletableFuture.runAsync(() -> {
-        streamingModel.generate(message, <span class="kw">new</span> StreamingResponseHandler() {
+        streamingModel.chat(message, <span class="kw">new</span> StreamingChatResponseHandler() {
             @Override
             <span class="kw">public void</span> onPartialResponse(String token) {
                 <span class="kw">try</span> {
@@ -305,7 +306,7 @@ data: [DONE]\n\n    <span class="cmt"># 结束标记</span></pre>
             }
             
             @Override
-            <span class="kw">public void</span> onComplete(Response&lt;AiMessage&gt; response) {
+            <span class="kw">public void</span> onCompleteResponse(Response&lt;AiMessage&gt; response) {
                 emitter.send(SseEmitter.event().data(<span class="str">"[DONE]"</span>));
                 emitter.complete();
             }
@@ -319,13 +320,13 @@ data: [DONE]\n\n    <span class="cmt"># 结束标记</span></pre>
 @GetMapping(value = "/chat/stream", produces = <span class="str">"text/event-stream"</span>)
 <span class="kw">public</span> Flux&lt;ServerSentEvent&lt;String&gt;&gt; chatStream(@RequestParam String message) {
     <span class="kw">return</span> Flux.create(sink -> {
-        streamingModel.generate(message, <span class="kw">new</span> StreamingResponseHandler() {
+        streamingModel.chat(message, <span class="kw">new</span> StreamingChatResponseHandler() {
             @Override
             <span class="kw">public void</span> onPartialResponse(String token) {
                 sink.next(ServerSentEvent.builder(token).build());
             }
             @Override
-            <span class="kw">public void</span> onComplete(Response&lt;AiMessage&gt; response) {
+            <span class="kw">public void</span> onCompleteResponse(Response&lt;AiMessage&gt; response) {
                 sink.next(ServerSentEvent.builder(<span class="str">"[DONE]"</span>).build());
                 sink.complete();
             }
@@ -447,7 +448,7 @@ eventSource.onerror = (e) => {
   <div class="interview-q">
     <div class="question">你的Agent流式输出是怎么做的？为什么用SSE不用WebSocket？</div>
     <div class="interview-answer">
-      <p>用SSE(Server-Sent Events)实现。后端Spring Boot用SseEmitter(或WebFlux的Flux&lt;ServerSentEvent&gt;)，langchain4j用StreamingChatLanguageModel逐token回调，每个token通过SseEmitter.send()推到前端。前端用浏览器原生EventSource API消费，逐token追加实现打字机效果。</p>
+      <p>用SSE(Server-Sent Events)实现。后端Spring Boot用SseEmitter(或WebFlux的Flux&lt;ServerSentEvent&gt;)，langchain4j用StreamingChatModel逐token回调，每个token通过SseEmitter.send()推到前端。前端用浏览器原生EventSource API消费，逐token追加实现打字机效果。</p>
       <p>用SSE不用WebSocket的原因：LLM流式输出是<strong>服务端->客户端的单向推送</strong>，SSE用标准HTTP协议，Nginx/CDN全兼容，浏览器原生支持自动重连，实现最简单。WebSocket的双向能力在这里是浪费，而且握手协议更复杂、部分代理不兼容。</p>
       <p>关键配置是Nginx必须proxy_buffering off，否则流被缓冲成一次性返回。</p>
     </div>
@@ -477,7 +478,7 @@ eventSource.onerror = (e) => {
 
   <p>这是LangChain4j最核心、也最有Java味道的特性。你只需定义一个Java接口，标注几个注解，框架就用<strong>动态代理</strong>生成实现类——把"调用LLM"这件事变成"调用本地方法"，业务代码完全感知不到LLM的存在。</p>
 
-  <p><strong>声明式开发的意义</strong>：传统做法是手动拼Prompt、手动调<code>model.generate()</code>、手动解析返回——LLM调用逻辑散落在业务代码里，难维护。@AiService把这些都收进框架：你在接口上声明<code>@SystemMessage</code>（角色设定）、<code>@UserMessage</code>（用户输入）、<code>@V</code>（模板变量），框架在方法被调用时自动拼装Prompt、调用模型、解析结果。业务代码只看到<code>analyzer.analyze("评论")</code>这样一个普通方法调用。</p>
+  <p><strong>声明式开发的意义</strong>：传统做法是手动拼Prompt、手动调<code>model.chat()</code>、手动解析返回——LLM调用逻辑散落在业务代码里，难维护。@AiService把这些都收进框架：你在接口上声明<code>@SystemMessage</code>（角色设定）、<code>@UserMessage</code>（用户输入）、<code>@V</code>（模板变量），框架在方法被调用时自动拼装Prompt、调用模型、解析结果。业务代码只看到<code>analyzer.analyze("评论")</code>这样一个普通方法调用。</p>
 
   <p><strong>结构化输出是关键能力</strong>：当方法返回类型是POJO（如<code>SentimentResult</code>）而非String时，框架会在Prompt里追加"请输出符合此JSON Schema的JSON"，LLM返回JSON文本后，框架用Jackson反序列化为目标类型。解析失败会自动重试（带修复提示）。这让LLM的输出能直接进入业务流程——查询结果、入库、传给下游Service，全链路类型安全。</p>
 
@@ -516,7 +517,7 @@ eventSource.onerror = (e) => {
       <!-- LLM -->
       <rect x="580" y="50" width="100" height="60" rx="8" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2"/>
       <text x="630" y="75" text-anchor="middle" font-size="12" fill="#7b1fa2" font-weight="bold">LLM</text>
-      <text x="630" y="95" text-anchor="middle" font-size="10" fill="#555">model.generate()</text>
+      <text x="630" y="95" text-anchor="middle" font-size="10" fill="#555">model.chat()</text>
 
       <line x1="160" y1="80" x2="198" y2="80" stroke="#555" stroke-width="2" marker-end="url(#ar_a)"/>
       <line x1="360" y1="80" x2="398" y2="80" stroke="#555" stroke-width="2" marker-end="url(#ar_a)"/>
@@ -576,7 +577,7 @@ eventSource.onerror = (e) => {
 
 <span class="cmt">// 3. 创建实例（类似 @FeignClient + 配置）</span>
 SentimentAnalyzer analyzer = AiServices.builder(SentimentAnalyzer.class)
-        .chatLanguageModel(model)
+        .chatModel(model)
         .build();
 
 <span class="cmt">// 4. 像调用普通Java方法一样调用LLM</span>
@@ -700,7 +701,7 @@ SentimentResult result = analyzer.analyze(<span class="str">"这个产品太棒�
 
 <span class="cmt">// 2. 把工具注册到AiService</span>
 CustomerService service = AiServices.builder(CustomerService.class)
-        .chatLanguageModel(model)
+        .chatModel(model)
         .tools(<span class="kw">new</span> WeatherTools())  <span class="cmt">// 注册工具</span>
         .build();
 
@@ -736,7 +737,7 @@ String answer = service.chat(<span class="str">"北京今天天气怎么样？�
 
   <p><strong>为什么需要Memory</strong>：用户说"我叫张三"，下一句"我叫什么"，LLM单独看第二句根本无法回答。ChatMemory把第一轮的"我叫张三"存下来，第二轮调用时把[用户:我叫张三, AI:好的] + [用户:我叫什么]一起发给LLM，LLM才能回答"张三"。本质上Memory就是在每次请求里<strong>拼接历史上下文</strong>。</p>
 
-  <p><strong>Token预算是核心约束</strong>。历史消息会占用模型的上下文窗口（如GPT-4是128K，但实际可用要留给System Prompt和当前问题）。如果对话很长，历史消息可能把窗口占满，导致LLM"忘记"当前任务。所以ChatMemory必须有<strong>裁剪策略</strong>——LangChain4j提供两种：按消息条数裁剪和按Token预算裁剪。</p>
+  <p><strong>Token预算是核心约束</strong>。历史消息会占用模型的上下文窗口（如GPT-5是256K，但实际可用要留给System Prompt和当前问题）。如果对话很长，历史消息可能把窗口占满，导致LLM"忘记"当前任务。所以ChatMemory必须有<strong>裁剪策略</strong>——LangChain4j提供两种：按消息条数裁剪和按Token预算裁剪。</p>
 
   <div class="one-liner">ChatMemory就是"LLM的短期记忆"——保存最近几轮对话，让LLM能"接着上次说"。</div>
 
@@ -769,7 +770,7 @@ ChatMemory memory2 = TokenWindowChatMemory.builder()
 
 <span class="cmt">// 3. 注入到AiService</span>
 CustomerService service = AiServices.builder(CustomerService.class)
-        .chatLanguageModel(model)
+        .chatModel(model)
         .chatMemory(memory1)  <span class="cmt">// 带记忆的Agent</span>
         .build();
 
@@ -876,7 +877,7 @@ ContentRetriever retriever = EmbeddingStoreContentRetriever.builder()
 
 <span class="cmt">// 4. 组装带RAG的AiService</span>
 FaqAssistant assistant = AiServices.builder(FaqAssistant.class)
-        .chatLanguageModel(model)
+        .chatModel(model)
         .contentRetriever(retriever)  <span class="cmt">// 注入检索器</span>
         .build();
 
@@ -903,7 +904,7 @@ String answer = assistant.chat(<span class="str">"你们的退货政策是什么
 
   <p><strong>AiServices Builder链式构建</strong>：所有能力（模型、记忆、工具、检索器）都通过Builder链式注入，组合即用。这种设计让"一个Agent同时具备记忆+工具+RAG"变得简单——四行Builder代码搞定。Builder本身是不可变配置，build()后生成的Agent实例是线程安全的，可以作为Spring单例Bean注入。</p>
 
-  <p><strong>多模型切换</strong>：同一个接口（如<code>CustomerService</code>）可以绑不同模型——生产用GPT-4保质量，测试用GPT-3.5省钱，本地用Ollama保隐私。因为核心层是接口，切换只需换Builder的<code>.chatLanguageModel()</code>参数，业务代码零改动。这是三层架构带来的直接红利。</p>
+  <p><strong>多模型切换</strong>：同一个接口（如<code>CustomerService</code>）可以绑不同模型——生产用GPT-5保质量，测试用GPT-4o-mini省钱，本地用Ollama保隐私。因为核心层是接口，切换只需换Builder的<code>.chatModel()</code>参数，业务代码零改动。这是三层架构带来的直接红利。</p>
 
   <p><strong>动态SystemMessage</strong>：默认<code>@SystemMessage</code>是静态的（编译期写死）。但有些场景需要运行时切换角色——比如客服系统根据用户VIP等级给不同人设。这时用<code>systemMessageProvider</code>，传入一个<code>Function&lt;Object, SystemMessage&gt;</code>，每次调用时根据sessionId动态生成SystemMessage。类比Spring的<code>RequestScope</code> Bean——同一个接口，不同请求上下文返回不同实例。</p>
 
@@ -915,7 +916,7 @@ String answer = assistant.chat(<span class="str">"你们的退货政策是什么
     <span class="lang">Java / langchain4j 完整配置</span>
 <pre><span class="cmt">// 链式Builder——组合所有能力</span>
 CustomerService service = AiServices.builder(CustomerService.class)
-        .chatLanguageModel(model)            <span class="cmt">// LLM</span>
+        .chatModel(model)            <span class="cmt">// LLM</span>
         .chatMemory(memory)                  <span class="cmt">// 对话记忆</span>
         .tools(<span class="kw">new</span> WeatherTools(),
                <span class="kw">new</span> OrderTools())        <span class="cmt">// 工具集</span>
@@ -924,11 +925,11 @@ CustomerService service = AiServices.builder(CustomerService.class)
 
 <span class="cmt">// 多模型切换——同一个接口，不同模型</span>
 CustomerService gptService = AiServices.builder(CustomerService.class)
-        .chatLanguageModel(openAiModel)  <span class="cmt">// GPT-4</span>
+        .chatModel(openAiModel)  <span class="cmt">// GPT-5</span>
         .build();
 
 CustomerService localService = AiServices.builder(CustomerService.class)
-        .chatLanguageModel(ollamaModel)  <span class="cmt">// 本地Ollama</span>
+        .chatModel(ollamaModel)  <span class="cmt">// 本地Ollama</span>
         .build();
 
 <span class="cmt">// 动态SystemMessage——运行时切换角色</span>
@@ -940,7 +941,7 @@ CustomerService localService = AiServices.builder(CustomerService.class)
 
 <span class="cmt">// 用SystemMessageProvider动态生成</span>
 CustomerService dynamicService = AiServices.builder(CustomerService.class)
-        .chatLanguageModel(model)
+        .chatModel(model)
         .systemMessageProvider(sessionId -&gt; {
             String role = roleService.getRole(sessionId);
             <span class="kw">return</span> SystemMessage.from(role);
@@ -974,7 +975,7 @@ CustomerService dynamicService = AiServices.builder(CustomerService.class)
       <p>本质是<strong>JDK动态代理 + Prompt模板拼装 + 结果解析</strong>三步：</p>
       <p>1. <strong>动态代理</strong>：AiServices.builder()用Proxy.newProxyInstance生成接口的实现类，拦截所有方法调用。</p>
       <p>2. <strong>Prompt拼装</strong>：拦截到方法调用后，读取@SystemMessage/@UserMessage/@V注解，用模板引擎填充变量，组装成完整的消息列表（System + Memory历史 + User）。</p>
-      <p>3. <strong>结果解析</strong>：调用ChatLanguageModel.generate()，拿到返回文本后，根据返回类型决定解析方式——String直接返回，POJO则解析JSON并反序列化，Result&lt;T&gt;还会带上Token用量等元数据。</p>
+      <p>3. <strong>结果解析</strong>：调用ChatModel.chat()，拿到返回文本后，根据返回类型决定解析方式——String直接返回，POJO则解析JSON并反序列化，Result&lt;T&gt;还会带上Token用量等元数据。</p>
       <p>4. <strong>工具循环</strong>：如果配置了Tools且LLM返回了ToolExecutionRequest，会先执行工具、把结果加入对话、再次调用LLM，直到LLM不再请求工具。</p>
     </div>
     <div class="interview-tip">提"动态代理"立刻和Spring联系起来。补充"Tool调用是个循环"体现你理解了Agent的ReAct模式。</div>
@@ -1009,7 +1010,7 @@ CustomerService dynamicService = AiServices.builder(CustomerService.class)
   <div class="interview-q">
     <div class="question">"你的Agent流式输出是怎么做的？为什么用SSE不用WebSocket？"</div>
     <div class="interview-answer">
-      <p>用SSE(Server-Sent Events)实现。后端Spring Boot用SseEmitter(或WebFlux的Flux&lt;ServerSentEvent&gt;)，langchain4j用StreamingChatLanguageModel逐token回调，每个token通过SseEmitter.send()推到前端。前端用浏览器原生EventSource API消费，逐token追加实现打字机效果。</p>
+      <p>用SSE(Server-Sent Events)实现。后端Spring Boot用SseEmitter(或WebFlux的Flux&lt;ServerSentEvent&gt;)，langchain4j用StreamingChatModel逐token回调，每个token通过SseEmitter.send()推到前端。前端用浏览器原生EventSource API消费，逐token追加实现打字机效果。</p>
       <p>用SSE不用WebSocket的原因：LLM流式输出是<strong>服务端->客户端的单向推送</strong>，SSE用标准HTTP协议，Nginx/CDN全兼容，浏览器原生支持自动重连，实现最简单。WebSocket的双向能力在这里是浪费，而且握手协议更复杂、部分代理不兼容。</p>
       <p>关键配置是Nginx必须proxy_buffering off，否则流被缓冲成一次性返回。</p>
     </div>
@@ -1031,7 +1032,7 @@ CustomerService dynamicService = AiServices.builder(CustomerService.class)
     <ul>
       <li>LangChain4j三层架构：应用层（@AiService）-> 核心层（接口契约，无厂商依赖）-> 集成层（模型/存储/加载器）。换模型只换集成层，业务代码不动</li>
       <li>和Python LangChain区别：Java强类型+注解声明式+无GIL并发优势+Spring集成；@AiService是独有声明式Agent抽象</li>
-      <li>同步ChatLanguageModel阻塞返回（首字延迟高），流式StreamingChatLanguageModel逐Token回调（onPartialResponse/onComplete/onError）</li>
+      <li>同步ChatModel阻塞返回（首字延迟高），流式StreamingChatModel逐Token回调（onPartialResponse/onCompleteResponse/onError）</li>
       <li>SSE流式输出：SseEmitter/WebFlux Flux推送，前端EventSource消费。Nginx必须proxy_buffering off！EventSource只支持GET，POST用fetch+ReadableStream</li>
       <li>@AiService = LLM版@FeignClient：JDK动态代理+Prompt模板拼装+结果解析。返回POJO=结构化输出（框架追加JSON Schema要求+Jackson反序列化）</li>
       <li>Tools机制：@Tool描述→LLM输出ToolExecutionRequest→框架反射执行Java方法→结果回传→LLM整合回答（可循环）。description是选工具唯一依据，要写清功能+输入+触发场景</li>
@@ -1064,3 +1065,4 @@ CustomerService dynamicService = AiServices.builder(CustomerService.class)
 })();
 </script>
 </body>
+</html>
