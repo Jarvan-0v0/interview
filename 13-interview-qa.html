@@ -421,7 +421,7 @@
     <p>多层错误处理：① <strong>工具层</strong>：每个工具方法try-catch，异常返回错误描述给LLM（而非抛异常中断），让LLM自行调整策略；② <strong>LLM层</strong>：设置maxRetries重试，处理超时/限流/API异常，重试用exponential backoff；③ <strong>Agent层</strong>：设置maxSteps防止死循环，超时fallback到规则引擎或预设回复；④ <strong>系统层</strong>：熔断器（连续失败触发降级）、降级策略（LLM不可用时回退到关键词匹配+模板回复）。</p>
     <p>降级策略设计：优雅降级而非直接报错——LLM挂了用规则引擎，检索挂了用缓存，工具挂了告知用户"该功能暂时不可用"。保证用户始终能拿到合理响应。</p>
   </div>
-  <div class="interview-tip">说"项目用Resilience4j做熔断+降级，LLM连续失败5次自动切换到规则引擎，保证SLA"，展示企业级可靠性思维。</div>
+  <div class="interview-tip">说"项目用多模型降级链做容错——ChatService按路由链Qwen-VL-72b→DeepSeek-V3.2→Qwen-32b逐级降级，前一个模型失败自动切下一个，保证SLA。可以提Resilience4j是未来优化方向"，展示企业级可靠性思维。</div>
 </div>
 
 <!-- Q31 -->
@@ -489,8 +489,8 @@
   <div class="question">36. 介绍一下你的客服助手项目（3分钟版） <span class="tag tag-hot">高频</span></div>
   <div class="interview-answer">
     <p><strong>背景</strong>：公司客服日均咨询量大，人工客服响应慢、成本高，且夜间无人值守。需要智能客服自动处理常见问题，复杂问题转人工。</p>
-    <p><strong>方案</strong>：基于LangChain4j开发智能客服Agent（矿池AI客服），核心架构：<strong>统一ReAct Agent</strong>（手写ReAct循环，因Qwen兼容端点原生tool calling不稳定）+ RAG知识库 + 29个本地工具 + MCP远程工具 + 质检门禁。技术栈：Spring WebFlux + LangChain4j + Qwen-VL-72b主力+DeepSeek-V3.2降级+ Milvus + Redis + MySQL。</p>
-    <p><strong>实现</strong>：离线用DocumentSplitter分块 + Qwen Embedding建索引存Milvus；在线用纯向量检索（minScore=0.65统一阈值）+ DashScope gte-rerank重排 + LLM生成。<strong>无前置意图分类器</strong>，由LLM在ReAct推理中自主决定调用知识库检索、转人工或业务工具。加质检门禁（5维度评分，&lt;0.6基于知识库重答一次（SSE correction透明纠错））+ 幻觉检测 + 兜底转人工。用Resilience4j做熔断降级，Micrometer监控全链路。</p>
+    <p><strong>方案</strong>：基于LangChain4j开发智能客服Agent（矿池AI客服），核心架构：<strong>统一ReAct Agent</strong>（手写ReAct循环，因Qwen兼容端点原生tool calling不稳定）+ RAG知识库 + 29个本地工具 + MCP远程工具 + Skill SOP热插拔 + 质检门禁。技术栈：Spring WebFlux + LangChain4j + Qwen-VL-72b主力+DeepSeek-V3.2降级+ Milvus + Redis + MySQL。</p>
+    <p><strong>实现</strong>：离线用DocumentSplitter分块 + Qwen Embedding建索引存Milvus；在线用纯向量检索（minScore=0.65统一阈值）+ DashScope gte-rerank重排 + LLM生成。<strong>无前置意图分类器</strong>，由LLM在ReAct推理中自主决定调用知识库检索、转人工或业务工具。加质检门禁（5维度评分，&lt;0.6基于知识库重答一次+SSE correction透明纠错）+ Skill SOP热插拔（后台上传业务流程，关键词+向量两层匹配注入提示词）+ 兜底转人工。多模型降级用ChatService手写路由链实现（Qwen-VL-72b→DeepSeek-V3.2→Qwen-32b），Micrometer+Prometheus监控全链路。</p>
     <p><strong>成果</strong>：上线后自动解决率约XX%，平均响应时间从分钟级降到秒级，用户满意度提升XX%，日均节省人工成本约XX元。（<em>待补充具体数据</em>）</p>
   </div>
   <div class="interview-tip">3分钟版要精炼：背景1句、方案3句、技术栈1句、成果2句。准备1分钟版和5分钟版应对不同场景，面试官追问再展开细节。</div>

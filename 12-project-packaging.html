@@ -48,13 +48,13 @@
 
 <p>面试官说"介绍一下你这个项目"时，用以下版本。控制在2分钟左右，有结构、有亮点、有深度。</p>
 
-<div class="one-liner">矿池AI客服系统：统一ReAct Agent架构，缓存快速通道+关键词拦截+LLM自主路由，29个工具+MCP远程工具+RAG知识库预检索+质检门禁。</div>
+<div class="one-liner">矿池AI客服系统：统一ReAct Agent架构，缓存快速通道+关键词拦截+LLM自主路由，29个工具+MCP远程工具+RAG知识库预检索+Skill SOP热插拔+质检门禁。</div>
 
 <h4>30秒版（快速介绍）</h4>
 
 <p>我做的是一个矿池AI客服系统，核心是统一ReAct Agent架构。用户提问后，系统先查缓存和转人工关键词做零成本快速拦截，然后统一进入ReAct循环——LLM自主推理决定调用哪些工具（29个本地工具+MCP远程工具），或者调用searchKnowledgeBase工具检索知识库。</p>
 
-<p>项目有几个做得比较深的点：一是手写ReAct循环（Qwen兼容端点tool calling不稳定，通过Prompt约定格式+字符串解析实现）；二是RAG全链路评估（每小时自动跑Hit Rate/MRR/NDCG/忠实度/相关性五项评估）；三是质检门禁（5维度评分，&lt;0.6分基于知识库重答一次，通过SSE correction事件透明纠错）；四是MCP协议集成（基于langchain4j MCP客户端SDK，远程工具和本地工具统一注册调度）。</p>
+<p>项目有几个做得比较深的点：一是手写ReAct循环（Qwen兼容端点tool calling不稳定，通过Prompt约定格式+字符串解析实现）；二是RAG全链路评估（每小时自动跑Hit Rate/MRR/NDCG/忠实度/相关性五项评估）；三是质检门禁（5维度评分，&lt;0.6分基于知识库重答一次，通过SSE correction事件透明纠错）；四是MCP协议集成（基于langchain4j MCP客户端SDK，远程工具和本地工具统一注册调度）；五是Skill SOP热插拔（后台上传技能流程，关键词+向量两层匹配，命中后注入ReAct系统提示词，运营无需改代码就能扩展业务流程）。</p>
 
 <p>技术栈是Spring WebFlux + LangChain4j + Milvus + Redis + MySQL，响应式架构，用户级限流10次/分钟，全局并发100。</p>
 
@@ -66,14 +66,14 @@
 <ol>
   <li><strong>缓存快速通道</strong>：SimpleQaCache命中且未过期→直接返回缓存答案（~5ms）</li>
   <li><strong>转人工关键词拦截</strong>：用户明确说"转人工/人工客服"→零成本立即返回转接事件</li>
-  <li><strong>统一ReAct</strong>：问题规范化→加载历史→工具分类（关键词+LLM混合多分类）→KB预检索上下文注入→ReAct循环。LLM自主选择调用searchKnowledgeBase工具检索知识库、transferToHuman工具转人工、或29个业务工具（订单/财务/物流/商品/用户/营销等）</li>
+  <li><strong>统一ReAct</strong>：问题规范化→加载历史→工具分类（关键词+LLM混合多分类）→Skill匹配（关键词+向量两层，命中则注入SOP流程并并入所需工具分类）→KB预检索上下文注入→ReAct循环。LLM自主选择调用searchKnowledgeBase工具检索知识库、transferToHuman工具转人工、或29个业务工具（订单/财务/物流/商品/用户/营销等）</li>
 </ol>
 
 <p>ReAct循环：Thought→Action→Observation→Final Answer，最多3轮，单轮90秒超时。支持并行工具调用（CompletableFuture），工具调用重试限制（MAX_TOOL_CALLS_PER_TOOL=3）。</p>
 
 <p>后置处理：答案→Redis对话记忆→QualityGate质检（5维度评分，&lt;0.6基于知识库重答一次→SSE correction事件透明纠错）→持久化纠错后版本。质检通过或警告的原答案自动缓存。</p>
 
-<p>这个项目我觉得有几个做得比较深的地方：第一是手写ReAct循环，第二是RAG全链路评估，第三是质检门禁，第四是MCP协议集成，第五是从"意图分类三路路由"演进到"统一ReAct"的架构升级——这个演进本身就是亮点。</p>
+<p>这个项目我觉得有几个做得比较深的地方：第一是手写ReAct循环，第二是RAG全链路评估，第三是质检门禁，第四是MCP协议集成，第五是Skill SOP热插拔（运营上传技能即可扩展流程），第六是从"意图分类三路路由"演进到"统一ReAct"的架构升级——这个演进本身就是亮点。</p>
 
 <div class="diagram">
 <svg viewBox="0 0 700 400" xmlns="http://www.w3.org/2000/svg">
@@ -109,8 +109,8 @@
   <line x1="470" y1="225" x2="470" y2="245" stroke="#1565c0" stroke-width="2" marker-end="url(#apr2)"/>
   <rect x="290" y="245" width="360" height="100" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
   <text x="470" y="265" text-anchor="middle" font-size="12" fill="#ff6f00" font-weight="bold">ReAct 循环 (最多3轮/单轮90s)</text>
-  <text x="470" y="282" text-anchor="middle" font-size="10" fill="#555">问题规范化→加载历史→工具分类(关键词+LLM多分类)</text>
-  <text x="470" y="296" text-anchor="middle" font-size="10" fill="#555">→KB预检索上下文注入→Thought→Action→Observation</text>
+  <text x="470" y="282" text-anchor="middle" font-size="10" fill="#555">问题规范化→加载历史→工具分类→Skill匹配(关键词+向量)</text>
+  <text x="470" y="296" text-anchor="middle" font-size="10" fill="#555">→KB预检索+SOP注入→Thought→Action→Observation</text>
   <text x="470" y="310" text-anchor="middle" font-size="10" fill="#555">→并行工具调用(CompletableFuture)→Final Answer</text>
   <text x="470" y="324" text-anchor="middle" font-size="10" fill="#d32f2f">工具重试限制: MAX_TOOL_CALLS_PER_TOOL=3</text>
   <line x1="470" y1="345" x2="350" y2="345" stroke="#1565c0" stroke-width="2" marker-end="url(#apr2)"/>
@@ -134,7 +134,7 @@
 <tr><td>讲架构演进</td><td>"从意图分类三路路由演进到统一ReAct"本身就是亮点，展示架构迭代能力</td></tr>
 </table>
 
-<h3>二、项目六大亮点（面试时的"杀手锏"）</h3>
+<h3>二、项目七大亮点（面试时的"杀手锏"）</h3>
 
 <div class="concept-card">
 <h4>亮点1：手写ReAct循环（不依赖AiServices）</h4>
@@ -173,6 +173,16 @@
 <p>项目经历了一次重要架构演进：早期版本用IntentClassifier做意图分类，分知识库/通用/转人工三路。后来发现三路路由维护复杂、KB路径和General路径代码重复、LLM分类3s超时影响响应速度。</p>
 <p>演进后：移除IntentClassifier，改为<strong>统一ReAct模式</strong>——缓存和关键词做零成本快速拦截，其他统一进ReAct。LLM在推理过程中自主决定是否调用searchKnowledgeBase工具（知识库）、transferToHuman工具（转人工）、或业务工具。好处是：代码更简洁、路由更灵活（LLM能处理意图分类无法覆盖的复杂场景）、维护成本更低。</p>
 <p>这个演进本身就是面试亮点——展示你不仅能写代码，还能判断架构什么时候该重构、怎么重构。</p>
+</div>
+
+
+<div class="concept-card">
+<h4>亮点7：Skill SOP热插拔（运营可扩展业务流程）</h4>
+<p><strong>背景</strong>：客服有大量标准化业务流程（退款/改地址/拦截发货等），以前靠写死在代码或塞进大Prompt，改一次要发版。现在做成「Skill」——后台上传一段Markdown SOP即可扩展流程，无需改代码、无需重启。</p>
+<p><strong>存储</strong>：Skill定义存MySQL表mall_ai_skill（name/description/triggers/tools/content/enabled），管理面mall-admin写入，运行面mall-ai只读轮询。</p>
+<p><strong>热加载</strong>：SkillRegistry按TTL（默认10秒）轮询DB，volatile快照整体替换，读侧永远拿到一致列表；刷新失败沿用上次快照，注册表永不因DB抖动变空。</p>
+<p><strong>两层匹配</strong>：SkillMatcher先走Layer 1触发词contains匹配（零embedding成本，命中即返回），未命中才走Layer 2向量匹配（问题embedding vs Skill description embedding，cosine≥0.65按分数取前maxHit个）。与ToolRouter的「关键词+LLM」、KB预检索的门控思想同构——便宜的手段先走，贵的手段兜底长尾。</p>
+<p><strong>注入</strong>：命中后SkillPromptBuilder把SOP渲染为「【技能流程：xxx】请严格按照以下流程处理」片段，拼进ReAct系统提示词；同时把Skill声明依赖的工具所属分类并入categories，保证SOP里要调的工具可用。无命中时空串不占任何token。</p>
 </div>
 
 <h3>三、项目部署架构</h3>
@@ -410,13 +420,49 @@ Mono.fromFuture(roundFuture)
 &lt;0.6 → fail，基于知识库上下文+扣分理由重答一次→SSE correction事件透明纠错</pre>
 </div>
 
-<h3>五、项目八大架构优化（量化数据）</h3>
+<h4>4.4 Skill SOP热插拔（两层匹配+热加载）</h4>
+
+<div class="code-block">
+<span class="lang">SkillMatcher两层匹配 + SkillRegistry热加载</span>
+<pre><span class="cmt">// SkillMatcher：两层触发，便宜的手段先走</span>
+<span class="kw">public</span> List&lt;SkillDefinition&gt; match(String question) {
+    <span class="cmt">// Layer 1: 触发词contains匹配（零embedding成本，命中即返回）</span>
+    List&lt;SkillDefinition&gt; keywordHits = enabled.stream()
+        .filter(s -&gt; s.triggers().stream().anyMatch(q::contains)).toList();
+    <span class="kw">if</span> (!keywordHits.isEmpty()) <span class="kw">return</span> keywordHits.limit(maxHit);
+
+    <span class="cmt">// Layer 2: 向量匹配（问题embedding vs Skill description embedding）</span>
+    Embedding queryVec = embeddingModel.embed(question).content();
+    <span class="kw">for</span> (SkillDefinition s : enabled) {
+        <span class="kw">double</span> cos = cosine(queryVec.vector(), registry.descriptionEmbedding(s.name()).vector());
+        <span class="kw">if</span> (cos &gt;= minSimilarity) scored.add(s, cos);  <span class="cmt">// 默认0.65</span>
+    }
+    <span class="kw">return</span> 按分数降序取前maxHit个;  <span class="cmt">// 默认1个</span>
+}
+
+<span class="cmt">// SkillRegistry：TTL轮询DB热加载，volatile快照整体替换</span>
+<span class="kw">public</span> List&lt;SkillDefinition&gt; getEnabledSkills() {
+    <span class="kw">if</span> (now - lastLoadedAt &gt;= ttlMs) {  <span class="cmt">// 默认10秒</span>
+        reload(now);  <span class="cmt">// 查mall_ai_skill表→校验工具名→懒编码description向量→替换快照</span>
+    }
+    <span class="kw">return</span> snapshot;  <span class="cmt">// volatile，读侧永远拿到一致列表；刷新失败沿用上次快照</span>
+}
+
+<span class="cmt">// ChatService注入：命中Skill后①渲染SOP拼进系统提示词 ②并入工具分类</span>
+List&lt;SkillDefinition&gt; hitSkills = skillMatcher.match(safeQuestion);
+String skillSop = SkillPromptBuilder.build(hitSkills);  <span class="cmt">// 无命中返回空串不占token</span>
+<span class="kw">for</span> (String toolName : hitSkills.tools()) categories.add(toolCategoryOf(toolName));
+<span class="cmt">// SOP注入位置：知识库指引之后、可用工具列表之前</span></pre>
+</div>
+
+<h3>五、项目九大架构优化（量化数据）</h3>
 
 <table class="compare-table">
 <tr><th>优化项</th><th>问题</th><th>方案</th><th>收益</th></tr>
 <tr><td>统一ReAct架构</td><td>三路路由维护复杂、代码重复</td><td>移除IntentClassifier，LLM自主路由</td><td>代码简化，路由更灵活</td></tr>
 <tr><td>工具分类选择性注入</td><td>所有工具注入Token过高</td><td>关键词+LLM多分类，按需注入</td><td>Token降60-80%</td></tr>
 <tr><td>知识库预检索三保障</td><td>LLM可能忘记调知识库工具</td><td>预检索+系统提示词强化+工具去重</td><td>知识库命中率100%</td></tr>
+<tr><td>Skill SOP热插拔</td><td>业务流程写死在代码/大Prompt，改一次要发版</td><td>后台上传Markdown SOP，两层匹配+TTL热加载注入提示词</td><td>运营无需改代码扩展流程</td></tr>
 <tr><td>质检逻辑冗余修复</td><td>原始答案和质检答案重复保存</td><td>统一保存，只存一份最终答案</td><td>数据库写入减少50%</td></tr>
 <tr><td>工具调用重试机制</td><td>工具失败可能无限重试</td><td>MAX_TOOL_CALLS_PER_TOOL=3</td><td>Token降30-50%</td></tr>
 <tr><td>记忆管理优化</td><td>历史对话格式复杂，无限增长</td><td>简化格式+动态消息限制+大小控制</td><td>Token降33%，内存降60%</td></tr>
@@ -596,6 +642,17 @@ Mono.fromFuture(roundFuture)
 <div class="interview-tip">五层成本控制层层递进。记住核心数字：工具注入降60-80%、记忆降33%、并行降67%。</div>
 </div>
 
+<div class="interview-q">
+<div class="question">Q16：Skill SOP热插拔是怎么实现的？为什么不让运营改Prompt？</div>
+<div class="interview-answer">
+<p><strong>动机</strong>：客服有大量标准化业务流程（退款/改地址/拦截发货），以前写死在代码或塞进大Prompt，改一次要发版。做成Skill后，运营在mall-admin后台上传一段Markdown SOP就能扩展流程，无需改代码、无需重启。</p>
+<p><strong>存储与热加载</strong>：Skill定义存MySQL表mall_ai_skill（name/description/triggers/tools/content/enabled），管理面写入、运行面只读。SkillRegistry按TTL（默认10秒）轮询DB，volatile快照整体替换——读侧永远拿到一致列表；刷新失败沿用上次快照，注册表永不因DB抖动变空。</p>
+<p><strong>两层匹配</strong>：先走触发词contains匹配（零embedding成本，命中即返回），未命中才走向量匹配（问题embedding vs Skill description embedding，cosine≥0.65按分数取前maxHit个，默认1个）。和ToolRouter的「关键词+LLM」、KB预检索的门控思想同构——便宜的手段先走，贵的手段兜底长尾。</p>
+<p><strong>注入</strong>：命中后把SOP渲染成「【技能流程：xxx】请严格按以下流程处理」拼进ReAct系统提示词，同时把Skill声明依赖的工具所属分类并入categories，保证SOP里要调的工具可用。无命中时空串不占任何token。质检纠错重答也会带上命中的SOP，保证纠错同样遵守流程约束。</p>
+</div>
+<div class="interview-tip">提「运营无需改代码扩展流程」展示产品思维。说「volatile快照+刷新失败沿用旧快照」展示并发与容错。说「两层匹配=便宜手段先走」呼应ToolRouter/KB门控，展示架构一致性。</div>
+</div>
+
 <h3>八、技术选型深度对比</h3>
 
 <p>面试官问"为什么选A不选B"时，需要展示<strong>技术选型的判断力</strong>。基于当前统一ReAct架构的实际选型：</p>
@@ -615,7 +672,7 @@ Mono.fromFuture(roundFuture)
 <div class="code-block">
 <span class="lang">简历一句话版</span>
 <pre>矿池AI客服系统：基于Spring WebFlux + LangChain4j构建，
-统一ReAct Agent架构，29个工具+MCP远程工具+RAG知识库，
+统一ReAct Agent架构，29个工具+MCP远程工具+RAG知识库+Skill SOP热插拔，
 Token优化70-80%，响应速度提升2-3倍。</pre>
 </div>
 
@@ -632,7 +689,8 @@ Token优化70-80%，响应速度提升2-3倍。</pre>
 3. 实现RAG全链路评估（Hit Rate/MRR/NDCG/忠实度/相关性，每小时自动执行）
 4. 质检门禁（5维度LLM-as-Judge评分，&lt;0.6基于知识库重答一次，SSE correction事件透明纠错）
 5. MCP协议集成（基于langchain4j MCP SDK：HttpMcpTransport+DefaultMcpClient，远程工具统一注册）
-6. 多模型降级（Qwen+DeepSeek双厂商），工具分类选择性注入（Token降60-80%）
+6. Skill SOP热插拔（后台上传技能流程，关键词+向量两层匹配注入ReAct提示词，运营无需改代码扩展业务流程）
+7. 多模型降级（Qwen+DeepSeek双厂商），工具分类选择性注入（Token降60-80%）
 
 成果：Token消耗降低70-80%，响应速度提升2-3倍，知识库命中率100%，
 全链路Prometheus指标可观测。</pre>
@@ -708,18 +766,18 @@ Token优化70-80%，响应速度提升2-3倍。</pre>
 <div class="review-card">
 <ul>
 <li><strong>项目定位</strong>：矿池AI客服，统一ReAct Agent + RAG + MCP，Spring WebFlux响应式架构</li>
-<li><strong>核心流程</strong>：缓存快速通道(~5ms)→转人工关键词(零成本)→统一ReAct(LLM自主路由29个工具+searchKnowledgeBase+transferToHuman)</li>
+<li><strong>核心流程</strong>：缓存快速通道(~5ms)→转人工关键词(零成本)→统一ReAct(Skill匹配+SOP注入→LLM自主路由29个工具+searchKnowledgeBase+transferToHuman)</li>
 <li><strong>关键演进</strong>：从IntentClassifier三路路由→统一ReAct（移除意图分类器，LLM自主路由更灵活）</li>
-<li><strong>六大亮点</strong>：手写ReAct/RAG四阶段评估/质检门禁/MCP集成/工具分类注入/架构演进</li>
+<li><strong>七大亮点</strong>：手写ReAct/RAG四阶段评估/质检门禁/MCP集成/工具分类注入/Skill SOP热插拔/架构演进</li>
 <li><strong>部署架构</strong>：Docker多阶段构建+K8s(3副本+RollingUpdate+健康检查)+Rancher+Jenkins CI/CD</li>
-<li><strong>代码解析</strong>：全缓冲策略防编造Observation / McpToolExecutor+McpToolAdapter / QualityGate评分Prompt</li>
-<li><strong>八大优化</strong>：统一ReAct/工具分类注入(Token降60-80%)/KB预检索三保障/重试限制/记忆管理/并行调用/CompletableFuture异步</li>
+<li><strong>代码解析</strong>：全缓冲策略防编造Observation / McpToolExecutor+McpToolAdapter / QualityGate评分Prompt / Skill两层匹配+热加载</li>
+<li><strong>九大优化</strong>：统一ReAct/工具分类注入(Token降60-80%)/KB预检索三保障/Skill SOP热插拔/重试限制/记忆管理/并行调用/CompletableFuture异步</li>
 <li><strong>五大难点</strong>：Qwen tool calling不稳定/流式编造Observation/Rerank超时降级/多模型Token累积/MCP断线</li>
 <li><strong>技术选型</strong>：langchain4j+MCP+手写ReAct+Milvus+WebFlux SSE+Qwen/DeepSeek</li>
 <li><strong>项目复盘</strong>：5条做对+5个坑+5条架构反思</li>
 <li><strong>未来优化</strong>：混合检索/MCP重连/Token限流/流式双模式/ModelRouter/工具插件化/成本归因/灰度/知识库自动更新/告警</li>
 <li><strong>量化收益</strong>：Token降70-80%，速度提升2-3倍，命中率100%，内存降60%</li>
-<li><strong>面试核心数字</strong>：29个工具/3轮循环/90s超时/5维度评分/质检超时60s/采样率100%/10次分钟限流/100并发/8个工具分类</li>
+<li><strong>面试核心数字</strong>：29个工具/3轮循环/90s超时/5维度评分/质检超时60s/采样率100%/10次分钟限流/100并发/8个工具分类/Skill TTL 10s·阈值0.65·maxHit 1</li>
 <li><strong>改进方向</strong>：Hybrid Search/MCP自动重连/Token级限流/流式双模式/ModelRouter抽象</li>
 </ul>
 </div>
