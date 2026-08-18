@@ -182,7 +182,9 @@
 <p><strong>存储</strong>：Skill定义存MySQL表mall_ai_skill（name/description/triggers/tools/content/enabled），管理面mall-admin写入，运行面mall-ai只读轮询。</p>
 <p><strong>热加载</strong>：SkillRegistry按TTL（默认10秒）轮询DB，volatile快照整体替换，读侧永远拿到一致列表；刷新失败沿用上次快照，注册表永不因DB抖动变空。</p>
 <p><strong>两层匹配</strong>：SkillMatcher先走Layer 1触发词contains匹配（零embedding成本，命中即返回），未命中才走Layer 2向量匹配（问题embedding vs Skill description embedding，cosine≥0.65按分数取前maxHit个）。与ToolRouter的「关键词+LLM」、KB预检索的门控思想同构——便宜的手段先走，贵的手段兜底长尾。</p>
-<p><strong>注入</strong>：命中后SkillPromptBuilder把SOP渲染为「【技能流程：xxx】请严格按照以下流程处理」片段，拼进ReAct系统提示词；同时把Skill声明依赖的工具所属分类并入categories，保证SOP里要调的工具可用。无命中时空串不占任何token。</p>
+<p><strong>注入</strong>：命中后SkillPromptBuilder把SOP渲染为「【技能流程：xxx】请严格按照以下流程处理」片段，拼进ReAct系统提示词；同时把Skill声明依赖的工具所属分类并入categories，保证SOP里要调的工具可用。无命中时空串不占任何token。质检纠错重答也携带命中的SOP，保证纠错同样遵守流程约束。</p>
+<p><strong>管理端闭环</strong>：mall-admin提供REST API（POST /api/web/skill上传Markdown文件、GET列表、PUT /{id}/enabled启停、DELETE /{id}删除），上传时校验扩展名白名单（.md/.markdown/.txt）+解析YAML frontmatter校验必填字段。admin-web前端有Skill管理页（列表/上传/启停开关/删除），运营通过页面直接管理。写入mall_ai_skill表后，mall-ai侧10秒内自动生效（TTL轮询）。</p>
+<p><strong>Skill文件格式</strong>：Markdown+YAML frontmatter——frontmatter含name（唯一标识）、displayName、description（向量匹配语料）、triggers（触发词列表）、tools（依赖工具名列表）、enabled；正文为Markdown SOP流程。示例：refund-skill（退款流程）triggers=[退款,退钱,售后]，tools=[queryOrderDetails,queryRefundPolicy,applyRefund]。</p>
 </div>
 
 <h3>三、项目部署架构</h3>
