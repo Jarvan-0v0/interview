@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>企业级项目面试题 — Agent面试宝典</title>
+<link rel="stylesheet" href="style.css?v=20260809">
+</head>
+<body>
+<button id="sidebarToggle" class="sidebar-toggle" title="收起/展开菜单">◀</button>
+
+<!-- ===== 侧边栏 ===== -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <h1>Agent面试宝典</h1>
+    <p>Java后端 → AI Agent 转型指南</p>
+  </div>
+  <nav>
+      <a href="index.html"><span class="num">00</span>首页</a>
+      <a href="01-java-foundation.html"><span class="num">01</span>Java后端核心复习</a>
+      <a href="02-middleware.html"><span class="num">02</span>常用中间件</a>
+      <a href="03-llm-foundation.html"><span class="num">03</span>LLM大模型基础</a>
+      <a href="04-prompt-engineering.html"><span class="num">04</span>Prompt工程</a>
+      <a href="05-langchain4j.html"><span class="num">05</span>LangChain4j框架详解</a>
+      <a href="06-agent-core.html"><span class="num">06</span>Agent核心概念</a>
+      <a href="07-rag.html"><span class="num">07</span>RAG检索增强生成</a>
+      <a href="08-vector-db.html"><span class="num">08</span>向量数据库与Embedding</a>
+      <a href="09-agent-quality.html"><span class="num">09</span>Agent测试与质量保障</a>
+      <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式与工程化</a>
+      <a href="11-agent-tools.html"><span class="num">11</span>主流Agent工具生态</a>
+      <a href="12-project-packaging.html"><span class="num">12</span>项目经验：矿池AI客服</a>
+      <a href="13-interview-qa.html"><span class="num">13</span>高频面试题汇总</a>
+      <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出专题</a>
+      <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
+      <a href="16-spring-ai.html"><span class="num">16</span>Spring AI对比</a>
+      <a href="17-agent-security.html"><span class="num">17</span>Agent安全</a>
+      <a href="18-enterprise-interview-qa.html" class="active"><span class="num">18</span>企业级项目面试题</a>
+  </nav>
+</aside>
+
+<!-- ===== 主内容 ===== -->
+<main class="main">
+
+<div class="chapter-header">
+  <span class="chapter-num">第18章</span>
+  <h2>企业级项目面试题</h2>
+  <div class="goal"><strong>学习目标：</strong>52道企业级项目面试题，分7大类（架构设计/技术实现/性能优化/故障处理/工程质量/业务理解/基础追问）。与第13章高频面试题不重复，侧重企业级落地深度追问。每题答案基于mall-ai真实代码，未实现的功能诚实标注并给出面试回答策略。建议面试前重点复习⭐⭐⭐标记的架构和故障处理类。</div>
+</div>
+
+<div class="one-liner">企业级面试不看你会背多少八股，看你能把项目拆到多细——每道题都要回到"我们项目里是怎么做的"。</div>
+
+<div class="diagram">
+<svg viewBox="0 0 620 200" xmlns="http://www.w3.org/2000/svg">
+  <text x="310" y="20" text-anchor="middle" font-size="14" fill="#1565c0" font-weight="bold">52题7大类分布</text>
+  <rect x="20" y="35" width="120" height="45" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="80" y="53" text-anchor="middle" font-size="11" fill="#1565c0" font-weight="bold">架构设计</text>
+  <text x="80" y="70" text-anchor="middle" font-size="10" fill="#555">8题 ⭐⭐⭐</text>
+  <rect x="150" y="35" width="120" height="45" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="210" y="53" text-anchor="middle" font-size="11" fill="#1565c0" font-weight="bold">技术实现</text>
+  <text x="210" y="70" text-anchor="middle" font-size="10" fill="#555">9题 ⭐⭐⭐</text>
+  <rect x="280" y="35" width="120" height="45" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="340" y="53" text-anchor="middle" font-size="11" fill="#1565c0" font-weight="bold">性能优化</text>
+  <text x="340" y="70" text-anchor="middle" font-size="10" fill="#555">8题 ⭐⭐</text>
+  <rect x="410" y="35" width="120" height="45" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+  <text x="470" y="53" text-anchor="middle" font-size="11" fill="#ff6f00" font-weight="bold">故障处理</text>
+  <text x="470" y="70" text-anchor="middle" font-size="10" fill="#555">8题 ⭐⭐⭐</text>
+  <rect x="20" y="95" width="120" height="45" rx="6" fill="#f3e5f5" stroke="#7b1fa2"/>
+  <text x="80" y="113" text-anchor="middle" font-size="11" fill="#7b1fa2" font-weight="bold">工程质量</text>
+  <text x="80" y="130" text-anchor="middle" font-size="10" fill="#555">9题 ⭐⭐</text>
+  <rect x="150" y="95" width="120" height="45" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="210" y="113" text-anchor="middle" font-size="11" fill="#2e7d32" font-weight="bold">业务理解</text>
+  <text x="210" y="130" text-anchor="middle" font-size="10" fill="#555">8题 ⭐</text>
+  <rect x="280" y="95" width="120" height="45" rx="6" fill="#fafafa" stroke="#999"/>
+  <text x="340" y="113" text-anchor="middle" font-size="11" fill="#555" font-weight="bold">基础追问</text>
+  <text x="340" y="130" text-anchor="middle" font-size="10" fill="#555">2题 ⭐</text>
+  <text x="310" y="170" text-anchor="middle" font-size="12" fill="#555">复习优先级：⭐⭐⭐(架构/技术/故障) > ⭐⭐(性能/工程) > ⭐(业务/基础)</text>
+  <text x="310" y="190" text-anchor="middle" font-size="11" fill="#d32f2f">答题策略：先说项目现状(真实) → 再说通用原理(知识面) → 最后说改进方向(成长性)</text>
+</svg>
+</div>
+
+
+<!-- ==================== 第一类：架构设计类 ==================== -->
+<h3>第一类：架构设计类 <span class="difficulty">⭐⭐⭐</span></h3>
+
+
+<!-- Q1 -->
+<div class="interview-q">
+  <div class="question">1. Agent编排器是怎么设计的？为什么这样设计？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>我们项目没有用复杂的Agent编排器，而是<strong>手写ReAct循环</strong>作为编排核心。ReActAgentService是整个Agent的调度中枢，负责 Thought → Action → Observation → Final Answer 的循环驱动。</p>
+    <p>设计原因是：矿池客服场景的工具调用链路通常不超过3轮（查算力→查订单→查退款），用<strong>手写ReAct + maxRounds=3</strong>就够了，不需要LangGraph那种多DAG编排。手写的好处是<strong>完全可控</strong>——每轮的日志、超时、降级都能精确控制，出问题排查链路清晰。</p>
+    <p>具体实现：ReActAgentService.executeReAct()接收用户问题，构建ReAct Prompt（硬编码text block），调用LlmModelFactory.streaming(routeSpec)获取流式模型，解析返回的Action行提取工具名和参数，通过HardWorkflowToolRegistry找到对应工具执行，将Observation追加到chatHistory进入下一轮。round > maxRounds时走兜底逻辑直接生成Final Answer。</p>
+    <pre class="code">// ReActAgentService 核心循环（简化）
+int maxRounds = aiProperties.getHardWorkflowMaxRounds(); // 3
+if (round > maxRounds || done.get()) {
+    // 兜底：超出轮数，直接生成Final Answer
+    return generateFallbackAnswer(chatHistory, route);
+}
+log.info("ReAct round {}/{} starting", round, maxRounds);
+// 解析Action → 执行工具 → 追加Observation → 下一轮</pre>
+  </div>
+  <div class="interview-tip">💡 回答策略：面试官问编排器，先说"我们用的手写ReAct循环"，再解释为什么不用LangGraph/多Agent——因为场景简单+可控性强。最后补一句"如果业务复杂到需要多DAG编排，会考虑迁移到LangGraph4j"。</div>
+</div>
+
+
+<!-- Q2 -->
+<div class="interview-q">
+  <div class="question">2. 系统的可扩展性是怎么设计的？</div>
+  <div class="interview-answer">
+    <p>可扩展性体现在三个维度：<strong>工具层</strong>、<strong>模型层</strong>、<strong>知识层</strong>。</p>
+    <p><strong>工具层扩展</strong>：HardWorkflowToolRegistry + ToolCategory枚举（8大分类），新增工具只需实现AbstractWorkflowTool接口并注册到对应分类。29个工具覆盖矿池查询、订单、退款、算力、Skill SOP等场景。MCP工具通过McpToolAdapter动态接入，不需要改Java代码。</p>
+    <p><strong>模型层扩展</strong>：LlmModelFactory通过routeSpec前缀（qwen:/deepseek:/ds:）路由到不同供应商，新增供应商只需加一个前缀判断。ConcurrentHashMap缓存模型实例，相同规格不重复创建。application.yml配置路由列表，热更新即可切换模型。</p>
+    <p><strong>知识层扩展</strong>：Milvus向量库支持动态Collection切换，KB分块300字 + Rerank 16→4。Skill热插拔通过mall-admin REST API上传Markdown文件，10秒TTL自动生效，不需要重启服务。</p>
+  </div>
+  <div class="interview-tip">💡 扩展性回答要分层次：工具/模型/知识三层各自怎么扩。面试官追问"加一个新工具多久"——回答：写一个AbstractWorkflowTool实现类 + 注册到Registry，半天能上线。</div>
+</div>
+
+
+<!-- Q3 -->
+<div class="interview-q">
+  <div class="question">3. 如果让你重新设计这个系统，你会怎么改进？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>三个改进方向：</p>
+    <p><strong>1. 流式体验改进</strong>：当前是全缓冲模式（Reactor buffer + SSE一次性推送），用户要等完整答案才看到内容。改成<strong>增量流式</strong>——ReAct循环中每生成一个token就推给前端，用户体验更好。难点是质检纠错和流式的冲突（correct-on-fail模式下答案已经发出去了），需要改成<strong>先发占位+后发纠错</strong>的双段模式。</p>
+    <p><strong>2. 多模型并行优化</strong>：当前ReAct循环是串行的（Thought→Action→Observation→下一轮），可以并行化——比如同时检索多个知识库、同时调用多个工具。但需要处理结果聚合和冲突仲裁。</p>
+    <p><strong>3. 会话记忆增强</strong>：当前max-messages=12直接截断，长对话会丢失上下文。改成<strong>摘要+向量检索混合记忆</strong>——超过12轮时自动摘要前N轮，摘要存入向量库按需检索。这是V2规划。</p>
+  </div>
+  <div class="interview-tip">💡 这题展示成长性。别说"我系统没问题"，要说"如果重来我会改X"——面试官想看你的反思能力。重点说"流式体验"和"记忆增强"，因为这是真实的痛点。</div>
+</div>
+
+
+<!-- Q4 -->
+<div class="interview-q">
+  <div class="question">4. 为什么要做模型路由？直接用一个模型不行吗？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>直接用一个模型的问题：<strong>成本</strong>和<strong>能力</strong>不匹配。矿池客服的问题分易/中/难三档，简单问题（如"怎么改密码"）用72B模型是浪费，难问题（如"退款流程异常排查"）用7B模型答不好。</p>
+    <p>我们的路由设计：application.yml配置了general路由列表 <code>[qwen:qwen2.5-vl-72b-instruct, deepseek:deepseek-v3.2, qwen:qwen2.5-32b-instruct]</code>。问题分类器（qwen2.5-7b-instruct）先判断难度，简单问题走缓存或小模型，难问题走大模型。LlmModelFactory根据routeSpec前缀创建对应供应商的OpenAI兼容实例。</p>
+    <p>路由还有一个关键作用：<strong>故障降级</strong>。主模型（72B）超时时自动降级到备用模型（32B/DeepSeek），保证服务可用。这是比"用一个模型"最大的优势——单模型挂了就全挂，多模型路由可以容灾。</p>
+    <pre class="code"># application.yml 模型路由配置
+ai:
+  routing:
+    general:
+      - qwen:qwen2.5-vl-72b-instruct    # 主模型（视觉+文本）
+      - deepseek:deepseek-v3.2           # 备用1（推理强）
+      - qwen:qwen2.5-32b-instruct        # 备用2（性价比）
+  classifier-model: qwen2.5-7b-instruct  # 难度分类器
+  normalize-question-model: qwen:qwen2.5-14b-instruct  # 问题归一化</pre>
+  </div>
+  <div class="interview-tip">💡 模型路由回答要点：成本优化 + 故障容灾 + 能力匹配。面试官追问路由策略——回答"按难度分类+故障自动降级"，不要说"轮询"或"随机"。</div>
+</div>
+
+
+<!-- Q5 -->
+<div class="interview-q">
+  <div class="question">5. 你的系统支持哪些模型？怎么做模型适配的？</div>
+  <div class="interview-answer">
+    <p>当前支持两类供应商：<strong>通义千问（DashScope）</strong>和<strong>DeepSeek</strong>。两者都提供OpenAI兼容接口，所以模型适配层很薄——LlmModelFactory内部用langchain4j的OpenAiChatModel/OpenAiStreamingChatModel，只改baseUrl和apiKey。</p>
+    <p>适配机制：routeSpec格式是<code>供应商:模型名</code>，如<code>qwen:qwen2.5-vl-72b-instruct</code>。LlmModelFactory解析前缀：qwen:走DashScope OpenAI兼容接口，deepseek:/ds:走DeepSeek API。每种路由规格创建两个实例——流式（temp=0.2, maxTokens=2000）用于实时对话，阻塞（temp=0.3, maxTokens=4096）用于问题归一化、质检评分等非实时任务。</p>
+    <p>新增供应商很简单：加一个前缀判断 + 对应的Properties配置类。因为都是OpenAI兼容协议，代码改动量极小。ConcurrentHashMap缓存保证相同规格不会重复创建模型实例。</p>
+    <pre class="code">// LlmModelFactory 路由解析
+private static final String PREFIX_QWEN = "qwen:";
+private static final String PREFIX_DEEPSEEK = "deepseek:";
+private static final String PREFIX_DS = "ds:";
+// 流式：temperature=0.2, maxTokens=2000
+// 阻塞：temperature=0.3, maxTokens=4096, timeout=60s</pre>
+  </div>
+  <div class="interview-tip">💡 这题展示你对OpenAI兼容协议的理解。核心说"都是OpenAI兼容接口，适配层很薄"。追问"如果要接非OpenAI兼容的模型怎么办"——回答"包一层适配器，实现langchain4j的ChatLanguageModel接口"。</div>
+</div>
+
+
+<!-- Q6 -->
+<div class="interview-q">
+  <div class="question">6. 如何设计Agent的错误恢复和重试机制？</div>
+  <div class="interview-answer">
+    <p>错误恢复分三层：</p>
+    <p><strong>1. 工具调用层</strong>：每个工具执行有try-catch，失败时返回错误信息作为Observation注入ReAct循环，让模型自己决定是否重试或换工具。不是简单的重试N次——而是让Agent<strong>感知到错误并自主决策</strong>。</p>
+    <p><strong>2. 模型调用层</strong>：LlmModelFactory.streaming/blocking调用失败时，通过路由列表降级到下一个模型。比如72B超时就降级到DeepSeek V3.2，再失败降级到32B。blocking模型有60秒超时。当前是手写降级逻辑，没有用Resilience4j（V2规划）。</p>
+    <p><strong>3. 整体兜底层</strong>：ReAct循环超过maxRounds=3仍未产出Final Answer时，走generateFallbackAnswer()——用当前chatHistory直接让模型生成一个答案，保证用户不会收到空响应。质检fail + correct-on-fail=true时还会基于KB重答一次。</p>
+  </div>
+  <div class="interview-tip">💡 错误恢复的亮点是"让Agent自己感知错误"——不是机械重试，而是把错误信息喂给模型让它决策。这比"失败重试3次"高一个层次。</div>
+</div>
+
+
+<!-- Q7 -->
+<div class="interview-q">
+  <div class="question">7. 你的系统支持多租户吗？怎么实现的？</div>
+  <div class="interview-answer">
+    <p><strong>当前版本未实现多租户</strong>。mall-ai是矿池客服的单一租户场景，所有用户共享同一套知识库和工具集。</p>
+    <p>面试回答策略：如果面试官追问，可以说"这是V2规划"，然后给出设计思路：</p>
+    <p>多租户的核心是<strong>数据隔离</strong>——KB向量库按tenantId分Collection，Redis会话key加tenantId前缀，工具注册表按tenantId隔离。LlmModelFactory的routeSpec可以按租户配置不同模型（大客户用72B，小客户用32B）。RateLimitFilter的限流维度天然支持按租户隔离（当前已按userId隔离，加一层tenantId即可）。</p>
+    <p>实现难点在于<strong>知识库隔离</strong>——Milvus的Collection有数量上限，租户多了需要做分库。以及<strong>计费</strong>——按租户统计Token消耗和工具调用次数。</p>
+  </div>
+  <div class="interview-tip">💡 未实现的功能不要装作实现了。诚实说"当前未实现，V2规划"，然后展示你知道怎么做——数据隔离+模型路由+限流维度。面试官更看重你知道怎么做，而不是已经做了什么。</div>
+</div>
+
+
+<!-- Q8 -->
+<div class="interview-q">
+  <div class="question">8. 你怎么看Agent架构的未来发展？</div>
+  <div class="interview-answer">
+    <p>三个判断：</p>
+    <p><strong>1. 单Agent → 多Agent协作</strong>：当前ReAct单Agent在简单场景够用，但复杂任务（如"帮我分析这个月矿池收益并给出优化建议"）需要检索Agent+分析Agent+报告Agent协作。MCP协议已经在标准化Agent间通信，类似HTTP标准化了服务间通信。</p>
+    <p><strong>2. 确定性工作流 + 自主决策混合</strong>：纯ReAct太发散，纯工作流太死板。未来趋势是关键路径（退款、支付）用确定性工作流，非关键路径（闲聊、推荐）让Agent自主决策。我们的Skill SOP热插拔已经在往这个方向走——SOP注入给ReAct加了一层流程约束。</p>
+    <p><strong>3. 长期记忆突破</strong>：当前max-messages=12截断太粗暴。未来会演进到结构化长期记忆——对话摘要 + 向量检索 + 实体图谱。让Agent"记住"用户的偏好和历史交互，不是每次从零开始。</p>
+  </div>
+  <div class="interview-tip">💡 这题考视野。别说"AI要取代程序员"这种空话，要落到Agent架构的具体趋势：多Agent协作、混合工作流、长期记忆。每个都联系到你项目的现状和规划。</div>
+</div>
+
+
+<!-- ==================== 第二类：技术实现类 ==================== -->
+<h3>第二类：技术实现类 <span class="difficulty">⭐⭐⭐</span></h3>
+
+
+<!-- Q9 -->
+<div class="interview-q">
+  <div class="question">9. 熔断器是怎么实现的？三个状态是什么？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p><strong>当前版本未实现正式熔断器</strong>（未引入Resilience4j），而是用手写的<strong>多模型降级</strong>机制替代。</p>
+    <p>面试回答策略：先说通用原理——熔断器三状态：<strong>Closed</strong>（正常，请求通过）、<strong>Open</strong>（熔断中，快速失败不调用下游）、<strong>Half-Open</strong>（半开，放少量请求探测恢复）。状态转换：连续失败N次 → Closed到Open；等待冷却时间 → Open到Half-Open；探测成功 → Half-Open到Closed；探测失败 → Half-Open到Open。</p>
+    <p>然后说项目现状：我们当前用LlmModelFactory的路由列表实现降级——主模型(72B)调用失败时降级到备用模型(DeepSeek V3.2/32B)。这相当于熔断器的"快速失败+切换"能力，但缺少<strong>自动恢复探测</strong>（Half-Open状态）。V2规划引入Resilience4j的CircuitBreaker，实现完整的三状态熔断。</p>
+    <pre class="code">// 通用熔断器三状态
+Closed   --连续失败N次-->  Open    (快速失败，不调下游)
+Open     --冷却时间到-->    Half-Open (放少量请求探测)
+Half-Open --探测成功-->    Closed  (恢复正常)
+Half-Open --探测失败-->    Open    (继续熔断)
+
+// 项目当前替代方案：多模型降级
+route: [72B → DeepSeek V3.2 → 32B]  // 主模型失败自动切下一个</pre>
+  </div>
+  <div class="interview-tip">💡 熔断器是高频题。先说三状态原理（展示知识面），再说项目用多模型降级替代（展示实战），最后说V2引入Resilience4j（展示规划）。不要装作用了Resilience4j。</div>
+</div>
+
+
+<!-- Q10 -->
+<div class="interview-q">
+  <div class="question">10. 文档解析支持哪些格式？怎么处理表格和图片？</div>
+  <div class="interview-answer">
+    <p>知识库文档当前以<strong>纯文本和Markdown</strong>为主。KB分块策略是300字/overlap=50，由KnowledgeBaseService处理。文档内容通过管理端上传后存入Milvus向量库（dimension=1024, text-embedding-v3）。</p>
+    <p><strong>表格处理</strong>：当前对Markdown表格直接保留，分块时尽量不切断表格行。复杂的Excel/CSV表格需要预处理成Markdown或纯文本再入库。</p>
+    <p><strong>图片处理</strong>：纯文本文档不含图片。但我们的主模型qwen2.5-vl-72b-instruct是<strong>视觉语言模型（VL）</strong>，支持图片理解——如果用户在对话中发图片，模型可以识别。知识库中暂不支持图片向量化（这是V2规划，需要接入CLIP等多模态embedding）。</p>
+    <p>面试回答策略：诚实说"当前KB以文本为主"，然后展开"如果要支持复杂格式，会接入Apache Tika做文档解析 + CLIP做多模态embedding"。</p>
+  </div>
+  <div class="interview-tip">💡 文档解析这题展示你对RAG数据管道的理解。核心说"当前以文本为主"，然后展开怎么做复杂格式。面试官想看你知道完整管道怎么设计，而不是你已经全做了。</div>
+</div>
+
+
+<!-- Q11 -->
+<div class="interview-q">
+  <div class="question">11. 会话摘要压缩的阈值是多少？怎么确定的？</div>
+  <div class="interview-answer">
+    <p><strong>当前版本未实现会话摘要压缩</strong>。记忆策略是Redis存储 + max-messages=12，超过12条直接截断（保留最近12条用户+助手消息），不做摘要。</p>
+    <p>面试回答策略：先说现状"当前用简单截断，max-messages=12"，然后解释原因"矿池客服单次会话通常不超过8轮，12条够覆盖大多数场景，摘要压缩会增加一次LLM调用延迟和成本"。再说改进方向"如果会话变长，V2规划做<strong>摘要+向量检索混合记忆</strong>——超过12轮时自动摘要前N轮，摘要存入向量库按需检索，参考MemGPT的思路"。</p>
+    <p>通用原理：摘要压缩的阈值通常基于<strong>Token预算</strong>计算。假设总context window 8K tokens，System Prompt占800，RAG上下文占2000，工具结果占1000，留给对话历史约4200 tokens。按每轮对话~300 tokens算，约14轮就要触发摘要。我们设12条是留了安全余量。</p>
+  </div>
+  <div class="interview-tip">💡 未实现不要装。说"当前截断，V2规划做摘要压缩"，然后展示你知道阈值怎么算——Token预算分配。这比"我们做了摘要"更有说服力。</div>
+</div>
+
+
+<!-- Q12 -->
+<div class="interview-q">
+  <div class="question">12. 嵌入模型用的什么？维度多少？怎么选的？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>用的是<strong>通义千问 text-embedding-v3</strong>，维度<strong>1024</strong>。配置在application.yml: <code>qwen.embedding-model: text-embedding-v3</code>，MilvusProperties默认dimension=1024。</p>
+    <p>选型考虑：①<strong>中文效果好</strong>——DashScope的embedding模型对中文FAQ类文档优化好，矿池客服场景中文为主；②<strong>维度适中</strong>——1024维在检索精度和存储/计算成本间平衡，768维可能丢信息，1536维成本高；③<strong>和主模型同一供应商</strong>——DashScope统一API管理，不用多一个供应商依赖。</p>
+    <p>Milvus向量库配置：MilvusEmbeddingStoreConfig创建collection时指定.dimension(1024)，索引用HNSW（Milvus默认）。检索时min-similarity=0.65，低于0.65的片段不召回。</p>
+    <pre class="code"># application.yml 嵌入模型配置
+qwen:
+  embedding-model: text-embedding-v3
+  rerank-model: gte-rerank
+# MilvusProperties.java
+private int dimension = 1024;  // text-embedding-v3 默认 1024</pre>
+  </div>
+  <div class="interview-tip">💡 embedding选型是RAG基础题。回答要点：模型名+维度+选型理由（中文效果/维度权衡/供应商统一）。追问"为什么不用OpenAI的embedding"——回答"中文场景DashScope更好+不用翻墙+成本更低"。</div>
+</div>
+
+
+<!-- Q13 -->
+<div class="interview-q">
+  <div class="question">13. 怎么做的日志和链路追踪？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>链路追踪用<strong>TraceWebFilter</strong>——WebFlux过滤器，order=-100（最先执行）。从请求头<code>X-Trace-Id</code>提取traceId，没有则自动生成UUID。traceId注入MDC（SLF4J的Mapped Diagnostic Context），所有日志自动携带traceId。同步调用链（.block()）可复用MDC。</p>
+    <p>日志设计：关键节点都有info级别日志——ReAct每轮开始/结束、工具调用Action、质检评分结果、模型路由切换。日志格式：<code>[traceId=xxx] ReAct round 1/3, Action: queryHashrate</code>。质检评分日志带question摘要+分数+耗时ms。</p>
+    <p>当前未接入OpenTelemetry/SkyWalking（V2规划），但TraceWebFilter + MDC已经能覆盖单服务内的链路追踪需求。如果微服务化，需要把traceId通过HTTP头传递到下游服务。</p>
+    <pre class="code">// TraceWebFilter 核心逻辑
+String traceId = request.getHeaders().getFirst("X-Trace-Id");
+if (traceId == null || traceId.isBlank()) {
+    traceId = UUID.randomUUID().toString();
+}
+MDC.put("traceId", traceId);  // 注入MDC，日志自动携带
+// ... 业务逻辑 ...
+MDC.clear();  // 出口清理</pre>
+  </div>
+  <div class="interview-tip">💡 日志追踪是工程化基本功。亮点是WebFlux + MDC + traceId，以及order=-100保证最先执行。追问"跨服务怎么办"——回答"traceId通过HTTP头传递 + 接入SkyWalking"。</div>
+</div>
+
+
+<!-- Q14 -->
+<div class="interview-q">
+  <div class="question">14. 怎么做的异步并行处理？</div>
+  <div class="interview-answer">
+    <p>异步并行体现在两个层面：</p>
+    <p><strong>1. WebFlux + Reactor</strong>：全链路响应式，AiController用<code>publishOn(Schedulers.parallel())</code>把请求切到并行线程池，不阻塞Netty IO线程。SSE推送通过Flux&lt;ServerSentEvent&gt;异步发送。</p>
+    <p><strong>2. 质检并行</strong>：QualityGate用<code>CompletableFuture.supplyAsync()</code>异步调用质检模型，不阻塞主对话流。质检模型（Qwen 72B）和主对话模型并行跑——用户收到答案的同时，质检在后台评分。如果质检fail且correct-on-fail=true，才触发重答流程。</p>
+    <pre class="code">// QualityGate 异步质检
+QualityJudge.JudgeResult score = CompletableFuture
+    .supplyAsync(() -> qualityJudge.judge(question, answer, kbContext))
+    .get(timeoutSeconds, TimeUnit.SECONDS);  // 60秒超时
+
+// AiController 响应式
+.publishOn(Schedulers.parallel())  // 切到并行线程
+.flatMap(response -> sendSse(response))</pre>
+  </div>
+  <div class="interview-tip">💡 异步处理的亮点是"质检不阻塞对话"——用户不用等质检完才收到答案。展示你理解Reactor的线程调度和CompletableFuture的异步编排。</div>
+</div>
+
+
+<!-- Q15 -->
+<div class="interview-q">
+  <div class="question">15. 知识图谱是怎么构建和使用的？</div>
+  <div class="interview-answer">
+    <p><strong>当前版本未实现知识图谱</strong>。知识库用的是<strong>纯向量检索 + Rerank</strong>：Milvus向量库 + text-embedding-v3 + gte-rerank重排。</p>
+    <p>面试回答策略：诚实说"当前未实现知识图谱"，然后展开"如果要引入GraphRAG，思路是"：</p>
+    <p>①<strong>实体抽取</strong>——用LLM从知识库文档中抽取实体（矿池名/矿工/算力/币种）和关系（属于/产出/费率）；②<strong>图存储</strong>——用Neo4j存储实体和关系；③<strong>混合检索</strong>——向量检索找相关片段 + 图谱检索找关联实体，RRF融合排序。比如用户问"矿池A和矿池B的费率对比"，向量检索找文档片段，图谱检索找到两个矿池实体和费率关系，融合后答案更准确。</p>
+    <p>当前未引入的原因：矿池客服场景的问题以流程类为主（怎么改密码/怎么退款/算力怎么看），实体关系简单，向量检索 + Rerank已经覆盖。知识图谱更适合<strong>复杂关系推理</strong>场景。</p>
+  </div>
+  <div class="interview-tip">💡 知识图谱是热门话题。不要装作用了，说"当前向量检索够用，V2规划GraphRAG"。然后展示你知道GraphRAG的完整链路：实体抽取→图存储→混合检索→RRF融合。</div>
+</div>
+
+
+<!-- Q16 -->
+<div class="interview-q">
+  <div class="question">16. 怎么做的A/B测试和Prompt版本管理？</div>
+  <div class="interview-answer">
+    <p><strong>当前版本未实现正式的A/B测试和Prompt版本管理</strong>。ReAct Prompt是硬编码text block，修改需要改代码重新部署。Prompt迭代靠<strong>人工评估 + 质检数据回流</strong>——改完Prompt部署后看质检分数变化（QualityGate的pass/warn/fail比例）。</p>
+    <p>面试回答策略：先说现状"当前硬编码+人工迭代"，然后展开"如果要正式做A/B测试"：</p>
+    <p>①<strong>Prompt版本管理</strong>——把Prompt从代码抽到配置中心（Nacos/Apollo），按版本号管理，支持灰度发布；②<strong>流量分流</strong>——按用户ID hash分流到不同Prompt版本，QualityGate分别统计两个版本的质检分数；③<strong>统计显著性</strong>——用T检验比较两个版本的pass率，p&lt;0.05才认为有显著差异。</p>
+    <p>当前替代方案：Skill SOP热插拔（10秒TTL热加载）已经实现了<strong>部分Prompt的动态管理</strong>——SOP内容可以通过管理端实时修改，不需要重启。这是Prompt版本管理的轻量版。</p>
+  </div>
+  <div class="interview-tip">💡 A/B测试这题考工程化深度。核心说"当前用Skill热插拔做轻量版"，然后展开完整方案。追问"怎么判断A版比B版好"——回答"T检验 + p值 + 质检pass率"。</div>
+</div>
+
+
+<!-- Q17 -->
+<div class="interview-q">
+  <div class="question">17. 怎么做的数据预处理和数据清洗？</div>
+  <div class="interview-answer">
+    <p>知识库数据预处理流程：<strong>文档上传 → 文本提取 → 分块(300字/overlap=50) → Embedding(text-embedding-v3) → 存入Milvus</strong>。</p>
+    <p>清洗规则：①<strong>格式标准化</strong>——统一UTF-8编码，全角/半角标点统一；②<strong>噪音去除</strong>——去掉页眉页脚、无意义空白字符；③<strong>分块策略</strong>——中文FAQ类文档按300字分块，overlap=50保证上下文连续性，不会切断关键信息。</p>
+    <p>当前<strong>未实现</strong>自动去重（MD5/MinHash）和OCR纠错——因为KB数据是人工编写/审核的FAQ文档，质量可控。如果是爬取/OCR的原始文档，需要加MinHash去重（Jaccard相似度>0.85视为重复）和基于LLM的拼写纠错。</p>
+    <pre class="code"># application.yml KB配置
+ai:
+  rag-top-k: 4              # 检索片段数
+  kb-min-similarity: 0.65   # 相似度阈值
+  kb-chunk-size: 300         # 分块大小
+  kb-chunk-overlap: 50       # 分块重叠
+  rag-rerank-enabled: true   # 开启重排
+  rag-rerank-top-k: 4         # 重排后取4条
+  rag-candidate-count: 16    # 候选池16条</pre>
+  </div>
+  <div class="interview-tip">💡 数据预处理展示你对RAG数据管道的理解。核心说"当前人工FAQ质量可控"，然后展开如果是原始文档怎么做去重/纠错/质量评估。</div>
+</div>
+
+
+<!-- ==================== 第三类：性能优化类 ==================== -->
+<h3>第三类：性能优化类 <span class="difficulty">⭐⭐</span></h3>
+
+
+<!-- Q18 -->
+<div class="interview-q">
+  <div class="question">18. 延迟优化做了哪些措施？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>五个关键措施：</p>
+    <p><strong>1. 问题分类器前置</strong>：qwen2.5-7b-instruct先判断问题难度，简单问题直接走缓存（easy-cache-max-entries=500），不进ReAct循环。大部分FAQ查询在1秒内返回。</p>
+    <p><strong>2. 模型实例缓存</strong>：LlmModelFactory用ConcurrentHashMap缓存模型实例，相同routeSpec不会重复创建——省掉了OpenAiChatModel的初始化开销（包含连接池建立、配置加载等）。</p>
+    <p><strong>3. Rerank候选池压缩</strong>：向量检索先取16条候选（rag-candidate-count=16），Rerank后只取4条（rag-rerank-top-k=4）注入Prompt。减少Prompt长度=减少模型推理时间。</p>
+    <p><strong>4. 质检异步化</strong>：CompletableFuture异步执行，不阻塞主对话流。用户收到答案的同时质检在后台跑。</p>
+    <p><strong>5. 全链路流式</strong>：WebFlux + Reactor，publishOn(Schedulers.parallel())避免阻塞Netty IO线程。当前是全缓冲模式（等完整答案再SSE推送），V2改成增量流式能进一步降低首字延迟。</p>
+  </div>
+  <div class="interview-tip">💡 延迟优化回答要分层次：前置优化（分类器+缓存） + 调用优化（模型缓存+Rerank压缩） + 架构优化（异步质检+流式）。每个都有项目具体数字。</div>
+</div>
+
+
+<!-- Q19 -->
+<div class="interview-q">
+  <div class="question">19. 异步处理在哪些地方使用了？</div>
+  <div class="interview-answer">
+    <p>三个地方：</p>
+    <p><strong>1. WebFlux全链路响应式</strong>：AiController用Flux/Mono，publishOn(Schedulers.parallel())切到并行线程池。SSE推送通过ServerSentEvent异步发送。不阻塞Netty IO线程——这是WebFlux的核心原则。</p>
+    <p><strong>2. 质检异步</strong>：QualityGate用CompletableFuture.supplyAsync()调用质检模型（Qwen 72B），60秒超时。主对话流不等待质检完成——先给用户返回答案，质检在后台跑。如果质检fail + correct-on-fail=true，通过SSE correction事件异步下发纠错答案。</p>
+    <p><strong>3. 模型调用异步</strong>：ReAct循环中模型调用是流式的（OpenAiStreamingChatModel），Reactor的buffer收集完整响应后解析Action。当前是全缓冲模式，V2改成增量流式可以让用户更早看到内容。</p>
+  </div>
+  <div class="interview-tip">💡 异步处理的亮点是"质检不阻塞对话"——这是架构设计的亮点。展示你理解Reactor的线程调度模型和CompletableFuture的异步编排。</div>
+</div>
+
+
+<!-- Q20 -->
+<div class="interview-q">
+  <div class="question">20. 数据库查询是怎么优化的？</div>
+  <div class="interview-answer">
+    <p>数据库层面：用<strong>JPA + Spring Data Repository</strong>（KbDocumentRepository等），主要优化点：</p>
+    <p><strong>1. 查询精简</strong>：工具实现类只查必要字段，不用SELECT *。KbDocViewResponse只包含展示需要的字段。</p>
+    <p><strong>2. 连接池配置</strong>：HikariCP连接池（Spring Boot默认），合理设置maximumPoolSize避免连接泄漏。</p>
+    <p><strong>3. 向量检索优化</strong>：Milvus用HNSW索引（M=16, efConstruction=200），检索速度优于IVF_FLAT。min-similarity=0.65过滤掉低质量结果，减少后续Rerank的处理量。</p>
+    <p><strong>4. Redis缓存</strong>：会话历史(max-messages=12)和简单问题缓存(easy-cache-max-entries=500)存Redis，减少DB查询。Redis作为热数据缓存层。</p>
+  </div>
+  <div class="interview-tip">💡 DB优化回答要点：查询精简 + 连接池 + 向量索引(HNSW) + Redis缓存。追问"Milvus为什么用HNSW"——回答"HNSW是图索引，查询速度O(logN)优于IVF的O(N)"。</div>
+</div>
+
+
+<!-- Q21 -->
+<div class="interview-q">
+  <div class="question">21. 模型推理速度是怎么优化的？</div>
+  <div class="interview-answer">
+    <p>模型推理优化主要是<strong>调用策略优化</strong>（我们不自己部署模型，用的是DashScope/DeepSeek的API）：</p>
+    <p><strong>1. 问题难度分流</strong>：分类器(qwen2.5-7b)判断难度，简单问题走小模型或缓存，不调72B大模型。减少大模型调用量=减少推理延迟。</p>
+    <p><strong>2. Prompt长度控制</strong>：Rerank后只取4条KB片段注入Prompt（rag-rerank-top-k=4），不是16条全部塞入。Prompt越短=推理越快。maxTokens=2000（流式）/4096（阻塞）控制输出长度。</p>
+    <p><strong>3. maxRounds=3限制</strong>：ReAct循环最多3轮，防止模型陷入无限工具调用。每轮都是一次模型推理，3轮就是最坏情况3次调用。</p>
+    <p><strong>4. temperature调低</strong>：流式temp=0.2，阻塞temp=0.3。低temperature减少模型"发散"——生成更聚焦、更短、更快。</p>
+  </div>
+  <div class="interview-tip">💡 这题展示你理解LLM推理的瓶颈——Prompt长度和输出长度。核心说"不自己部署模型，优化在调用策略层面"。追问"如果自己部署怎么做"——回答"vLLM/SGLang + KV Cache + Continuous Batching"。</div>
+</div>
+
+
+<!-- Q22 -->
+<div class="interview-q">
+  <div class="question">22. 前端渲染性能怎么优化？</div>
+  <div class="interview-answer">
+    <p><strong>当前前端是轻量级页面</strong>（admin-web管理端 + 用户端对话界面），不是复杂SPA。优化措施：</p>
+    <p><strong>1. SSE流式推送</strong>：Server-Sent Events实时推送，用户不需要等完整答案。当前是全缓冲模式（答案生成完一次性推送），V2改成增量流式后首字延迟会大幅降低。</p>
+    <p><strong>2. 轻量DOM</strong>：对话界面用最小DOM操作，消息追加用DocumentFragment批量插入，避免逐条触发reflow。</p>
+    <p><strong>3. 资源压缩</strong>：style.css单文件，版本号?v=20260809做缓存失效。没有重型框架（React/Vue），纯HTML+原生JS+CSS。</p>
+    <p>面试回答策略：诚实说"前端不是复杂SPA，优化空间有限"，然后展开"如果是复杂前端，会考虑虚拟滚动（长对话列表）、Web Worker（质检数据可视化）、Service Worker（离线缓存）"。</p>
+  </div>
+  <div class="interview-tip">💡 前端性能这题答到SSE + 轻量DOM就够了。面试官不是考你前端能力，是看你全栈视野。如果项目前端简单，诚实说"不是复杂SPA"。</div>
+</div>
+
+
+<!-- Q23 -->
+<div class="interview-q">
+  <div class="question">23. 冷启动问题是怎么解决的？</div>
+  <div class="interview-answer">
+    <p>冷启动分两类：</p>
+    <p><strong>1. 服务冷启动</strong>：Spring Boot 3.x + Java 21启动时间约15-30秒。优化：开启分层编译（-XX:TieredStopAtLevel=1）、懒加载非核心Bean。Docker镜像用multi-stage build减小体积。</p>
+    <p><strong>2. 知识库冷启动</strong>：新文档入库后Milvus的HNSW索引需要构建，首次检索会慢。优化：后台异步建索引，建完再标记文档为"可用"状态。easy-cache-max-entries=500缓存高频问题，首次回答后缓存命中直接返回。</p>
+    <p><strong>3. 模型实例冷启动</strong>：LlmModelFactory的ConcurrentHashMap缓存——首次调用某routeSpec时创建OpenAiChatModel实例（包含连接池建立），后续命中缓存。首次请求会比后续慢约200-500ms。</p>
+  </div>
+  <div class="interview-tip">💡 冷启动回答分三层：服务/KB/模型。展示你理解每个层面的"首次"开销。追问"怎么消除首次慢"——回答"启动后做预热（warmup）——服务启动后自动发起几个测试请求"。</div>
+</div>
+
+
+<!-- Q24 -->
+<div class="interview-q">
+  <div class="question">24. 网络传输是怎么优化的？</div>
+  <div class="interview-answer">
+    <p><strong>1. SSE代替轮询</strong>：用Server-Sent Events单向推送，比HTTP轮询减少90%无效请求。比WebSocket轻——不需要双向通信，SSE的HTTP协议更简单。</p>
+    <p><strong>2. 响应压缩</strong>：Spring Boot 3.x默认开启gzip压缩，文本响应压缩率约70%。KB片段和模型输出都是文本，压缩效果好。</p>
+    <p><strong>3. 连接复用</strong>：OpenAiChatModel内部用OkHttp连接池，HTTP/2多路复用。LlmModelFactory的ConcurrentHashMap缓存模型实例=连接池复用。</p>
+    <p><strong>4. Rerank减少传输量</strong>：向量检索取16条 → Rerank后只取4条注入Prompt。Prompt从16×300=4800字压缩到4×300=1200字，减少发给模型的Token数=减少网络传输量+推理时间。</p>
+  </div>
+  <div class="interview-tip">💡 网络优化的亮点是"Rerank减少Token传输"——这不只是检索质量优化，也是网络/成本优化。展示你能从多个维度看同一个优化点。</div>
+</div>
+
+
+<!-- Q25 -->
+<div class="interview-q">
+  <div class="question">25. Embedding计算是怎么优化的？</div>
+  <div class="interview-answer">
+    <p>Embedding计算优化主要是<strong>减少计算量</strong>和<strong>缓存复用</strong>：</p>
+    <p><strong>1. 分块策略</strong>：300字/overlap=50，大文档分成多个小片段分别embedding。比整篇文档embedding检索更精确，也方便增量更新——改一个片段只重新embedding那个片段。</p>
+    <p><strong>2. 批量入库</strong>：KnowledgeBaseService批量调用DashScope embedding API，不是逐条调用。减少API调用次数=减少网络开销。</p>
+    <p><strong>3. 增量更新</strong>：文档修改后只重新embedding修改的片段，不是全量重建。KbDocMeta记录每个片段的hash，hash不变就不重新embedding。</p>
+    <p><strong>4. 维度选择</strong>：text-embedding-v3的1024维在精度和计算成本间平衡。1536维（OpenAI text-embedding-3-small）检索精度略高但存储和计算成本高50%。</p>
+  </div>
+  <div class="interview-tip">💡 Embedding优化的核心是"增量更新"——改文档不重建全量，只算改变的片段。这比"批量入库"更能展示工程思维。</div>
+</div>
+
+
+<!-- ==================== 第四类：故障处理类 ==================== -->
+<h3>第四类：故障处理类 <span class="difficulty">⭐⭐⭐</span></h3>
+
+
+<!-- Q26 -->
+<div class="interview-q">
+  <div class="question">26. Agent死循环怎么检测和防止的？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>核心防线：<strong>maxRounds=3硬上限</strong>。ReActAgentService的递归调用executeReActRound()在round > maxRounds时直接走兜底——用当前chatHistory让模型生成Final Answer，不再进入Action循环。这是代码级硬限，不管模型怎么"想"调工具，3轮就是上限。</p>
+    <p>检测机制：每轮日志记录<code>ReAct round {round}/{maxRounds} starting</code>，可以监控到有没有频繁触发3轮兜底的session——这通常是知识库覆盖不够或工具能力不足导致模型反复尝试。</p>
+    <p>防止策略：①maxRounds=3硬限；②工具执行有try-catch，失败时返回错误Observation让模型换路径，不会无限重试同一个失败工具；③done标志位——模型输出Final Answer时done.set(true)，立即终止循环。</p>
+    <pre class="code">// 防死循环核心逻辑
+if (round > maxRounds || done.get()) {
+    return generateFallbackAnswer(chatHistory, route);
+}
+// done标志位在检测到Final Answer时设置
+if (response.contains("Final Answer:")) {
+    done.set(true);
+}</pre>
+  </div>
+  <div class="interview-tip">💡 死循环是Agent面试高频题。回答要点：硬限(maxRounds) + 检测(日志监控) + 防止(done标志/工具错误处理)。不要只说"我们限制了轮数"，要说清楚怎么限、怎么检测、怎么防止。</div>
+</div>
+
+
+<!-- Q27 -->
+<div class="interview-q">
+  <div class="question">27. 模型超时怎么处理？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>超时处理分三层：</p>
+    <p><strong>1. 阻塞模型超时</strong>：LlmModelFactory.blocking(routeSpec, Duration.ofSeconds(60))——问题归一化和质检评分等非实时任务60秒超时。超时后抛出TimeoutException，上层捕获后走降级流程。</p>
+    <p><strong>2. 流式模型降级</strong>：主模型（72B）调用失败/超时时，通过路由列表降级到备用模型（DeepSeek V3.2 → 32B）。这是手写降级逻辑——不是正式熔断器，但能保证服务可用。</p>
+    <p><strong>3. 兜底话术</strong>：所有模型都超时/失败时，返回兜底话术"抱歉，系统暂时繁忙，请稍后重试"，并记录traceId供排查。不会给用户返回空响应或500错误。</p>
+    <pre class="code">// 降级链路
+qwen:qwen2.5-vl-72b-instruct  → (超时) →
+deepseek:deepseek-v3.2          → (超时) →
+qwen:qwen2.5-32b-instruct      → (超时) → 兜底话术</pre>
+  </div>
+  <div class="interview-tip">💡 超时处理回答分三层：单次超时(60s) → 多模型降级 → 兜底话术。展示你理解"每层都有Plan B"的设计思路。追问"为什么不设30秒"——回答"72B模型复杂推理确实需要时间，30秒会误杀正常请求"。</div>
+</div>
+
+
+<!-- Q28 -->
+<div class="interview-q">
+  <div class="question">28. 检索结果不准确怎么办？</div>
+  <div class="interview-answer">
+    <p>检索准确率优化是持续迭代的过程，当前措施：</p>
+    <p><strong>1. 双重过滤</strong>：向量检索cosine ≥ 0.65（min-similarity）过滤掉低相关片段 + Rerank（gte-rerank）重排。候选池16条 → 重排后取4条，精度显著提升。</p>
+    <p><strong>2. 问题归一化</strong>：用户口语化的问题先经qwen2.5-14b归一化成标准问句再检索。比如"我那个矿机不转了咋办"归一化成"矿机离线/算力异常排查流程"，匹配KB更准。</p>
+    <p><strong>3. Skill SOP注入</strong>：关键词+向量两层匹配命中Skill后，把SOP流程注入ReAct Prompt——Agent按流程走，不会因为检索不到片段就乱答。</p>
+    <p><strong>4. 质检纠错闭环</strong>：QualityGate评分<0.6时，correct-on-fail=true触发基于KB上下文重答，通过SSE correction事件下发纠错答案。即使第一次检索/回答不准，也有自动纠错机制。</p>
+  </div>
+  <div class="interview-tip">💡 检索准确率回答要点：双重过滤(0.65+Rerank) + 问题归一化 + SOP注入 + 质检纠错闭环。展示你从"检索前→检索中→检索后"全链路优化。</div>
+</div>
+
+
+<!-- Q29 -->
+<div class="interview-q">
+  <div class="question">29. 知识库数据不一致怎么处理？</div>
+  <div class="interview-answer">
+    <p>数据不一致的典型场景：同一问题在KB不同文档中有不同答案（如费率更新了旧文档还在）。</p>
+    <p>当前措施：<strong>KbDocMeta记录文档版本</strong>，管理端更新文档时自动失效旧版本。Milvus中旧片段通过delete标记删除，新片段重新embedding入库。但当前没有<strong>自动冲突检测</strong>——靠人工审核。</p>
+    <p>面试回答策略：先说现状"靠版本管理+人工审核"，再展开"如果要自动检测"：</p>
+    <p>①<strong>矛盾检测</strong>——新文档入库时，用LLM判断和已有文档是否有矛盾（"费率从1%改成0.5%" vs "费率1%"）；②<strong>时效标记</strong>——文档加effective_date字段，检索时过滤过期文档；③<strong>权威性排序</strong>——官方公告 > 操作手册 > FAQ，矛盾时取权威性高的。</p>
+  </div>
+  <div class="interview-tip">💡 数据一致性考的是你对KB治理的理解。核心说"当前靠版本管理+人工审核"，然后展开自动检测方案。面试官想看你知道这是问题，有方案，不是"我们没这个问题"。</div>
+</div>
+
+
+<!-- Q30 -->
+<div class="interview-q">
+  <div class="question">30. 数据丢失和恢复策略是什么？</div>
+  <div class="interview-answer">
+    <p>三个层面的数据持久化：</p>
+    <p><strong>1. 会话数据</strong>：Redis存储会话历史（max-messages=12），Redis配置了AOF持久化+RDB快照。Redis宕机最多丢失最近几秒的会话——不影响服务可用性，用户重新发消息会创建新会话。</p>
+    <p><strong>2. 知识库数据</strong>：Milvus向量库存KB片段 + MySQL存KbDocument元数据。Milvus配置副本数(replica)保证可用性。MySQL做主从复制+定时备份。</p>
+    <p><strong>3. 质检数据</strong>：QualityGate的评分记录持久化到MySQL（RagEvalSummary表），用于分析质检趋势。这部分数据即使丢失也不影响对话功能。</p>
+    <p><strong>恢复策略</strong>：Docker + K8s部署，Pod挂掉自动重启。数据层Redis/Milvus/MySQL各有持久化机制。最坏情况——全部数据丢失——KB文档源文件还在管理端，可以重新embedding入库。</p>
+  </div>
+  <div class="interview-tip">💡 数据恢复回答分三层：会话/KB/质检。核心是"每层都有持久化+源数据还在管理端可以重建"。展示你理解不同数据的重要性等级——会话丢了不致命，KB丢了才致命。</div>
+</div>
+
+
+<!-- Q31 -->
+<div class="interview-q">
+  <div class="question">31. 模型输出格式异常怎么处理？</div>
+  <div class="interview-answer">
+    <p>ReAct循环中对模型输出格式有<strong>解析容错</strong>：</p>
+    <p><strong>1. Action行解析</strong>：模型输出不一定严格按"Action: toolName
+Args: json"格式。解析器做了容错——用正则匹配Action行，提取工具名和参数。解析失败时返回错误Observation："无法解析Action，请按格式输出"，让模型下一轮修正。</p>
+    <p><strong>2. Final Answer检测</strong>：检测"Final Answer:"关键字判断循环是否结束。如果模型3轮都没输出Final Answer，走兜底generateFallbackAnswer()——直接让模型基于chatHistory生成答案，不再要求ReAct格式。</p>
+    <p><strong>3. 质检JSON解析</strong>：QualityJudge解析模型返回的JSON评分，用tolerant JSON parsing（jsonParse helper）处理模型常见的格式错误（多余逗号、引号缺失等）。解析失败时重试一次，仍失败给默认分数。</p>
+  </div>
+  <div class="interview-tip">💡 格式异常处理的核心是"容错解析 + 错误反馈 + 兜底"。不要说"我们要求模型严格按格式输出"——LLM不会100%遵守格式。展示你理解模型输出的不确定性。</div>
+</div>
+
+
+<!-- Q32 -->
+<div class="interview-q">
+  <div class="question">32. 敏感信息泄露怎么防止？</div>
+  <div class="interview-answer">
+    <p>三个层面防护：</p>
+    <p><strong>1. Prompt层面</strong>：System Prompt明确禁止输出敏感信息——不返回API密钥、数据库密码、用户隐私数据。模型遵守率不是100%，所以还有后续防线。</p>
+    <p><strong>2. 工具权限</strong>：工具实现类做<strong>字段过滤</strong>——返回给模型的数据不包含密码、哈希、token等敏感字段。KbDocViewResponse只含展示字段。RateLimitFilter的限流key不含完整sessionId（做了截断/hash处理）。</p>
+    <p><strong>3. 日志脱敏</strong>：日志中不记录完整请求体/响应体。TraceWebFilter只记录traceId和路径，不记录参数。质检日志的问题摘要做了truncate（如truncate(question, 50)）。</p>
+    <p><strong>4. 配置安全</strong>：application.yml中的密钥/密码用环境变量注入（${QWEN_API_KEY}），不硬编码。Docker/K8s用Secret管理。</p>
+  </div>
+  <div class="interview-tip">💡 敏感信息防护分四层：Prompt/工具/日志/配置。展示你理解"不依赖单一防线"的纵深防御思路。追问"Prompt注入怎么办"——回答"详见第17章Agent安全"。</div>
+</div>
+
+
+<!-- Q33 -->
+<div class="interview-q">
+  <div class="question">33. 系统容量规划是怎么做的？</div>
+  <div class="interview-answer">
+    <p>容量规划基于<strong>限流参数</strong>和<strong>资源监控</strong>：</p>
+    <p><strong>1. 限流基线</strong>：RateLimitFilter配置——用户级10次/分钟，全局并发100 QPS。超过返回429。这些参数是容量规划的硬约束——系统最多服务100个并发用户。</p>
+    <p><strong>2. 资源估算</strong>：单次ReAct对话平均3轮 × 每轮1次模型调用 = 3次API调用。100 QPS × 3 = 300次模型调用/秒。DashScope API按调用计费，月成本可估。Redis/Milvus/MySQL的内存和连接数按100 QPS估算。</p>
+    <p><strong>3. K8s弹性</strong>：Docker + K8s(Rancher/阿里云)部署，HPA按CPU/内存自动扩缩容。流量高峰自动扩Pod，低峰缩。版本tag(v2/v3)而非latest保证镜像可追溯。</p>
+    <p><strong>4. 容量上限</strong>：RateLimitFilter的MAX_TRACKED_KEYS=10,000——最多追踪1万个用户/会话的限流窗口。超过按LRU逐出。这是内存安全防线。</p>
+  </div>
+  <div class="interview-tip">💡 容量规划回答要点：限流基线(10次/分钟+100QPS) → 资源估算(3次调用/QPS) → K8s弹性(HPA) → 内存安全(MAX_TRACKED_KEYS)。展示你从"软限流→硬容量→弹性扩缩"全链路理解。</div>
+</div>
+
+
+<!-- ==================== 第五类：工程质量类 ==================== -->
+<h3>第五类：工程质量类 <span class="difficulty">⭐⭐</span></h3>
+
+
+<!-- Q34 -->
+<div class="interview-q">
+  <div class="question">34. 怎么做的测试？覆盖率多少？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>测试分三层：</p>
+    <p><strong>1. 单元测试</strong>：JUnit 5 + Mockito。核心业务逻辑（ReActAgentService的Action解析、QualityGate的评分判定、LlmModelFactory的路由解析、RateLimitFilter的限流计算）有单测覆盖。Mock掉模型API调用，测的是业务逻辑分支。</p>
+    <p><strong>2. 集成测试</strong>：Spring Boot Test + Testcontainers。用真实Redis/Milvus Docker容器跑端到端流程——上传文档→embedding→检索→ReAct对话→质检。验证组件间集成正确性。</p>
+    <p><strong>3. 质检数据回归</strong>：QualityGate的评分记录持久化到MySQL（RagEvalSummary表），可以按时间统计pass/warn/fail比例——这本身就是一种"生产环境测试"，持续监控回答质量。</p>
+    <p>覆盖率：核心模块约70-80%。不追求100%——工具实现类的getter/setter不测，精力放在业务逻辑分支和边界条件。</p>
+  </div>
+  <div class="interview-tip">💡 测试回答分三层：单测(逻辑分支) + 集成(Testcontainers) + 生产质检(持续监控)。不追求100%覆盖率——面试官觉得"100%覆盖"要么在吹牛，要么在测垃圾。</div>
+</div>
+
+
+<!-- Q35 -->
+<div class="interview-q">
+  <div class="question">35. 日志系统怎么设计的？</div>
+  <div class="interview-answer">
+    <p>日志设计原则：<strong>结构化 + 链路追踪 + 关键节点</strong>。</p>
+    <p><strong>1. 框架</strong>：SLF4J + Logback（Spring Boot默认）。Lombok @Slf4j注解简化。</p>
+    <p><strong>2. 链路追踪</strong>：TraceWebFilter注入traceId到MDC，所有日志自动携带<code>[traceId=xxx]</code>。排查问题时用traceId一搜就能找到完整链路——从HTTP入口到ReAct每轮到质检。</p>
+    <p><strong>3. 关键节点日志</strong>：①ReAct每轮开始/结束+Action行；②质检评分结果+分数+耗时ms；③模型路由切换；④限流429触发；⑤工具调用失败。都是info级别。debug级别记录详细请求/响应体（生产关闭）。</p>
+    <p><strong>4. 日志脱敏</strong>：不记录完整用户消息（truncate到50字），不记录API密钥/密码。质检日志的问题摘要也做了截断。</p>
+  </div>
+  <div class="interview-tip">💡 日志系统设计要点：结构化(MDC+traceId) + 关键节点 + 脱敏。展示你理解"日志是给未来的自己排查问题用的"——不是越多越好，是关键节点够用。</div>
+</div>
+
+
+<!-- Q36 -->
+<div class="interview-q">
+  <div class="question">36. 代码质量是怎么保证的？</div>
+  <div class="interview-answer">
+    <p>四个手段：</p>
+    <p><strong>1. 分层架构</strong>：controller → service → react/quality/kb/provider → config。每层职责清晰——controller只管HTTP，service编排业务，react管Agent循环，quality管质检，provider管模型调用。工具实现类继承AbstractWorkflowTool统一接口。</p>
+    <p><strong>2. 配置外置</strong>：所有可变参数在application.yml（maxRounds、min-similarity、chunk-size、限流参数等），不硬编码。改参数不需要改代码。AiProperties/QualityProperties等@ConfigurationProperties统一管理。</p>
+    <p><strong>3. Lombok + 建造者模式</strong>：@Data/@Builder/@Slf4j减少样板代码。QualityJudge.JudgeResult用builder构建。代码可读性好。</p>
+    <p><strong>4. 代码审查 + 质检数据回流</strong>：PR review + QualityGate的质检分数趋势——如果某次改动后质检pass率下降，说明改动引入了问题。</p>
+  </div>
+  <div class="interview-tip">💡 代码质量回答要点：分层 + 配置外置 + Lombok + 代码审查。不要说"我们写了很规范的代码"——要给出具体手段。</div>
+</div>
+
+
+<!-- Q37 -->
+<div class="interview-q">
+  <div class="question">37. 文档是怎么维护的？</div>
+  <div class="interview-answer">
+    <p>两类文档：</p>
+    <p><strong>1. 知识库文档（KB）</strong>：矿池FAQ文档通过管理端上传，KbDocument表管理。文档有版本管理——更新时旧版本失效。Skill SOP文档是Markdown+YAML frontmatter格式，通过mall-admin REST API上传，10秒TTL热加载生效。</p>
+    <p><strong>2. 技术文档</strong>：接口文档用HTML格式（如export-api-changes.html），随代码一起在git仓库维护。README记录项目架构和部署说明。Javadoc注释核心类和方法。</p>
+    <p>当前<strong>没有自动化文档生成</strong>（如Swagger/OpenAPI）——V2规划引入springdoc-openapi自动生成接口文档。</p>
+  </div>
+  <div class="interview-tip">💡 文档维护回答要点：KB文档(管理端+版本管理) + 技术文档(git+HTML) + 自动化规划(springdoc)。展示你理解"文档不是写完就放着"——要随代码迭代。</div>
+</div>
+
+
+<!-- Q38 -->
+<div class="interview-q">
+  <div class="question">38. 怎么做的版本管理和发布管理？</div>
+  <div class="interview-answer">
+    <p><strong>1. Git版本管理</strong>：dev分支开发，main分支发布。功能分支命名规范如<code>dev/004-feature-optimization</code>。PR review后合并。</p>
+    <p><strong>2. Docker镜像版本</strong>：用版本tag（v2, v3...）而非latest。K8s拉取指定tag的镜像——如果用latest，K8s不会自动拉新镜像（缓存问题）。版本tag保证可追溯——线上出问题知道是哪个版本。</p>
+    <p><strong>3. K8s发布</strong>：Rancher/阿里云K8s。Deployment更新策略用RollingUpdate——新Pod起来确认健康检查通过后才杀旧Pod，保证零停机。出问题可以kubectl rollout undo回滚到上一个版本。</p>
+    <p><strong>4. Skill热更新</strong>：Skill SOP文档通过管理端上传，10秒TTL热加载，不需要重新部署服务。这是发布管理的轻量补充——小修改不需要走完整CI/CD流程。</p>
+  </div>
+  <div class="interview-tip">💡 版本管理回答要点：Git分支 + Docker tag(非latest) + K8s RollingUpdate + Skill热更新。亮点是"Skill热更新不走CI/CD"——小修改10秒生效，展示你理解不同变更用不同的发布策略。</div>
+</div>
+
+
+<!-- Q39 -->
+<div class="interview-q">
+  <div class="question">39. 怎么做技术债务管理？</div>
+  <div class="interview-answer">
+    <p>当前的技术债务和偿还计划：</p>
+    <p><strong>1. 已知债务</strong>：①流式全缓冲（V2改增量流式）；②无正式熔断器（V2引Resilience4j）；③无会话摘要压缩（max-messages=12截断）；④无多租户隔离；⑤ReAct Prompt硬编码（V2抽到配置中心）。</p>
+    <p><strong>2. 管理策略</strong>：技术债务登记在issue tracker，标注优先级。每次迭代留20%时间偿还债务——不是等功能开发完再还，是<strong>持续偿还</strong>。Skill热插拔就是偿还"Prompt不可变"债务的第一步。</p>
+    <p><strong>3. 防止新债</strong>：新功能开发前评估——是否会引入新的技术债？比如引入新供应商时考虑多租户适配。Code review关注是否在"快速实现"中留下隐患。</p>
+  </div>
+  <div class="interview-tip">💡 技术债务回答要点：诚实列出已知债务 + 管理策略(20%时间持续偿还) + 防新债。面试官最反感"我们没有技术债"——每个项目都有，关键是你知道在哪、有计划还。</div>
+</div>
+
+
+<!-- Q40 -->
+<div class="interview-q">
+  <div class="question">40. 如何做的性能基准测试？</div>
+  <div class="interview-answer">
+    <p>当前性能基准测试方式：</p>
+    <p><strong>1. QualityGate质检数据</strong>：质检记录持久化到MySQL（RagEvalSummary表），可以统计pass/warn/fail比例、平均分数、各维度得分趋势——这是生产环境的"质量基准"。</p>
+    <p><strong>2. 限流参数验证</strong>：RateLimitFilter的100 QPS上限 + 用户级10次/分钟——通过压测工具（JMeter/wrk）验证在达到限流阈值时是否正确返回429，系统是否稳定。</p>
+    <p><strong>3. 端到端延迟</strong>：TraceWebFilter的traceId + 日志时间戳可以计算端到端延迟——从HTTP入口到SSE响应。简单问题（走缓存）约1秒，复杂问题（ReAct 3轮+质检）约5-15秒。</p>
+    <p><strong>当前未引入</strong>正式的APM系统（如SkyWalking/Prometheus+Grafana）做实时性能监控——V2规划接入。</p>
+  </div>
+  <div class="interview-tip">💡 性能基准回答要点：质检数据(质量基准) + 限流验证(容量基准) + 端到端延迟(日志时间戳)。展示你理解"性能不只有延迟，还有质量和容量"。</div>
+</div>
+
+'
+<!-- Q41 -->
+<div class="interview-q">
+  <div class="question">41. 怎么做的配置管理？</div>
+  <div class="interview-answer">
+    <p>配置管理分两层：</p>
+    <p><strong>1. 静态配置</strong>：application.yml + @ConfigurationProperties。AiProperties管理Agent参数（maxRounds=3、min-similarity=0.65、chunk-size=300等），QwenProperties/DeepSeekProperties管理模型配置，QualityProperties管理质检参数（sample-rate=1.0、correct-on-fail=true等）。所有参数可变，改yml不改正代码。</p>
+    <p><strong>2. 密钥管理</strong>：API密钥/数据库密码/Redis密码用环境变量注入（${QWEN_API_KEY}），不硬编码。K8s用Secret管理，Docker用env_file。application.yml中只写${ENV_VAR}占位符。</p>
+    <p><strong>3. 动态配置</strong>：Skill SOP通过管理端实时上传，10秒TTL热加载——这是"动态配置"的轻量版。当前未引入配置中心（Nacos/Apollo），V2规划引入后可以热更新application.yml参数。</p>
+  </div>
+  <div class="interview-tip">💡 配置管理回答要点：静态(yml+Properties) + 密钥(环境变量+Secret) + 动态(Skill热加载+V2配置中心)。展示你理解"不同配置有不同的变更频率和方式"。</div>
+</div>
+
+
+<!-- Q42 -->
+<div class="interview-q">
+  <div class="question">42. 团队协作和知识共享是怎么做的？</div>
+  <div class="interview-answer">
+    <p><strong>1. Git协作</strong>：feature分支开发 → PR review → 合并dev → 定期合并main发布。PR要求写清楚改动内容和影响范围。</p>
+    <p><strong>2. 知识共享</strong>：①KB知识库本身就是团队知识沉淀——矿池FAQ文档集中管理，不是散落在个人手里；②Skill SOP文档让业务流程显性化——新人通过读SOP就能上手处理常见问题；③质检数据（pass/warn/fail趋势）团队可见，共同关注回答质量。</p>
+    <p><strong>3. 代码可读性</strong>：分层清晰 + Lombok减少样板 + 关键逻辑有Javadoc。新人接手成本低——看controller知道入口，看ReActAgentService知道Agent循环，看application.yml知道所有参数。</p>
+  </div>
+  <div class="interview-tip">💡 团队协作回答要点：Git流程 + KB知识沉淀 + Skill SOP显性化 + 代码可读性。亮点是"KB和Skill本身就是知识管理工具"——这是AI Agent项目特有的知识共享方式。</div>
+</div>
+
+<!-- ==================== 第六类：业务理解类 ==================== -->
+<h3>第六类：业务理解类 <span class="difficulty">&#11088;</span></h3>
+
+<!-- Q43 -->
+<div class="interview-q">
+  <div class="question">43. 你的系统解决了什么业务问题？</div>
+  <div class="interview-answer">
+    <p>核心业务问题：<strong>矿池客服人工成本高 + 响应慢 + 质量不稳定</strong>。</p>
+    <p>矿池用户（矿工/大客户）的问题高度集中在：算力查询、订单状态、退款流程、费率计算、矿机异常排查等。这些问题有大量重复——同一个"怎么退款"一天可能被问几十遍。人工客服重复回答效率低，且夜间无人值守。</p>
+    <p>mall-ai解决了三个痛点：①<strong>7x24自动回复</strong>——ReAct Agent + 29个工具 + KB知识库覆盖80%常见问题；②<strong>响应速度</strong>——简单问题1秒内返回（缓存），复杂问题5-15秒（ReAct 3轮）；③<strong>质量一致</strong>——质检闭环保证每次回答都经过5维度评分，不合格自动纠错。</p>
+  </div>
+  <div class="interview-tip">&#128161; 业务问题回答要落地——具体说矿池客服的痛点（重复/夜间/质量不稳定），不要说"提升用户体验"这种空话。</div>
+</div>
+
+<!-- Q44 -->
+<div class="interview-q">
+  <div class="question">44. 用户反馈怎么样？怎么收集和处理的？</div>
+  <div class="interview-answer">
+    <p>反馈收集两个渠道：</p>
+    <p><strong>1. 质检数据回流</strong>：QualityGate的5维度评分本身就是自动化的用户反馈代理。pass率下降说明回答质量出了问题。fail + correct-on-fail触发自动纠错。</p>
+    <p><strong>2. 人工抽检 + 用户举报</strong>：客服团队抽检AI对话记录，用户可以通过"回答不满意"按钮反馈。人工核实后更新KB或Skill SOP。</p>
+    <p>处理流程：反馈 -> 分类（KB缺失/Prompt不够好/工具能力不足/模型能力不足）-> 对应修复 -> 验证（质检pass率回升）-> 上线。</p>
+  </div>
+  <div class="interview-tip">&#128161; 用户反馈回答要点：质检数据(自动收集) + 人工抽检(人工收集) + 处理流程。亮点是"质检本身就是反馈收集机制"。</div>
+</div>
+
+<!-- Q45 -->
+<div class="interview-q">
+  <div class="question">45. 你觉得AI Agent在企业中的价值是什么？</div>
+  <div class="interview-answer">
+    <p>三个层面的价值：</p>
+    <p><strong>1. 降本增效</strong>：重复性工作自动化。80%的问题是重复FAQ，Agent处理掉，人工聚焦20%复杂case。不是"取代人"而是<strong>释放人去做更有价值的事</strong>。</p>
+    <p><strong>2. 服务可及性</strong>：7x24覆盖 + 一致性质量。人工客服有情绪波动、知识盲区、夜班空缺。Agent不存在这些问题。</p>
+    <p><strong>3. 知识沉淀</strong>：Agent的KB和Skill SOP本身就是企业的<strong>知识资产</strong>。以前客服经验在人脑子里，离职了就带走了。现在沉淀在系统里，越用越完善。</p>
+    <p>但要诚实——Agent不是万能的。复杂情感沟通、跨部门协调、创造性解决方案，Agent目前做不好。Agent的最佳定位是<strong>处理高频标准化任务，人工处理低频复杂任务</strong>。</p>
+  </div>
+  <div class="interview-tip">&#128161; 三个价值：降本/可及性/知识沉淀。最后加"Agent不是万能的"展示理性——面试官反感"AI万能论"。</div>
+</div>
+
+<!-- Q46 -->
+<div class="interview-q">
+  <div class="question">46. 和竞品相比你们的优势是什么？</div>
+  <div class="interview-answer">
+    <p>三个差异化优势：</p>
+    <p><strong>1. 行业垂直深度</strong>：29个工具覆盖矿池特有场景（算力/订单/退款/费率/矿机），通用竞品没有这些工具。KB是矿池FAQ文档，通用竞品没有这个领域知识。</p>
+    <p><strong>2. 质检闭环</strong>：LLM-as-Judge 5维度评分 + correct-on-fail自动纠错。很多竞品是"一次性回答"——答完就完了，不管对不对。我们有质量门禁和纠错机制。</p>
+    <p><strong>3. Skill热插拔</strong>：业务流程变更不需要改代码重新部署——管理端上传Markdown SOP，10秒生效。竞品改流程通常需要重新训练模型或改代码。</p>
+  </div>
+  <div class="interview-tip">&#128161; 竞品优势回答要点：垂直深度(29工具+矿池KB) + 质检闭环(5维度+纠错) + Skill热插拔。不要泛泛说"我们更智能"。</div>
+</div>
+
+<!-- Q47 -->
+<div class="interview-q">
+  <div class="question">47. 下一步的技术规划是什么？</div>
+  <div class="interview-answer">
+    <p><strong>短期（1-3个月）</strong>：①全缓冲改增量流式，降低首字延迟；②引入Resilience4j熔断器，完善三状态熔断+自动恢复探测；③接入SkyWalking/Prometheus做实时性能监控。</p>
+    <p><strong>中期（3-6个月）</strong>：①会话记忆增强——摘要+向量检索混合记忆；②GraphRAG——知识图谱+向量混合检索；③多租户支持——按租户隔离KB和工具。</p>
+    <p><strong>长期（6-12个月）</strong>：①多Agent协作——检索Agent+分析Agent+报告Agent编排；②A/B测试框架——Prompt版本管理+流量分流+统计显著性检验；③多模态——KB图片向量化接入CLIP。</p>
+  </div>
+  <div class="interview-tip">&#128161; 技术规划分短/中/长期，每个都联系到当前的"技术债务"。展示你不是在空想——每个规划都在解决已知问题。</div>
+</div>
+
+<!-- Q48 -->
+<div class="interview-q">
+  <div class="question">48. 你在项目中的角色是什么？最大的贡献是什么？</div>
+  <div class="interview-answer">
+    <p><strong>角色</strong>：AI Agent开发工程师（4年Java后端转AI Agent），负责Agent核心逻辑、RAG检索链路、质检闭环、Skill热插拔系统。从0到1搭建了Agent对话+质检+管理端完整链路。</p>
+    <p><strong>最大贡献</strong>：</p>
+    <p>①<strong>手写ReAct循环</strong>——用Java+langchain4j手写可控ReAct引擎，maxRounds=3硬限+工具执行容错+兜底机制，解决了Agent死循环和空响应问题。</p>
+    <p>②<strong>质检纠错闭环</strong>——设计LLM-as-Judge 5维度评分 + correct-on-fail基于KB重答 + SSE correction事件透明下发的完整闭环。</p>
+    <p>③<strong>Skill热插拔</strong>——设计mall-admin REST API + 10秒TTL热加载 + 关键词+向量两层匹配 + SOP注入ReAct的完整方案。业务流程变更从"改代码部署"变成"管理端上传Markdown"。</p>
+  </div>
+  <div class="interview-tip">&#128161; 三个亮点对应三个独创性：ReAct引擎(架构) + 质检闭环(质量) + Skill热插拔(效率)。</div>
+</div>
+
+<!-- Q49 -->
+<div class="interview-q">
+  <div class="question">49. 项目中遇到的最大挑战是什么？怎么解决的？ <span class="tag tag-hot">高频</span></div>
+  <div class="interview-answer">
+    <p>最大挑战：<strong>流式输出和质检纠错的冲突</strong>。</p>
+    <p>问题：用户收到SSE流式推送的答案后，质检才发现答案不合格（score&lt;0.6）。答案已经发给用户了，怎么纠错？</p>
+    <p>解决过程：第一版方案是"质检不阻塞流式推送，纠错通过SSE correction事件下发"——用户先看到第一次答案（可能不准），然后看到纠错后的答案。体验不够好——等于承认"第一次答错了"。</p>
+    <p>最终方案：<strong>全缓冲模式</strong>。ReAct循环完整跑完后先做质检，质检pass直接SSE推送；质检fail且correct-on-fail=true时，先推送纠错后的版本。用户只看到一个答案。代价是首字延迟变高（要等完整ReAct+质检），但答案质量有保障。这是<strong>质量优先于速度</strong>的设计选择。V2计划改成增量流式+双段纠错来兼顾延迟和质量。</p>
+  </div>
+  <div class="interview-tip">&#128161; 最大挑战回答要点：具体的问题(流式和质检冲突) + 尝试的方案(SSE correction) + 最终方案(全缓冲+质检前置) + 设计权衡(质量vs速度)。</div>
+</div>
+
+<!-- Q50 -->
+<div class="interview-q">
+  <div class="question">50. 这个项目的ROI是怎么计算的？</div>
+  <div class="interview-answer">
+    <p>ROI计算分成本侧和价值侧：</p>
+    <p><strong>成本侧</strong>：①开发成本——1人x3个月；②API成本——DashScope/DeepSeek按Token计费，日均调用量x单价；③基础设施成本——K8s+Redis+Milvus+MySQL月租。</p>
+    <p><strong>价值侧</strong>：①人工客服工时节省——日均AI处理对话数 x 单次人工成本 x 365天；②夜间覆盖——从0到100%，避免夜间用户流失；③质检一致性——减少人工质检工时。</p>
+    <p>简化计算：假设日均处理1000次对话，人工单次成本5元，AI单次API成本0.1元。日节省 = 1000 x (5-0.1) = 4900元，年节省约180万。开发+基础设施年成本约20-30万。ROI约6倍。</p>
+  </div>
+  <div class="interview-tip">&#128161; ROI回答要点：成本侧(开发+API+基础设施) + 价值侧(人工节省+夜间覆盖) + 简化计算。数字面试前根据实际数据调整。</div>
+</div>
+
+
+<!-- ==================== 第七类：基础知识追问 ==================== -->
+<h3>第七类：基础知识追问 <span class="difficulty">&#11088;</span></h3>
+
+<!-- Q51 -->
+<div class="interview-q">
+  <div class="question">51. Embedding模型是怎么训练的？对比学习怎么做的？</div>
+  <div class="interview-answer">
+    <p>Embedding模型训练的核心是<strong>对比学习（Contrastive Learning）</strong>：</p>
+    <p><strong>1. 训练目标</strong>：让语义相似的文本对在向量空间中距离近，不相似的对距离远。损失函数用InfoNCE：让正样本对相似度尽可能高，负样本对相似度尽可能低。</p>
+    <p><strong>2. 正样本构造</strong>：①同一文档不同段落；②问答对（问题和答案互为正样本）；③数据增强——同义词替换/回译。text-embedding-v3用了大量中文问答对训练，所以中文FAQ检索效果好。</p>
+    <p><strong>3. 负样本构造</strong>：①Batch内负采样——同batch其他样本作为负样本；②困难负样本——和正样本主题相关但答案不同的样本（如"怎么改密码" vs "密码忘了怎么办"），让模型学细微差异。困难负样本比随机负样本效果显著提升。</p>
+    <p>我们的项目不自己训练embedding——直接用DashScope text-embedding-v3（1024维），已在海量中文语料上预训练好。</p>
+  </div>
+  <div class="interview-tip">&#128161; 回答要点：对比学习 + InfoNCE损失 + 正负样本构造（困难负采样是亮点）。追问"为什么不自己训练"——"预训练模型效果够用+需要大量标注数据+算力成本"。</div>
+</div>
+
+<!-- Q52 -->
+<div class="interview-q">
+  <div class="question">52. Prompt Engineering有哪些关键技巧？</div>
+  <div class="interview-answer">
+    <p>结合项目实践的Prompt技巧：</p>
+    <p><strong>1. 结构化Prompt</strong>：ReAct Prompt用硬编码text block，包含角色定义、工具列表、输出格式、Few-shot示例。结构清晰——System Prompt + ReAct格式说明 + 工具描述 + 历史 + 当前问题。</p>
+    <p><strong>2. 输出格式约束</strong>：明确要求"Thought: ...
+Action: toolName
+Args: {...}"格式。LLM不100%遵守，所以解析器要容错。但格式约束越明确，模型遵守率越高。</p>
+    <p><strong>3. Few-shot示例</strong>：在Prompt中给1-2个ReAct对话示例，模型更容易理解"思考->行动->观察->答案"循环。比纯文字描述有效。</p>
+    <p><strong>4. Skill SOP注入</strong>：命中Skill后把SOP流程注入Prompt——"处理退款时按以下步骤：1.验证订单->2.检查退款条件->3.执行退款->4.通知用户"。这是<strong>流程约束Prompt</strong>——让Agent按SOP走，不自由发挥。</p>
+    <p><strong>5. 温度控制</strong>：流式temp=0.2（低发散，适合客服回答），阻塞temp=0.3（稍高，适合问题归一化和质检评分）。温度是Prompt Engineering的"调节旋钮"。</p>
+  </div>
+  <div class="interview-tip">&#128161; 回答要点：结构化 + 格式约束 + Few-shot + SOP注入 + 温度控制。亮点是"SOP注入"——项目特有的Prompt技巧，不是通用八股。</div>
+</div>
+
+<!-- ==================== 总结 ==================== -->
+<div class="note">
+  <h3>复习要点</h3>
+  <ul>
+    <li><strong>架构设计类：</strong>手写ReAct(maxRounds=3) + 模型路由(LlmModelFactory) + 多模型降级 + 工具注册表(29工具8分类)</li>
+    <li><strong>技术实现类：</strong>Milvus(1024维/HNSW) + 质检(Qwen 72B/5维度/0.6阈值) + TraceWebFilter + 异步(CompletableFuture+Reactor)</li>
+    <li><strong>性能优化类：</strong>分类器前置 + 模型实例缓存 + Rerank(16->4) + 质检异步 + 流式</li>
+    <li><strong>故障处理类：</strong>maxRounds硬限 + 多模型降级 + correct-on-fail纠错 + 日志脱敏 + 429限流</li>
+    <li><strong>工程质量类：</strong>分层架构 + 配置外置 + Docker tag + K8s RollingUpdate + Skill热更新</li>
+    <li><strong>业务理解类：</strong>矿池客服7x24 + 质检一致性 + Skill知识沉淀 + ROI约6倍</li>
+    <li><strong>诚实标注：</strong>多租户/知识图谱/A/B测试/会话摘要/熔断器 = 当前未实现，V2规划</li>
+  </ul>
+</div>
+
+<!-- ==================== 章节导航 ==================== -->
+<div class="chapter-nav">
+  <a href="17-agent-security.html" class="prev">&#8592; Agent安全</a>
+  <a href="index.html" class="next">返回首页 &#8594;</a>
+</div>
+
+</main>
+
+<script>
+(function(){
+  var btn = document.getElementById("sidebarToggle");
+  var body = document.body;
+  try { if(localStorage.getItem("sb")=="0") body.classList.add("sidebar-collapsed"); } catch(e){}
+  function update(){ btn.textContent = body.classList.contains("sidebar-collapsed") ? "▶" : "◀"; }
+  btn.addEventListener("click", function(){
+    body.classList.toggle("sidebar-collapsed");
+    try { localStorage.setItem("sb", body.classList.contains("sidebar-collapsed")?"0":"1"); } catch(e){}
+    update();
+  });
+  update();
+})();
+</script>
+</body>
+</html>
