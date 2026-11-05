@@ -44,368 +44,376 @@
 
 <div class="chapter-header">
   <span class="chapter-num">第19章</span>
-  <h2>项目经验：AntClaw LLM开放平台</h2>
-  <div class="goal"><strong>学习目标：</strong>把AntClaw（基于OpenClaw改造的LLM开放平台+智能体产品线，12个子项目/4+1数据库/主库175张表）包装成面试可讲述的第二项目。包含：一句话定位、STAR讲述稿、架构分层、4条核心链路深讲、10道追问Q&A、优点与不足、技术新旧评估。所有数字与源码核实一致，未实现的功能诚实标注。</div>
+  <h2>项目经验：AntClaw LLM开放平台（面试复习版）</h2>
+  <div class="goal"><strong>学习目标：</strong>把AntClaw（SophGo的LLM开放平台+OpenClaw OEM智能体产品线）包装成面试第二个项目。本章按<strong>复习场景</strong>组织：面试前5分钟看速记卡，30分钟看追问Q&amp;A的口语原话，2小时通读全章。每个答案都给<strong>面试原话</strong>（第一人称可直接背）和<strong>追问预判</strong>（面试官下一刀砍哪里）。所有数字与源码核实一致。</div>
 </div>
 
-<div class="one-liner">大平台项目的面试讲法：不讲全，讲一条链——把"智能体从订阅到运行到计费"这一条链讲透，比罗列12个子项目有力得多。</div>
+<div class="one-liner">大平台项目不讲全，讲一条链——"智能体从订阅到运行到计费"这一条链讲透，比罗列12个子项目有力得多。</div>
 
-<!-- ==================== 一句话定位与STAR ==================== -->
-<h3>一、项目定位与STAR讲述稿 <span class="difficulty">⭐⭐⭐</span></h3>
-
-<div class="interview-q">
-  <div class="question">0.1 一句话介绍这个项目（电梯稿，30秒版）</div>
-  <div class="interview-answer">
-    <p><strong>面试表述：</strong>"AntClaw是算能（SophGo）的LLM开放平台+AI智能体产品线，我参与的是平台侧研发。整体12个子项目：7个Java后端服务、4个前端、1个智能体运行时。业务三大块——<strong>LLM开放平台</strong>（用户买Token额度、拿API Key调大模型）、<strong>智能体产品</strong>（基于开源OpenClaw做OEM改造的个人AI助理，多租户托管+订阅计费）、<strong>多租户管理运营体系</strong>（平台管理端/租户运营端/用量账单）。我主要负责后端服务间的链路设计和智能体运行时的平台化改造，比如智能体从订阅开通、K8s部署、实例反向注册到月结扣费的完整生命周期。"</p>
-    <p><strong>关键数字（必须记牢）：</strong>12个子项目、4+1个数据库（llmop主库175张表、sophclaw App库97张表、管理库、租户库、moltbot每Agent一个SQLite）、网关层Spring Cloud Gateway + Redis限流、全服务K8s + Helm部署、智能体运行时152个扩展插件、30+ IM渠道、40+模型Provider。</p>
-  </div>
-  <div class="interview-tip">💡 30秒版本不要展开技术细节，只给"规模感"（12项目/175表/30+渠道）和"你的位置"（链路设计+运行时改造）。面试官感兴趣哪块，再往哪块深挖——后面的Q&A就是弹药。</div>
-</div>
-
-<div class="interview-q">
-  <div class="question">0.2 STAR完整版（2-3分钟，被要求"详细介绍这个项目"时用）</div>
-  <div class="interview-answer">
-    <p><strong>S（背景）：</strong>公司要做LLM开放平台对标OpenRouter/阿里百炼：用户注册组织、购买Token额度、用API Key调用对话/视觉/语音/RAG等模型。同时要上线一个C端智能体产品——个人AI助理。自研运行时成本太高，选了当时最活跃的开源项目OpenClaw做OEM二次开发，但要解决三个问题：怎么<b>多租户托管</b>（上游是单用户本地部署的）、怎么<b>计费</b>（上游没有商业化的订阅体系）、怎么<b>和平台打通</b>（上游直连Anthropic/OpenAI，我们要走自己的开放平台）。</p>
-    <p><strong>T（任务）：</strong>我负责①平台侧四个Java后端的链路设计（backend主后端/api-gateway/sophclaw App后端/k8s-backend的协作关系）；②智能体运行时的平台化改造（OpenClaw OEM分支）；③用量计费数据链路。</p>
-    <p><strong>A（行动）：</strong>三个核心动作：</p>
-    <p>①<strong>设计了"每订阅一实例"的托管模型</strong>——用户开通智能体订阅，sophclaw校验余额，backend写订阅表并调k8s-backend部署Pod，从服务池分配实例，下发gateway auth-token，实例以独立子域名（如 moltbot-xxxx.sophnet.com）通过实例级Ingress对外服务。月结扣费、休眠、备份、升配全部由backend定时巡检驱动。</p>
-    <p>②<strong>改造OpenClaw为平台插件化对接</strong>——不fork核心代码硬改，而是用上游的插件机制写平台扩展：sophnet插件让运行时以平台用户身份调自家模型和搜索（走开放平台OpenAPI，模型调用进入计费体系）；yagent渠道插件对接自家IM；cron-reminder插件实现定时提醒到点后用HMAC签名反向回调云端（双向互信闭环）；admin-http-rpc插件暴露受网关Token保护的配置RPC，云端可远程读改实例配置。</p>
-    <p>③<strong>网关数据面</strong>——所有模型调用经api-gateway：API Key鉴权后走Redis三级控制（用户级滑动窗口限流10秒burst窗口防突增、按模型×组织的优先级排队保证大客户SLA、设备并发控制），之后路由到上游供应商。</p>
-    <p><strong>R（结果）：</strong>智能体产品按订阅制商业化上线，单实例隔离（每订阅独立Pod+独立SQLite），故障爆炸半径小；模型调用100%经平台计费（堵住了直连供应商绕过计费的口子）；我自己还维护了一份12项目的工程结构与数据库关系报告（4+1库ER图、13条服务间调用清单、4张局部设计图），成为团队的架构入门文档。</p>
-  </div>
-  <div class="interview-tip">💡 STAR里埋了4个钩子：托管生命周期、插件化改造、网关限流排队、文档能力。面试官钩到哪个，就深讲哪个（下面四条链路+Q&A就是深度弹药）。"工程报告"是差异化亮点——说明你不只写代码，还输出架构认知。</div>
-</div>
-
-<!-- ==================== 二、架构分层 ==================== -->
-<h3>二、架构分层与核心链路 <span class="difficulty">⭐⭐⭐</span></h3>
+<!-- ==================== 〇、复习路线 ==================== -->
+<h3>〇、复习路线（按剩余时间选路线） <span class="difficulty">⭐⭐⭐</span></h3>
 
 <div class="diagram">
-<svg viewBox="0 0 660 300" xmlns="http://www.w3.org/2000/svg">
-  <text x="330" y="20" text-anchor="middle" font-size="14" fill="#1565c0" font-weight="bold">AntClaw 五层架构</text>
-  <rect x="20" y="35" width="620" height="40" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
-  <text x="330" y="52" text-anchor="middle" font-size="11" fill="#1565c0" font-weight="bold">入口层：web用户门户(Vue3) · doc-station(Next.js) · admin-web(Vue3+ElementPlus) · admin-tenant-web(Next.js15+shadcn)</text>
-  <text x="330" y="68" text-anchor="middle" font-size="9" fill="#777">SophNet门户 / 文档站 / 平台管理 / 租户运营</text>
-  <rect x="20" y="90" width="620" height="30" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
-  <text x="330" y="109" text-anchor="middle" font-size="11" fill="#ff6f00" font-weight="bold">网关层：api-gateway :8888 (Spring Cloud Gateway) 路由改写·API Key鉴权·Redis限流·优先级排队·Provider Key管理</text>
-  <rect x="20" y="135" width="620" height="52" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
-  <text x="330" y="153" text-anchor="middle" font-size="11" fill="#2e7d32" font-weight="bold">应用服务层（Java/Spring Boot + JPA，K8s+Helm部署）</text>
-  <text x="330" y="170" text-anchor="middle" font-size="10" fill="#555">backend:8859主后端(175表) · sophclaw:8080 App后端(97表) · tenant-backend · admin-backend · usage-portal · k8s-backend:8899</text>
-  <text x="330" y="182" text-anchor="middle" font-size="9" fill="#777">服务间HTTP/REST(RestTemplate)，跨服务身份=HMAC签名 或 Bearer Gateway Token</text>
-  <rect x="20" y="202" width="620" height="34" rx="6" fill="#f3e5f5" stroke="#7b1fa2"/>
-  <text x="330" y="219" text-anchor="middle" font-size="11" fill="#7b1fa2" font-weight="bold">智能体运行时：moltbot (OpenClaw OEM v3.2.10-oem) Node22+/TS/pnpm · 152插件 · 30+渠道 · 40+Provider</text>
-  <text x="330" y="232" text-anchor="middle" font-size="9" fill="#777">每订阅一实例：独立Pod + 独立子域名Ingress + 独立SQLite</text>
-  <rect x="20" y="251" width="620" height="34" rx="6" fill="#fafafa" stroke="#999"/>
-  <text x="330" y="268" text-anchor="middle" font-size="11" fill="#555" font-weight="bold">数据层：MySQL llmop(175表) · sophnet_app(97表) · sophnet_admin · bcc-tenant · moltbot SQLite · Redis</text>
-  <text x="330" y="280" text-anchor="middle" font-size="9" fill="#777">跨库逻辑关联：collab_project.moltbot_subscription_uuid → llmop.moltbot_subscription.uuid</text>
+<svg viewBox="0 0 640 190" xmlns="http://www.w3.org/2000/svg">
+  <text x="320" y="20" text-anchor="middle" font-size="14" fill="#1565c0" font-weight="bold">复习时间 → 看什么</text>
+  <rect x="20" y="35" width="180" height="55" rx="6" fill="#ffebee" stroke="#d32f2f"/>
+  <text x="110" y="55" text-anchor="middle" font-size="11" fill="#d32f2f" font-weight="bold">剩5分钟（电梯里）</text>
+  <text x="110" y="72" text-anchor="middle" font-size="10" fill="#555">§六 速记总卡</text>
+  <text x="110" y="84" text-anchor="middle" font-size="9" fill="#777">一句话+数字卡+三优三缺</text>
+  <rect x="230" y="35" width="180" height="55" rx="6" fill="#fff3e0" stroke="#ff6f00"/>
+  <text x="320" y="55" text-anchor="middle" font-size="11" fill="#ff6f00" font-weight="bold">剩30分钟（面试前夜）</text>
+  <text x="320" y="72" text-anchor="middle" font-size="10" fill="#555">§三 追问Q&amp;A口语原话</text>
+  <text x="320" y="84" text-anchor="middle" font-size="9" fill="#777">+§四 主动暴露不足的话术</text>
+  <rect x="440" y="35" width="180" height="55" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="530" y="55" text-anchor="middle" font-size="11" fill="#1565c0" font-weight="bold">剩2小时（系统复习）</text>
+  <text x="530" y="72" text-anchor="middle" font-size="10" fill="#555">通读全章+自己复述一遍</text>
+  <text x="530" y="84" text-anchor="middle" font-size="9" fill="#777">重点: §二 四条链路的追问树</text>
+  <text x="320" y="125" text-anchor="middle" font-size="12" fill="#555">背诵优先级：数字卡(必背) &gt; 电梯稿 &gt; 四条链路 &gt; 10道Q&amp;A原话 &gt; 优缺点话术 &gt; 技术新旧表</text>
+  <text x="320" y="150" text-anchor="middle" font-size="12" fill="#d32f2f">最容易翻车的3处：①数字说错(175/97/152) ②装作做了质检(实际没有) ③说公司项目技术栈low</text>
+  <text x="320" y="172" text-anchor="middle" font-size="11" fill="#999">所有"面试原话"都是第一人称口语——背下来直接说，不要临场组织语言</text>
 </svg>
 </div>
 
+<!-- ==================== 一、数字卡 ==================== -->
+<h3>一、关键数字卡（必背，说错即穿帮） <span class="difficulty">⭐⭐⭐</span></h3>
+
 <div class="interview-q">
-  <div class="question">0.3 链路①：智能体订阅生命周期（最复杂的一条链，重点讲）</div>
+  <div class="question">1.1 规模数字（所有面试表述里的数字必须与这张表一致）</div>
   <div class="interview-answer">
-    <p>用户开通一个AI助理订阅，<strong>四个后端+K8s依次接力</strong>，职责划分是"sophclaw管卖、backend管部署和钱、k8s-backend管落容器、实例起来后反向注册"：</p>
+    <table>
+      <tr><th>数字</th><th>内容</th><th>什么时候说</th></tr>
+      <tr><td><strong>12个子项目</strong></td><td>4前端 + 7 Java后端 + 1智能体运行时</td><td>第一句话介绍</td></tr>
+      <tr><td><strong>175张表</strong></td><td>backend主库(llmop)——模型/计费/智能体托管/生态API</td><td>展示平台规模</td></tr>
+      <tr><td><strong>97张表</strong></td><td>sophclaw App库——会话/协作版/IM/技能商店/订阅</td><td>同上</td></tr>
+      <tr><td><strong>4+1数据库</strong></td><td>llmop主库 + sophnet_app + sophnet_admin + bcc-tenant + moltbot每Agent一个SQLite</td><td>讲多租户/数据架构时</td></tr>
+      <tr><td><strong>152个插件</strong></td><td>moltbot扩展生态</td><td>讲OpenClaw选型时</td></tr>
+      <tr><td><strong>30+渠道</strong></td><td>Telegram/WhatsApp/Discord/Slack/iMessage/Line/钉钉等</td><td>讲产品能力时</td></tr>
+      <tr><td><strong>40+ Provider</strong></td><td>Anthropic/OpenAI/DeepSeek/Bedrock等</td><td>讲模型接入时</td></tr>
+      <tr><td><strong>13条调用边</strong></td><td>服务间HTTP/REST调用清单（RestTemplate）</td><td>讲微服务架构时</td></tr>
+      <tr><td><strong>Node 22+ / TS</strong></td><td>moltbot运行时，pnpm monorepo</td><td>讲技术栈时</td></tr>
+      <tr><td><strong>Java 8 + Boot 2.7.18</strong></td><td>Java侧现状（2.7已于2025-11 EOL）</td><td>讲不足/技术债时主动说</td></tr>
+      <tr><td><strong>Next.js 15</strong></td><td>admin-tenant-web租户运营前端</td><td>被问前端/新技术时</td></tr>
+      <tr><td><strong>7个端口</strong></td><td>网关8888/backend 8859/sophclaw 8080/tenant 9099/admin 8099/usage 8863/k8s-backend 8899</td><td>被追问细节时（背3个核心的就够：8888/8859/8080）</td></tr>
+    </table>
+  </div>
+  <div class="interview-tip">💡 数字是可信度的地基。"175表""152插件"这种具体数字一说，面试官立刻知道你真做过。数字卡考前最后扫一眼的就是它。</div>
+</div>
+
+<!-- ==================== 二、电梯稿 ==================== -->
+<h3>二、项目介绍（三档时长，直接背） <span class="difficulty">⭐⭐⭐</span></h3>
+
+<div class="interview-q">
+  <div class="question">2.1 一句话定位（10秒，自我介绍里带过时用）</div>
+  <div class="interview-answer">
+    <p class="interview-quote">"AntClaw是算能旗下的LLM开放平台加AI智能体产品线，12个子项目——7个Java后端、4个前端、1个基于开源OpenClaw改造的智能体运行时。我负责平台侧服务间链路设计和智能体运行时的平台化改造。"</p>
+  </div>
+</div>
+
+<div class="interview-q">
+  <div class="question">2.2 电梯稿（30秒，"简单介绍下这个项目"）</div>
+  <div class="interview-answer">
+    <p class="interview-quote">"AntClaw是算能的LLM开放平台加智能体产品线。业务三块：一是LLM开放平台，用户注册组织、买Token额度、拿API Key调大模型；二是智能体产品，我们基于开源的OpenClaw做了OEM二次开发，做成多租户托管的个人AI助理，订阅制收费；三是管理运营体系，平台管理端、租户运营端、用量账单。整个工程12个子项目，主库175张表。我主要负责两块：一是后端服务间的链路设计，比如智能体从订阅开通、K8s部署到月结扣费的完整生命周期；二是智能体运行时的改造——把一个单用户本地部署的开源项目，改造成能云端多租户托管、能接平台计费的商业产品。"</p>
+  </div>
+  <div class="interview-tip">💡 30秒版的结构：业务三块（一句一个）→ 规模（12项目/175表）→ 我的位置（链路设计+运行时改造）。最后半句"把单用户开源项目改造成商业产品"是钩子——面试官大概率追问"怎么改的"，就进入你的主场（§三链路④）。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">2.3 STAR完整版（2-3分钟，"详细讲讲这个项目"）</div>
+  <div class="interview-answer">
+    <p><strong>【S·背景】面试原话：</strong></p>
+    <p class="interview-quote">"公司要做LLM开放平台，对标OpenRouter和阿里百炼——用户买额度、调模型、按Token计费。同时要上一个C端智能体产品：个人AI助理。这块自研成本太高，我们选了当时最活跃的开源项目OpenClaw做OEM二次开发。但有个核心矛盾：OpenClaw的定位是'跑在自己电脑上的单用户助理'，我们要做的是云端多租户托管+订阅计费的商业产品——中间差着一整个商业化层。"</p>
+    <p><strong>【T·任务】面试原话：</strong></p>
+    <p class="interview-quote">"我负责三块：平台侧四个核心后端的协作链路（主后端、网关、App后端、K8s部署服务）；智能体运行时的平台化改造；还有用量计费的数据链路。"</p>
+    <p><strong>【A·行动】面试原话（三个动作）：</strong></p>
+    <p class="interview-quote">"第一，设计了'每订阅一实例'的托管模型——用户开通订阅后，sophclaw管卖、backend管部署和钱、k8s-backend管落容器，实例起来后用独立子域名对外服务，月结扣费、休眠、升配全部由backend定时巡检驱动。"</p>
+    <p class="interview-quote">"第二，改造OpenClaw坚持'核心不硬改'——全部用上游的插件机制写平台扩展：sophnet插件让运行时以平台用户身份调自家模型，保证模型调用100%进计费；cron-reminder插件做定时提醒，实例到点用HMAC签名反向回调云端，形成双向互信闭环；还有配置RPC插件，云端可以远程改实例配置。"</p>
+    <p class="interview-quote">"第三，网关数据面——所有模型调用过Spring Cloud Gateway：API Key鉴权之后，Redis三级控制：滑动窗口限流防突增、按模型加组织的优先级排队保大客户SLA、设备并发控制，然后才路由到上游供应商。"</p>
+    <p><strong>【R·结果】面试原话：</strong></p>
+    <p class="interview-quote">"智能体产品按订阅制上线了，单实例隔离让故障爆炸半径很小；模型调用全部走平台计费，堵住了绕过计费直连供应商的口子。我还维护了一份整个工程的架构报告——12个项目的结构、4+1个库的ER关系、13条服务调用链，成了团队的架构入门文档。"</p>
+  </div>
+  <div class="interview-tip">💡 STAR里埋了4个钩子：托管生命周期→追问进链路①；插件改造→链路④；HMAC互信→链路②；网关限流→链路③。面试官钩到哪个讲哪个，每条链路都有准备好的追问树（§三）。"架构报告"是差异化亮点——说明你不只写代码，还输出架构认知。</div>
+</div>
+
+
+<!-- ==================== 三、四条核心链路 ==================== -->
+<h3>三、四条核心链路（每条带"追问树"） <span class="difficulty">⭐⭐⭐</span></h3>
+
+<div class="interview-q">
+  <div class="question">3.1 链路① 智能体订阅生命周期（最重要，讲透这条=讲透半个项目）</div>
+  <div class="interview-answer">
+    <p><strong>30秒版本·面试原话：</strong></p>
+    <p class="interview-quote">"用户开通AI助理订阅时，四个后端加K8s接力：sophclaw先校验余额，然后调backend创建订阅记录——写moltbot_subscription表，带月费和下次扣费日期；backend再调k8s-backend部署Pod，优先从预热好的服务池分配；实例起来后backend下发网关鉴权Token，最后实例级Ingress生效，用户拿到一个独立子域名，比如moltbot-xxx.sophnet.com。后续月结扣费、休眠、备份、升配，都是backend定时巡检驱动的。"</p>
     <pre class="code">用户选套餐开通
-→ sophclaw-backend: 校验余额(调backend /openclaw/bill-amount/check-balance)
+→ sophclaw-backend: 校验余额(backend /openclaw/bill-amount/check-balance)
 → sophclaw→backend: 创建订阅(INSERT moltbot_subscription: 状态+monthly_fee+next_billing_date)
-→ backend→k8s-backend: POST /k8s/open-claw/deploy (从服务池分配或新建Deployment)
+→ backend→k8s-backend: POST /k8s/open-claw/deploy (服务池分配或新建Deployment)
 → backend→moltbot实例: OpenClawGatewayClient 下发 gateway auth-token
-→ backend→sophclaw: 返回订阅就绪(实例URL/SSH/SFTP)
 → 实例级Ingress生效: moltbot-&lt;uuid&gt;.sophnet.com
 后续: 月结定时任务按monthly_fee扣费; 休眠/备份/升配由backend定时巡检驱动</pre>
-    <p><strong>面试要点：</strong>①<strong>服务池（moltbot_service_pool）设计</strong>——不是每次都冷启Pod，优先从预热好的服务池分配，开通秒级可用；②<strong>状态机</strong>——订阅有状态流转（moltbot_status_transition_log记日志），休眠实例可恢复；③<strong>成本模型</strong>——休眠/备份机制让低活跃订阅不持续占计算资源。</p>
+    <p><strong>追问树（面试官每问一层，你答一层）：</strong></p>
+    <p>→ <strong>追问1："为什么每订阅一个Pod？不浪费资源吗？"</strong></p>
+    <p class="interview-quote">"这是隔离性和成本的trade-off。个人助理有大量持久状态——会话记忆、技能配置、文件——共享实例会有状态串扰和安全问题。每订阅一Pod加独立SQLite，故障爆炸半径最小，一个实例挂了不影响别人。资源浪费靠两个机制缓解：服务池预热让开通秒级可用，休眠机制让低活跃订阅释放计算资源、保留存储卷，可以随时唤醒。"</p>
+    <p>→ <strong>追问2："用户量大了怎么办？一万订阅就是一万个Pod？"</strong></p>
+    <p class="interview-quote">"对，这就是这个架构的天花板，我想过：第一阶段把休眠做得更激进——冷实例只保留对象存储上的SQLite快照，Pod全释放；第二阶段做状态外置，SQLite快照按需挂载；第三阶段才考虑共享运行时加逻辑隔离——成本最优但隔离降级。当前阶段选隔离优先，因为商业产品早期，口碑比成本重要。"</p>
+    <p>→ <strong>追问3："订阅扣费怎么保证不出错？"</strong></p>
+    <p class="interview-quote">"预扣校验加流水对账。开通前check-balance校验；订阅有状态机，每次休眠、恢复、升配的状态流转都写moltbot_status_transition_log日志表，可追溯；月结是定时任务按monthly_fee扣，next_billing_date驱动，幂等可重跑。"</p>
   </div>
-  <div class="interview-tip">💡 这条链是项目的灵魂。讲的时候强调"职责单一"——卖的和收钱分开、部署的不管钱。追问"为什么不用Serverless/共享实例"——答：个人助理有持久状态（会话/记忆/技能），共享实例状态串扰+安全隔离难做，每订阅一Pod+SQLite是隔离性和成本的折中。</div>
+  <div class="interview-tip">💡 追问树就是你的弹药库——面试官往深问一层，你有准备好的第二层答案，问到第三层你还有。这比答不上"我再研究研究"强十倍。三问三答背熟。</div>
 </div>
 
 <div class="interview-q">
-  <div class="question">0.4 链路②：定时提醒回调（运行时→云端的反向通道，双向HMAC互信）</div>
+  <div class="question">3.2 链路② 定时提醒回调（安全类面试官最爱，双向HMAC互信）</div>
   <div class="interview-answer">
-    <p>用户说"每天9点提醒我吃药"，这条链展示了<strong>云端和实例的双向信任</strong>：</p>
+    <p><strong>30秒版本·面试原话：</strong></p>
+    <p class="interview-quote">"用户在IM里说'每天9点提醒我吃药'。云端先通过配置RPC把提醒目标下发给实例——带上回调地址和签名密钥；实例到点触发后，用HMAC签名反向回调云端的一个接口，云端验签通过才推送给用户。这条链展示的是云和实例的'双向互信'：云端→实例走网关Token，实例→云端走HMAC签名，两把密钥都是订阅创建时下发的，互相不知道对方的，做了最小授权。"</p>
     <pre class="code">用户(IM渠道): /remind 每天9点叫我吃药
-→ sophclaw: 先RPC config.get(取配置hash) → RPC config.patch
-  channels.cron-reminder.targets = {enabled, callbackUrl, signSecret, subscriptionUuid}
+→ sophclaw: RPC config.get(取配置hash) → RPC config.patch 下发提醒目标
+  {enabled, callbackUrl, signSecret, subscriptionUuid}
 → moltbot实例: 到点触发
 → 实例→sophclaw: POST /admin-apis/openclaw/cron-reminder/callback
-  Header: X-YAgent-Signature (HMAC签名)
-→ sophclaw: WebhookSignatureVerifier验签 → 推送提醒到用户IM(Telegram/Discord...)</pre>
-    <p><strong>面试要点：</strong>①<strong>为什么要HMAC</strong>——回调端点在公网，签名防伪造回调；signSecret只在订阅创建时下发实例和云端两方，第三方拿不到；②<strong>为什么先get再patch</strong>——配置带hash做乐观并发控制，避免覆盖其他渠道的配置；③<strong>这个设计和mall-ai的Skill下发异曲同工</strong>——都是"云端控制面→实例数据面"的配置分发，但这里多了实例到云端的反向回调闭环。</p>
+  Header: X-YAgent-Signature (HMAC)
+→ sophclaw: WebhookSignatureVerifier验签 → 推送到用户IM(Telegram/Discord...)</pre>
+    <p><strong>追问树：</strong></p>
+    <p>→ <strong>追问1："为什么要HMAC，不用普通Token吗？"</strong></p>
+    <p class="interview-quote">"回调接口在公网，必须防伪造。HMAC的好处是密钥不落网——签名是拿密钥对请求体算出来的，中间人拿到签名也伪造不了新请求，因为他没有密钥。普通Bearer Token是'你是谁'的证明，HMAC是'这个请求没被篡改过'的证明，安全级别不一样。"</p>
+    <p>→ <strong>追问2："重放攻击怎么防？"（必问！这是诚实的坑）</strong></p>
+    <p class="interview-quote">"当前版本没有做防重放——签名请求理论上可以截获重放。标准解法是签名时带上时间戳加nonce，服务端校验时间窗口比如正负5分钟，nonce做短期去重。这个我知道怎么改，当时排期没排上，是已知的技术债。"（<strong>主动承认+给出正解，比装作做了强百倍</strong>）</p>
+    <p>→ <strong>追问3："配置下发为什么先get再patch？"</strong></p>
+    <p class="interview-quote">"乐观并发控制。配置带hash版本号，先get拿到当前hash，patch提交时校验hash——如果别的渠道先改了，hash对不上，patch失败重试。避免多个渠道的配置互相覆盖。"</p>
   </div>
-  <div class="interview-tip">💡 安全类面试官最爱这条。主动说"签名密钥只有订阅双方持有、验签失败拒绝"展示安全意识。追问"重放攻击怎么办"——诚实答"当前靠订阅UUID绑定+签名，没做时间戳防重放，这是可改进点"。</div>
+  <div class="interview-tip">💡 追问2"重放攻击"几乎是必问的——这题的价值就是让你在被戳穿前自己说出不足+正解。"我知道怎么改但排期没排上"是工程现场最真实的话术。</div>
 </div>
 
 <div class="interview-q">
-  <div class="question">0.5 链路③：网关数据面（一次模型调用的完整路径）</div>
+  <div class="question">3.3 链路③ 网关数据面（计费正确性的咽喉，和mall-ai串起来讲）</div>
   <div class="interview-answer">
-    <p>所有模型调用（平台OpenAPI用户 + moltbot实例自用）都过api-gateway，这是<strong>计费正确性</strong>的咽喉：</p>
+    <p><strong>30秒版本·面试原话：</strong></p>
+    <p class="interview-quote">"所有模型调用——不管是开放平台的API用户还是智能体实例自用——都必须过api-gateway，这是计费正确性的咽喉。流程是：API Key鉴权，识别组织和套餐；然后Redis三级控制——先滑动窗口限流，注意我们限的是'token增量'不是QPS，因为LLM一次请求的消耗和token数相关，用10秒窗口防突增把上游打挂；再按模型加组织两个维度做优先级排队，付费等级高的组织优先出队，保证大客户的延迟；最后设备并发控制，才路由到上游。请求完了MetricsFilter记Token用量，usage-portal做小时聚合出账单。"</p>
     <pre class="code">请求(api-key) → api-gateway:8888
-① 鉴权: API Key校验(查backend/Redis) → 识别org/project/套餐
-② 限流: FlowLimitService — Redis 10秒窗口token增量检查, 防burst突增打挂上游
-③ 排队: PriorityQueueService — 按模型×orgId优先级排队, 大客户SLA优先放行
+① 鉴权: API Key校验 → 识别org/project/套餐
+② 限流: FlowLimitService — Redis 10秒窗口token增量检查, 防burst突增
+③ 排队: PriorityQueueService — 按模型×orgId优先级排队, 大客户SLA优先
 ④ 并发: DeviceConcurrencyService — 设备/上游并发控制
-⑤ 路由: 按模型路由改写 → 上游供应商(带Provider Key管理)
-⑥ 记量: MetricsFilter — Token用量记录 → usage-portal小时聚合 → 账单/发票</pre>
-    <p><strong>面试要点：</strong>①<strong>限流维度</strong>——不是简单QPS限制，是"token增量"维度（LLM特性：一次请求消耗和token数相关，10秒窗口防突发）；②<strong>优先级队列</strong>——按模型+组织两级维度，付费等级高的组织优先出队，保证大客户延迟；③<strong>和mall-ai的RateLimitFilter对比</strong>——mall-ai是单机滑动窗口（10次/分钟），AntClaw是分布式Redis多级控制（限流+排队+并发），规模差两个量级。</p>
+⑤ 路由: 按模型路由改写 → 上游供应商(Provider Key由网关统一管理)
+⑥ 记量: MetricsFilter → usage-portal小时聚合 → 账单/发票</pre>
+    <p><strong>追问树：</strong></p>
+    <p>→ <strong>追问1："为什么限token增量而不是QPS？"</strong></p>
+    <p class="interview-quote">"LLM场景的特殊性：一次请求消耗和token数强相关。10个短问题可能不如1个长问题消耗大，只限QPS限不住真正的成本风险。所以我们做了两层——QPS层有基础限流，再加10秒窗口的token增量检查，防止短时间内用量突增。"</p>
+    <p>→ <strong>追问2："优先级排队怎么实现的？"</strong></p>
+    <p class="interview-quote">"按模型加组织两个维度排队。每个模型一个资源池，组织按付费等级有优先级配置，请求进队列时带上优先级，出队时高优先级先走。这样大客户的SLA有保障，又不影响整体吞吐。"</p>
+    <p>→ <strong>追问3："mall-ai里你的限流是什么样的？为什么不一样？"（双项目对比，主动引导）</strong></p>
+    <p class="interview-quote">"mall-ai是单机滑动窗口，用户级每分钟10次加全局100并发，用LinkedHashMap加LRU做的。两个项目的限流差两个量级——mall-ai单实例部署，本地限流就够；AntClaw是分布式多实例，必须用Redis做全局限流，而且要多级（限流加排队加并发）。同一个问题在不同规模下解法完全不同，这两个项目正好各占一端。"</p>
   </div>
-  <div class="interview-tip">💡 把两个项目串起来讲是加分项："mall-ai里我写单机限流，AntClaw里是Redis分布式三级控制，同一个问题在不同规模下的不同解法"——展示你不是只会一种hammer。</div>
+  <div class="interview-tip">💡 追问3是主动送分——把两个项目的限流对比讲清楚（单机LRU vs 分布式Redis多级），面试官立刻知道你不是只会一种hammer。"差两个量级"这个说法直接背。</div>
 </div>
 
 <div class="interview-q">
-  <div class="question">0.6 链路④：OpenClaw OEM改造（怎么把单用户开源项目改成多租户托管产品）</div>
+  <div class="question">3.4 链路④ OpenClaw OEM改造（"怎么把单用户开源项目改成多租户商业产品"）</div>
   <div class="interview-answer">
-    <p>OpenClaw上游定位是<strong>"跑在自己设备上的单用户助理"</strong>，改成托管多租户产品，改造原则是<strong>"核心不硬改、能力靠插件、状态靠约定"</strong>：</p>
-    <p><strong>1. 插件化对接（不fork核心逻辑）</strong>——上游152个扩展插件的机制本身就是扩展点，我们写了4个平台插件：</p>
-    <ul>
-      <li><strong>sophnet插件</strong>：注册为模型Provider+Web搜索Provider——运行时以平台用户身份（SOPHNET_API_KEY）调自家开放平台OpenAPI，模型调用回到平台计费体系（不直连Anthropic/OpenAI绕过计费）；</li>
-      <li><strong>yagent渠道插件</strong>：对接自家IM前端（会话/好友/消息），openclaw_chat_*系列表存云端会话；</li>
-      <li><strong>cron-reminder插件</strong>：定时提醒+HMAC反向回调（见链路②）；</li>
-      <li><strong>admin-http-rpc插件</strong>：暴露受Gateway Token保护的配置RPC（config.get/config.patch），云端可远程读改实例配置——这是"控制面→数据面"的管理通道。</li>
-    </ul>
-    <p><strong>2. 状态约定</strong>——运行时遵循<strong>SQLite-only</strong>存储原则（不用JSON/JSONL散文件）：全局状态库state/openclaw.sqlite（插件KV/会话索引/队列/游标）+ <strong>每Agent独立库</strong>agents/&lt;id&gt;/agent/openclaw-agent.sqlite（会话转录/缓存/技能状态），Kysely类型安全访问，DDL走schema文件+迁移。云端侧订阅/会话数据不落SQLite——回传backend（moltbot_*表）和sophclaw（openclaw_chat_*表）。</p>
-    <p><strong>3. 跟进上游</strong>——OEM分支v3.2.10-oem基于上游v2026.6.8，定期merge上游（git历史里有多次"Merge origin/master v3.2.10 into v3.2.10-oem"），把上游修复（会话锁abort释放、failover误判、compaction模型fallback等）带进来，同时保持平台插件不冲突。</p>
-  </div>
-  <div class="interview-tip">💡 "核心不硬改"是这题的题眼——展示你懂二次开发的边界感：改得越少，跟上游合并成本越低。追问"上游breaking change怎么办"——答：插件机制隔离了大部分（我们只依赖plugin-sdk契约），核心schema变化时靠定期merge+CI回归，成本可控。</div>
-</div>
-
-
-<!-- ==================== 三、追问Q&A ==================== -->
-<h3>三、高频追问Q&amp;A（10题） <span class="difficulty">⭐⭐⭐</span></h3>
-
-<div class="interview-q">
-  <div class="question">1. 为什么选OpenClaw做二次开发，而不是自研或用其他框架（LangGraph/AutoGen）？</div>
-  <div class="interview-answer">
-    <p>三者根本不是一类东西：<strong>LangGraph/AutoGen是Agent编排框架（库），OpenClaw是成品助理运行时（产品）</strong>。我们要做的是C端个人助理产品——需要现成的多渠道接入（Telegram/WhatsApp/Discord/Slack/iMessage/Line/钉钉等30+渠道）、多Provider（Anthropic/OpenAI/DeepSeek/Bedrock等40+）、语音/画布/浏览器/技能生态。自研这些等于重做一个产品的80%，LangGraph只解决编排不解决渠道和产品化。</p>
-    <p>选OpenClaw还有三个理由：①<strong>工程成熟</strong>——pnpm monorepo、152个扩展插件、plugin-sdk契约清晰、有完整CI；②<strong>架构干净</strong>——Gateway控制面/Agent运行时分离、SQLite-only状态存储、插件激活机制（onStartup/onConfigPaths/onCommands按需激活）；③<strong>社区活跃</strong>——上游迭代快，我们的OEM分支能定期吃到修复（会话锁、failover、compaction fallback等）。</p>
-  </div>
-  <div class="interview-tip">💡 关键是分清"框架 vs 产品运行时"两个赛道。可以补一句"mall-ai项目里我用langchain4j手写ReAct是因为客服场景窄、要可控；AntClaw是通用助理产品，产品化程度要求高，站在OpenClaw肩膀上是对的"——两个项目选型逻辑对比，展示判断力。</div>
-</div>
-
-<div class="interview-q">
-  <div class="question">2. 每订阅一个Pod，成本和规模怎么扛？用户量大了怎么办？</div>
-  <div class="interview-answer">
-    <p>这是这个架构最诚实的争议点，分三层答：</p>
-    <p>①<strong>当前设计</strong>——每订阅一实例（独立Pod+独立SQLite+独立子域名），隔离性最好（状态/安全/故障半径），但资源利用率低：助理类负载是低频长尾的，绝大多数实例大部分时间空闲。</p>
-    <p>②<strong>已有的缓解</strong>——服务池预热（moltbot_service_pool，开通秒级可用）、<strong>休眠机制</strong>（低活跃订阅休眠释放计算资源，保留SQLite状态卷，可恢复）、月结+状态巡检由backend定时任务驱动。</p>
-    <p>③<strong>诚实的不足与演进</strong>——单K8s集群实例数有上限（Pod密度/IP/etcd），万级订阅后要考虑：休眠更激进（冷实例只留PV）、SQLite状态外置到对象存储按需挂载、甚至"共享运行时+按用户逻辑隔离"（成本最优但隔离降级）。这是典型的<strong>隔离性↔成本</strong>trade-off，当前阶段选隔离优先是对的（商业产品早期，口碑比成本重要）。</p>
-  </div>
-  <div class="interview-tip">💡 这题一定主动说不足再说演进——面试官问规模就是想看你想没想过天花板。"休眠+服务池"是已有的亮点，"万级订阅的分阶段演进"展示前瞻性。</div>
-</div>
-
-<div class="interview-q">
-  <div class="question">3. moltbot的会话记忆是怎么做的？（对比mall-ai的记忆设计）</div>
-  <div class="interview-answer">
-    <p>OpenClaw的记忆体系比mall-ai完整一个量级，分层：</p>
-    <p>①<strong>会话转录</strong>——每Agent独立SQLite存完整对话转录（openclaw-agent.sqlite）；②<strong>上下文压缩（compaction）</strong>——agent-core里有完整的compaction harness（branch-summarization分支摘要），上下文快满时生成compactionSummary角色消息，带"压缩前估算token数"，解决长对话窗口问题（<strong>mall-ai没有做，是max-messages=12硬截断，这是AntClaw版本的加分对照</strong>）；③<strong>长期记忆插件群</strong>——memory-lancedb（LanceDB向量库长期记忆，auto-recall/auto-capture/向量检索，memory_store/memory_recall/memory_forget三个工具）、memory-wiki（结构化wiki记忆）、active-memory（活跃记忆）；④<strong>云端留存</strong>——会话回传sophclaw的openclaw_chat_*系列表（会话/消息/草稿/用户偏好/强制提示词），云端可审计可分析。</p>
-  </div>
-  <div class="interview-tip">💡 这是两个项目最好的互补点："mall-ai我做了Redis窗口+质检闭环，AntClaw我看到工业级的compaction+向量长期记忆方案"——一个会截断一个会压缩，面试官立刻知道你理解记忆分层。被追问compaction细节，答"分支摘要+估算token阈值触发，压缩消息带角色标记可追溯"。</div>
-</div>
-
-<div class="interview-q">
-  <div class="question">4. 服务间调用全是RestTemplate+HTTP，为什么不用Feign/注册中心/RPC？</div>
-  <div class="interview-answer">
-    <p>先承认这是<strong>务实而非先进</strong>的选择：①服务固定（7个后端），规模不需要动态服务发现——K8s Service DNS（xxx-service）就是注册中心，K8s本身解决了服务发现和负载均衡；②调用方少（13条调用边），RestTemplate+Client类封装够用，Feign省的代码量有限；③团队Java 8 + Spring Boot 2.7的技术栈下，引入Dubbo/gRPC的序列化兼容和运维成本大于收益。</p>
-    <p>不足也直说：①RestTemplate同步阻塞，长链路（订阅开通穿4个服务）延迟叠加，没有超时熔断的统一治理（对比Spring Cloud OpenFeign+Resilience4j会更好）；②无链路追踪上下文自动传递，靠各服务日志里的业务ID人工串联；③强类型契约缺失，接口变更靠人工同步（我们有一次美元单位对齐的跨仓修复——fix/usd-unit-alignment分支同时改3个仓库，就是契约靠人肉的痛）。</p>
-  </div>
-  <div class="interview-tip">💡 "务实而非先进"四个字定调，然后马上自我批评（同步阻塞/无追踪/契约人肉）——主动说不足比被面试官戳穿体面得多。fix/usd-unit-alignment跨3仓库修单位问题是真实案例，讲出来特别可信。</div>
-</div>
-
-<div class="interview-q">
-  <div class="question">5. 计费链路怎么保证不丢单、不少记？</div>
-  <div class="interview-answer">
-    <p>计费是平台的命根子，设计是"先扣后用+流水对账"：</p>
-    <p>①<strong>预扣校验</strong>——开通订阅前check-balance余额校验；模型调用经网关记量（MetricsFilter），Token用量落llmop库；②<strong>小时聚合</strong>——usage-portal做Token用量小时聚合（大表聚合慢查询解耦），账单=聚合结果，聚合任务幂等可重跑；③<strong>异步导出</strong>——大账单导出走UsagesExportJob异步作业（提交→轮询status→OSS下载URL），不阻塞接口，作业有清理调度器防堆积；④<strong>对账兜底</strong>——订阅月结由backend定时巡检按monthly_fee扣费，next_billing_date驱动，状态流转全记moltbot_status_transition_log，可追溯。</p>
-    <p>诚实说不足：网关记量到聚合之间如果Redis/网络故障理论上可能丢计量点，当前靠小时聚合任务重跑补偿，没有做到强一致的单笔不丢（业界普遍用Kafka+幂等消费做exactly-once，我们是定时任务补偿的at-least-once近似）。</p>
-  </div>
-  <div class="interview-tip">💡 计费题展示数据严谨性。"先扣后用+幂等聚合+异步导出"是亮点，最后主动承认"at-least-once补偿而非exactly-once"——诚实且有行业视野（知道标准解法是消息队列+幂等）。</div>
-</div>
-
-<div class="interview-q">
-  <div class="question">6. 多租户隔离是怎么做的？数据层面和运行时层面分别说。</div>
-  <div class="interview-answer">
-    <p><strong>运行时层（物理隔离）</strong>：智能体实例每订阅一Pod、每Agent独立SQLite库、独立子域名Ingress——这是物理级隔离，租户间不可能串数据。</p>
-    <p><strong>数据层（逻辑隔离）</strong>：①llmop主库——organization/project/sys_user三级组织结构，API Key挂project，数据行都带org_id/project_id；②租户库（bcc-tenant）——tenant-backend独立管理租户全生命周期（20张租户配置表），所有tenant_*表带tenant_id逻辑外键，通用字段继承BaseEntity；③跨库桥接——tenant_organization表桥接租户库和llmop库的org，collab_project用moltbot_subscription_uuid跨库指向llmop的订阅；④管理面——admin-backend的RBAC（JWT）+ sys_operation_log操作审计，租户代管走HMAC签名信道。</p>
-    <p>不足：MySQL单库共享（没有按租户分库），超 large 租户的数据量隔离靠索引+归档，没有做物理分库（当前规模合理，万级租户要重新评估）。</p>
-  </div>
-  <div class="interview-tip">💡 "运行时物理隔离+数据逻辑隔离"两层分开说，条理立刻清晰。这个项目的多租户是真实生产级的（对比mall-ai的多租户只是"V2规划"——AntClaw补上了这块短板，面试叙事上两个项目正好互补）。</div>
-</div>
-
-<div class="interview-q">
-  <div class="question">7. 你在OpenClaw上游社区做过什么贡献？OEM分支怎么维护？</div>
-  <div class="interview-answer">
-    <p>如实回答（面试不夸大）：<strong>OEM分支维护</strong>是主要工作——v3.2.10-oem基于上游v2026.6.8，定期merge上游master，git历史里的合并记录包括：会话锁abort释放修复（防止卡住的写入长期持锁）、failover误判finalize修复（webchat卡在generating）、compaction模型fallback、session-unlock命令、ttyd Ctrl+V热键冲突修复等。平台侧改造（sophnet/yagent/cron-reminder/admin-http-rpc四个插件+filebrowser认证CI改造）以插件形式叠加在OEM分支。</p>
-    <p><strong>维护策略</strong>：①平台能力全部走插件不进核心，merge冲突面最小化；②上游安全修复优先合入；③每次merge跑CI回归（.gitlab-ci.yml含filebrowser auth的CI_JOB_TOKEN改造）。</p>
-    <p>诚实说：没有向上游提交过PR（公司代码和上游有边界），属于"下游消费者+OEM分支维护者"角色。</p>
-  </div>
-  <div class="interview-tip">💡 别吹"开源贡献者"，说"OEM分支维护者"更真实。亮点是维护策略："插件化最小化冲突面"——这是所有做二次开发的人都会遇到的痛点，说出来内行会点头。</div>
-</div>
-
-<div class="interview-q">
-  <div class="question">8. 这个项目和mall-ai（矿池AI客服）的区别？面试官想看你对两个项目的定位。</div>
-  <div class="interview-answer">
-    <p>两个项目是<strong>刻意互补</strong>的叙事组合：</p>
+    <p><strong>30秒版本·面试原话：</strong></p>
+    <p class="interview-quote">"OpenClaw上游是单用户本地部署的个人助理，我们改成云端多租户托管。改造原则是九个字：核心不硬改、能力靠插件、状态靠约定。上游有152个插件的生态和清晰的plugin-sdk契约，我们写了四个平台插件：sophnet插件注册成模型Provider，运行时以平台用户身份调自家开放平台，保证模型调用100%进计费体系；yagent渠道插件对接自家IM；cron-reminder插件做定时提醒的双向回调；还有admin-http-rpc插件暴露受Token保护的配置RPC，云端能远程读改实例配置。状态侧，运行时遵循SQLite-only原则，全局一个库、每个Agent一个独立库，云端侧订阅和会话数据回传到backend和sophclaw的MySQL。"</p>
+    <p><strong>四个插件一览（背这个表）：</strong></p>
     <table>
-      <tr><th>维度</th><th>mall-ai 矿池AI客服</th><th>AntClaw LLM开放平台</th></tr>
-      <tr><td>定位</td><td>垂直场景Agent应用（客服）</td><td>通用Agent产品+平台基础设施</td></tr>
-      <tr><td>架构</td><td>单体Spring Boot 3 + Java 21 + WebFlux</td><td>12服务微服务 + Spring Boot 2.7 + Java 8 + Node22运行时</td></tr>
-      <tr><td>Agent引擎</td><td>手写ReAct（maxRounds=3，完全可控）</td><td>OpenClaw OEM（152插件，产品级成熟度）</td></tr>
-      <tr><td>质检</td><td>LLM-as-Judge 5维度质检+纠错闭环（强）</td><td>无独立质检门禁（弱，靠上游生态）</td></tr>
-      <tr><td>记忆</td><td>Redis窗口12条截断（弱）</td><td>compaction压缩+LanceDB向量长期记忆（强）</td></tr>
-      <tr><td>多租户</td><td>无（V2规划）</td><td>生产级（物理+逻辑双层隔离）</td></tr>
-      <tr><td>计费</td><td>无</td><td>Token计量/订阅/账单/发票全链路</td></tr>
-      <tr><td>我的角色</td><td>从0到1独立开发</td><td>平台链路设计+运行时OEM改造（团队协作）</td></tr>
+      <tr><th>插件</th><th>作用</th><th>解决什么问题</th></tr>
+      <tr><td><strong>sophnet</strong></td><td>模型Provider+Web搜索Provider</td><td>运行时调模型走平台OpenAPI→100%进计费（堵直连绕过）</td></tr>
+      <tr><td><strong>yagent</strong></td><td>渠道插件对接自家IM</td><td>会话存云端openclaw_chat_*表，可审计</td></tr>
+      <tr><td><strong>cron-reminder</strong></td><td>定时提醒+HMAC反向回调</td><td>实例→云端的反向通道（链路②）</td></tr>
+      <tr><td><strong>admin-http-rpc</strong></td><td>受Gateway Token保护的配置RPC</td><td>云端→实例的管控通道（config.get/patch）</td></tr>
     </table>
-    <p>一句话总结："mall-ai证明我能独立从0到1做深Agent技术（ReAct/质检/RAG），AntClaw证明我能在大型平台团队里做工程化和商业化（多租户/计费/微服务/开源二开）——深度和广度各有一个代表作。"</p>
+    <p><strong>追问树：</strong></p>
+    <p>→ <strong>追问1："为什么不直接fork改核心代码？"</strong></p>
+    <p class="interview-quote">"改得越少，跟上游合并的成本越低。OpenClaw上游迭代很快，我们OEM分支要定期merge上游吃安全修复和功能——git历史里有好几次merge上游的记录，比如会话锁修复、failover误判修复。如果核心代码改得面目全非，每次merge都是一场灾难。插件机制把我们的改动隔离在边界上，merge冲突面最小。"</p>
+    <p>→ <strong>追问2："上游breaking change怎么办？"</strong></p>
+    <p class="interview-quote">"我们的插件只依赖plugin-sdk的契约接口，不碰内核实现，所以上游内部重构影响有限。契约本身变化时，靠定期merge加CI回归兜底。这是二次开发的通用代价，选型时就评估过。"</p>
+    <p>→ <strong>追问3："SQLite做生产存储靠谱吗？"</strong></p>
+    <p class="interview-quote">"对单Agent实例场景非常靠谱——写入模式是单进程顺序写，没有并发竞争；WAL模式保证读写不阻塞；每Agent独立库，一个库损坏不影响别人。真正要高可用的数据——订阅、账单、云端会话——都不在SQLite里，回传MySQL。SQLite存的是'可以重建的运行时状态'，MySQL存的是'不能丢的商业数据'，存储分层的边界很清楚。"</p>
   </div>
-  <div class="interview-tip">💡 这张对照表是双项目面试策略的核心——主动引导面试官看到互补性，把"两个项目可能被质疑重复"变成"深度+广度的组合拳"。背下这张表。</div>
+  <div class="interview-tip">💡 "九个字原则"（核心不硬改、能力靠插件、状态靠约定）直接背——这是整章最容易被记住的金句。追问3的SQLite回答展示存储分层的判断力。</div>
 </div>
 
+
+<!-- ==================== 四、高频追问Q&A ==================== -->
+<h3>四、高频追问Q&amp;A（口语原话版，背了直接说） <span class="difficulty">⭐⭐⭐</span></h3>
+
 <div class="interview-q">
-  <div class="question">9. 这个项目里你遇到的最难的技术问题是什么？</div>
+  <div class="question">Q1 "为什么选OpenClaw，不用LangGraph/AutoGen自研？"</div>
   <div class="interview-answer">
-    <p>推荐讲<strong>"单用户开源项目改造为多租户托管"的边界问题</strong>（真实且深度够）：</p>
-    <p><strong>问题</strong>：OpenClaw的配置体系是"单用户本地文件"，云端要实现"管理员远程改实例配置"（如开通cron-reminder回调、切换模型Provider），但不能让实例端口直接暴露公网管理接口。</p>
-    <p><strong>方案迭代</strong>：①直接开管理端口+IP白名单——被否，K8s下实例IP动态，白名单维护不了；②VPN/内网穿透——运维成本高；③<strong>最终方案</strong>——利用上游Gateway已有的 authenticated-request 分发契约，写admin-http-rpc插件注册受保护的RPC方法（config.get/config.patch），云端持有per-subscription的Gateway Token（Bearer），配置变更走"get取hash→patch提交"的乐观并发模式；反向的实例→云端通道（提醒回调）用HMAC签名。两条通道密钥都是订阅创建时下发，互相不知道对方的密钥，实现<strong>双向互信、单向授权</strong>。</p>
-    <p><strong>收获</strong>：二次开发的关键是找到上游的扩展契约（plugin-sdk的gatewayMethodDispatch），顺着架构改而不是对抗架构。</p>
+    <p class="interview-quote">"因为它们不是一类东西。LangGraph、AutoGen是Agent编排框架，是库；OpenClaw是成品助理运行时，是产品。我们要做C端个人助理——需要30多个IM渠道接入、40多个模型Provider、语音画布浏览器技能生态。这些用框架等于自己重造产品的80%。OpenClaw这三样都是现成的，而且工程成熟——pnpm monorepo、152个插件、清晰的plugin-sdk契约、完整的CI。</p>
+    <p class="interview-quote">"可以补充一个对比：mall-ai项目里我用langchain4j手写ReAct，因为客服场景窄、要完全可控；AntClaw是通用助理产品，产品化要求高，站在OpenClaw肩膀上是对的。两个选型都是'场景决定选型'，不是'哪个新用哪个'。"</p>
   </div>
-  <div class="interview-tip">💡 这题的结构是"问题→错误方案及为什么否掉→最终方案→抽象收获"。中间"被否的方案"最重要——展示你做过真实的trade-off而不是一次成型。</div>
+  <div class="interview-tip">💡 金句："框架和产品是两个赛道" + "场景决定选型"。双项目对比放最后，主动引导面试官看到你的判断力。</div>
 </div>
 
 <div class="interview-q">
-  <div class="question">10. 如果让你重构这个平台，你会改什么？</div>
+  <div class="question">Q2 "你在项目里的角色？哪些是你做的？"</div>
   <div class="interview-answer">
-    <p>按优先级给5条（每条都有现状依据）：</p>
-    <p>①<strong>Java 8/Boot 2.7 → Java 21/Boot 3.x</strong>：主后端栈太老（Boot 2.7已于2025-11 EOL），升级解锁虚拟线程、记录类型、新背压API——但175张表ddl-auto:update的存量迁移成本高，建议新模块先行（k8s-backend这种小服务先动）；</p>
-    <p>②<strong>RestTemplate → OpenFeign + Resilience4j + Micrometer Tracing</strong>：13条调用边统一超时/熔断/重试/链路上下文传递，解决同步阻塞和无追踪问题；</p>
-    <p>③<strong>ddl-auto:update → Flyway全量管理</strong>：生产库靠ddl-auto是隐患（字段类型变更无告警、无回滚），tenant-backend已经用了Flyway（db/migration），推广到全部服务；</p>
-    <p>④<strong>实例成本优化</strong>：更激进的休眠策略+SQLite状态卷快照到对象存储，支撑万级订阅；</p>
-    <p>⑤<strong>补质检门禁</strong>：把mall-ai的LLM-as-Judge质检思路移植到AntClaw的云端会话审计（openclaw_chat_*数据都在云端，做抽样质检的数据基础是现成的）。</p>
+    <p class="interview-quote">"平台侧的链路设计和运行时改造是我主导的。具体说：智能体订阅生命周期这条链——sophclaw校验余额、backend写订阅表、调k8s-backend部署、下发Token、月结巡检——这条链的设计和落地是我做的；OpenClaw的四个平台插件——sophnet、yagent、cron-reminder、admin-http-rpc——是我设计并参与开发的；网关的限流排队逻辑我参与设计。上游OpenClaw本身的内核代码不是我写的，我是OEM分支的维护者，负责跟上游同步。</p>
+    <p class="interview-quote">"另外我独立维护了一份整个工程的架构报告——12个项目结构、4+1库的ER图、13条调用链清单——后来成了团队新人的入门文档。"</p>
   </div>
-  <div class="interview-tip">💡 重构题的公式："现状依据+具体方案+迁移成本意识"。第⑤条把两个项目再次串起来（AntClaw补质检短板），强化双项目互补叙事。</div>
+  <div class="interview-tip">💡 "我做的/不是我做的"边界要清楚——面试官追打"这真是你做的吗"时，模糊回答最致命。主动划边界反而可信。</div>
 </div>
 
-
-<!-- ==================== 四、优点与不足 ==================== -->
-<h3>四、项目全方位评估：优点与不足 <span class="difficulty">⭐⭐⭐</span></h3>
-
-<div class="one-liner">面试官一定会问"这项目有什么问题"——这节的每一条不足都是送分题：主动说=有判断力，被戳穿=减分。</div>
-
 <div class="interview-q">
-  <div class="question">4.1 架构设计：优点 vs 不足</div>
+  <div class="question">Q3 "这个项目最难的技术问题是什么？"</div>
   <div class="interview-answer">
-    <p><strong>优点：</strong></p>
-    <ul>
-      <li><strong>职责切分干净</strong>——"卖"（sophclaw）与"收钱部署"（backend）分离、K8s操作独立成k8s-backend单一职责小服务、统计独立成usage-portal；每个服务一个明确的领域，175表大库也没有失控成泥球；</li>
-      <li><strong>物理隔离的托管模型</strong>——每订阅一Pod+独立SQLite+独立子域名，多租户隔离是产品级而非规划级，故障爆炸半径小，这在SaaS里是重投入但正确的选择；</li>
-      <li><strong>双向安全信道设计</strong>——云端→实例走Bearer Gateway Token，实例→云端走HMAC签名，两条信道密钥互不共享，最小授权原则执行到位；</li>
-      <li><strong>二次开发边界感好</strong>——OEM改造全走插件机制，核心零侵入，上游可merge可跟进。</li>
-    </ul>
-    <p><strong>不足：</strong></p>
-    <ul>
-      <li><strong>同步调用链长且无弹性治理</strong>——全RestTemplate同步HTTP，订阅开通一条链穿4个服务+K8s，任一环节抖动全链失败；无熔断/舱壁/重试预算（Resilience4j缺席）；</li>
-      <li><strong>无分布式链路追踪</strong>——没有traceId透传机制，跨服务排障靠业务ID人工串日志；</li>
-      <li><strong>每订阅一Pod的成本天花板</strong>——万级订阅时Pod密度/IP/控制面压力见顶，休眠机制只是缓解不是解法；</li>
-      <li><strong>强一致缺失</strong>——跨库（llmop/sophnet_app/租户库）只有逻辑外键，无分布式事务/Saga，跨库数据一致性靠业务流程保证（订阅回滚场景要小心）。</li>
-    </ul>
+    <p class="interview-quote">"最难的是'单用户开源项目改造成多租户托管'里的管理通道问题。场景是：云端管理员要能远程改实例配置——比如开通定时提醒、切换模型——但不能把实例的管理端口直接暴露公网。</p>
+    <p class="interview-quote">"我们试过两个方案都被否了：直接开管理端口加IP白名单——K8s下实例IP是动态的，白名单维护不动；VPN内网穿透——运维成本太高。</p>
+    <p class="interview-quote">"最终方案是顺着上游架构走：发现OpenClaw的Gateway本身有authenticated-request的分发契约，我们就写了一个admin-http-rpc插件，注册受保护的RPC方法，云端持有一个订阅级别的网关Token来调用。配置变更是'先get拿hash再patch提交'的乐观并发模式。加上反方向的HMAC回调通道，两条信道密钥互相不知道，实现了双向互信、单向授权。</p>
+    <p class="interview-quote">"这件事最大的收获是：二次开发的关键是找到上游的扩展契约，顺着架构改，而不是对抗架构。"</p>
   </div>
-  <div class="interview-tip">💡 讲优点时给"为什么对"（隔离性/职责单一），讲不足时给"规模前提"（当前规模合理、万级时要变）——不足说得有分寸，反而显得架构判断成熟。</div>
+  <div class="interview-tip">💡 "问题→两个被否的方案→最终方案→抽象收获"结构。被否的方案最值钱——证明你做过真实trade-off，不是一次成型。</div>
 </div>
 
 <div class="interview-q">
-  <div class="question">4.2 工程质量：优点 vs 不足</div>
+  <div class="question">Q4 "计费怎么保证不丢单不少记？"</div>
   <div class="interview-answer">
-    <p><strong>优点：</strong></p>
-    <ul>
-      <li><strong>K8s+Helm标准化部署</strong>——每个服务自带helm chart，版本tag管理，RollingUpdate；</li>
-      <li><strong>操作审计</strong>——admin-backend有sys_operation_log，管理端每个动作留痕；</li>
-      <li><strong>状态机+流转日志</strong>——订阅/实例的休眠/恢复/升配全记moltbot_status_transition_log，可追溯可排障；</li>
-      <li><strong>异步大任务</strong>——用量导出走作业表+OSS产物+清理调度器，不阻塞接口；</li>
-      <li><strong>团队文档文化</strong>——工程结构/数据库ER/13条调用链有完整报告（我维护的），新人上手快。</li>
-    </ul>
-    <p><strong>不足：</strong></p>
-    <ul>
-      <li><strong>ddl-auto:update建生产表</strong>——Spring Boot的ddl-auto是开发便利工具，生产用它建表是隐患（无迁移历史/无回滚/字段变更静默），只有tenant-backend用了Flyway，其他服务没有；</li>
-      <li><strong>测试覆盖不均衡</strong>——moltbot上游有较完整单测（*.test.ts遍布源码），但Java侧各服务测试薄弱，跨服务集成测试缺失；</li>
-      <li><strong>接口契约靠人肉同步</strong>——没有OpenAPI契约中心/版本化管理，跨仓接口变更出过真实事故（美元单位对齐fix横跨3仓库）；</li>
-      <li><strong>配置管理分散</strong>——无统一配置中心，配置在各自application.yml+Helm values里，改配置要重新发布。</li>
-    </ul>
+    <p class="interview-quote">"三层保障。第一层，架构上堵漏：所有模型调用必须过网关，包括智能体实例自用——我们用sophnet插件把运行时流量导回平台OpenAPI，物理上不存在绕过计费的路径。第二层，记量聚合分离：网关MetricsFilter记明细，usage-portal做小时聚合，聚合任务幂等可重跑；大账单导出是异步作业，提交后轮询状态拿OSS下载链接。第三层，对账兜底：订阅月结由定时巡检驱动，状态流转全记日志表，可追溯可补偿。</p>
+    <p class="interview-quote">"要说不足：网关记量到聚合之间如果出故障，理论上可能丢计量点。当前是靠小时任务重跑补偿的at-least-once，不是严格的单笔不丢。业界标准做法是Kafka加幂等消费做exactly-once，这个我知道差距在哪，属于已知演进项。"</p>
   </div>
-  <div class="interview-tip">💡 ddl-auto:update 是Java面试官一听就懂的痛点，主动讲出来并且给出Flyway/Liquibase的正解，直接证明你的生产意识。美元单位对齐事故是真实案例，讲出来极可信。</div>
+  <div class="interview-tip">💡 "三层保障+主动承认at-least-once"的组合话术。知道exactly-once标准解法说明你有视野，承认现状说明你诚实——两头都占。</div>
 </div>
 
 <div class="interview-q">
-  <div class="question">4.3 产品与安全：优点 vs 不足</div>
+  <div class="question">Q5 "多租户隔离怎么做的？"</div>
   <div class="interview-answer">
-    <p><strong>优点：</strong></p>
-    <ul>
-      <li><strong>商业化闭环完整</strong>——注册/组织/项目/API Key/充值/Token计量/账单/发票全链路，这在Agent创业公司里普遍是缺失的；</li>
-      <li><strong>计费正确性的架构保证</strong>——所有模型调用（含moltbot自用）强制过网关，插件层面把运行时流量导回平台（sophnet插件），堵死绕过计费的路径；</li>
-      <li><strong>密钥管理分层</strong>——上游Provider Key由网关统一管理（Provider Key管理），实例侧只持有平台API Key，不接触真实供应商密钥；</li>
-      <li><strong>HMAC双向互信</strong>——订阅级密钥下发，验签失败拒绝，比裸API Token强。</li>
-    </ul>
-    <p><strong>不足：</strong></p>
-    <ul>
-      <li><strong>防重放缺失</strong>——HMAC签名没带时间戳/nonce，理论上签名请求可截获重放（应加X-Timestamp+短窗口校验）；</li>
-      <li><strong>无独立质检/评测体系</strong>——智能体回答质量没有LLM-as-Judge门禁（mall-ai有而AntClaw没有），依赖上游OpenClaw生态的工具修复；</li>
-      <li><strong>租户级配额粒度粗</strong>——限流在网关是org/模型维度，租户级（bcc-tenant）细粒度配额要靠业务层；</li>
-      <li><strong>审计只覆盖管理面</strong>——用户面数据访问（谁查了谁的会话）没有等同的审计链路。</li>
-    </ul>
+    <p class="interview-quote">"两层。运行时层是物理隔离：每订阅一个Pod、每Agent一个独立SQLite库、独立子域名Ingress——租户之间物理上碰不到彼此。数据层是逻辑隔离：主库是组织-项目-用户三级结构，API Key挂项目，数据行带org_id；租户库独立一套20多张配置表，全带tenant_id；跨库用桥接表关联。管理面有RBAC加操作审计日志。</p>
+    <p class="interview-quote">"不足也要说：MySQL目前是共享单库，没有按租户分库——当前规模合理，租户量上来后要重新评估物理分库。"</p>
   </div>
-  <div class="interview-tip">💡 安全不足里"防重放"最容易被追问，准备好正解：HMAC payload加时间戳+服务端校验±5分钟窗口+nonce去重。这题答好了是安全意识的直接证明。</div>
+  <div class="interview-tip">💡 "运行时物理隔离+数据逻辑隔离"两分法背熟，条理分明确。结尾带一句规模前提，显得有分寸。</div>
 </div>
 
-<!-- ==================== 五、技术新旧评估 ==================== -->
-<h3>五、技术栈新旧程度评估（2026年11月视角） <span class="difficulty">⭐⭐</span></h3>
+<div class="interview-q">
+  <div class="question">Q6 "智能体的记忆是怎么做的？"（和mall-ai对比的黄金题）</div>
+  <div class="interview-answer">
+    <p class="interview-quote">"OpenClaw的记忆体系比一般Agent完整，分层设计：最底层是会话转录，每Agent独立SQLite存完整对话；第二层是上下文压缩compaction——上下文快满时自动生成分支摘要，把旧对话压成一条带角色标记的摘要消息，解决长对话窗口问题；第三层是长期记忆插件——有LanceDB向量库实现的长期记忆，自动捕获、自动召回、向量检索，对Agent暴露memory_store、memory_recall、memory_forget三个工具；最高层云端留存——会话回传MySQL，可审计可分析。</p>
+    <p class="interview-quote">"对比有意思的是：mall-ai里我做的记忆是Redis窗口加12条硬截断——简单粗暴但够用；AntClaw是工业级的压缩加向量长期记忆。一个是截断一个是压缩，理解了两个方案的差距，才知道记忆分层的意义。"</p>
+  </div>
+  <div class="interview-tip">💡 "一个截断一个压缩"这六个字是这道题的记忆点。面试官如果懂Agent，立刻知道你理解记忆分层；如果不懂，你也展示了两段真实经验。</div>
+</div>
 
 <div class="interview-q">
-  <div class="question">5.1 技术栈新旧打分表（面试前必看，防止被"你们技术老不老"问倒）</div>
+  <div class="question">Q7 "这个项目和mall-ai什么关系？是不是重复堆项目？"</div>
+  <div class="interview-answer">
+    <p class="interview-quote">"正好相反，两个项目刻意互补。mall-ai是我个人从0到1的项目，证明的是深度——手写ReAct、质检纠错闭环、RAG全链路，一个人撑起全部技术决策。AntClaw是公司平台级项目，证明的是广度——多租户托管、Token计费、微服务协作、开源二开，在团队里做工程化和商业化。一个是'能把Agent技术做深'，一个是'能把AI产品做上线收钱'。面试官您要考察任何一个方向，我都有对应的实战。"</p>
+    <table>
+      <tr><th>维度</th><th>mall-ai（深度）</th><th>AntClaw（广度）</th></tr>
+      <tr><td>角色</td><td>从0到1独立开发</td><td>平台链路设计+OEM改造（团队）</td></tr>
+      <tr><td>Agent引擎</td><td>手写ReAct（可控）</td><td>OpenClaw OEM（产品级）</td></tr>
+      <tr><td>质检</td><td>LLM-as-Judge闭环（强）</td><td>无独立质检（靠上游生态）</td></tr>
+      <tr><td>记忆</td><td>Redis窗口截断（弱）</td><td>compaction+LanceDB向量记忆（强）</td></tr>
+      <tr><td>多租户</td><td>无（V2规划）</td><td>生产级物理+逻辑双层</td></tr>
+      <tr><td>计费</td><td>无</td><td>计量/订阅/账单/发票全链路</td></tr>
+    </table>
+  </div>
+  <div class="interview-tip">💡 这张表是双项目策略的核心——把"项目重复"的质疑变成"深度+广度组合"。注意"质检强/记忆弱"和"质检无/记忆强"正好互补，说明你两边的方案都见过、都知道怎么选。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q8 "为什么服务间调用用RestTemplate，不用Feign/注册中心/gRPC？"</div>
+  <div class="interview-answer">
+    <p class="interview-quote">"先说为什么当时合理：服务固定就7个，不需要动态服务发现——K8s Service的DNS本身就是注册中心；调用关系13条边，RestTemplate加Client类封装够用；而且存量栈是Java 8加Boot 2.7，引入新组件的兼容成本大于收益。这是务实，不是先进。</p>
+    <p class="interview-quote">"但我清楚它的代价：一是同步阻塞，订阅开通一条链穿四个服务，没有统一的超时熔断治理；二是没有链路追踪，traceId不跨服务传递，排障靠业务ID人工串日志；三是接口契约靠人肉同步——我们真实出过一次事故，美元单位对齐的修复同时要改三个仓库，就是契约没有集中管理的痛。</p>
+    <p class="interview-quote">"如果要重构，我会上OpenFeign加Resilience4j做统一的超时熔断重试，加Micrometer Tracing做traceId透传。"</p>
+  </div>
+  <div class="interview-tip">💡 "务实而非先进"定调→主动说三个代价→给重构方向。美元单位对齐事故是真实案例，说出来极可信——真实事故细节是面试的硬通货。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q9 "让你重构这个平台，你改什么？"（优先级排序题）</div>
+  <div class="interview-answer">
+    <p class="interview-quote">"按投入产出排五条。第一，Java 8加Boot 2.7升到Java 21加Boot 3——2.7已经EOL了，安全补丁都没了，这是最大的风险项；但主库175张表迁移成本高，我会让k8s-backend这种无库小服务先动，趟出新模块先行的路子。第二，RestTemplate换OpenFeign加Resilience4j加链路追踪，解决刚才说的三个代价。第三，ddl-auto:update换Flyway全量管理——生产库靠ddl-auto建表是没有回滚能力的，tenant-backend已经用了Flyway，推广到全部服务就行。第四，实例成本优化——更激进的休眠加SQLite快照外置到对象存储，支撑万级订阅。第五，补质检——把mall-ai的LLM-as-Judge质检思路移植过来，openclaw_chat_*的会话数据都在云端，抽样质检的数据基础是现成的。"</p>
+  </div>
+  <div class="interview-tip">💡 重构题公式："风险项优先+迁移成本意识+已有试点推广"。第③条的"tenant-backend已经用了Flyway"这种细节最值钱——说明你真的摸过代码。第⑤条再次串联mall-ai。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q10 "公司项目Java 8，你mall-ai用Java 21——是不是你个人项目才追新，工作中没机会？"（压力测试题）</div>
+  <div class="interview-answer">
+    <p class="interview-quote">"恰恰相反，这正说明我知道'什么时候该新、什么时候该稳'。mall-ai是我的绿地项目，一个人开发，直接上Java 21加Boot 3，零迁移成本，当然选最新的。AntClaw是存量生产项目，上面跑着商业流量，Java 8升21不是不想升，是要算账：175张表、13条调用边、一堆依赖的兼容性验证，这个迁移要排期要做灰度，不是拍脑袋就动的。我在重构方案里已经把升级路径设计好了——小服务先行、新模块先用新栈。能管住'想用新技术的手'，同时给出演进路径，这才是工程判断。"</p>
+  </div>
+  <div class="interview-tip">💡 这题是坑：抱怨"公司技术栈旧没机会"=减分；吹"我推动了升级"=穿帮。正确姿势是"存量演进要算账"——把技术债说成管理问题而不是能力问题。</div>
+</div>
+
+
+<!-- ==================== 五、主动暴露不足 ==================== -->
+<h3>五、"这项目有什么不足？"（主动暴露话术） <span class="difficulty">⭐⭐⭐</span></h3>
+
+<div class="interview-q">
+  <div class="question">5.1 三优三缺标准答案（每条都是"不足+前提+方向"三段式）</div>
+  <div class="interview-answer">
+    <p><strong>架构三个优点·面试原话：</strong></p>
+    <p class="interview-quote">"第一，职责切分干净——卖订阅的sophclaw和管钱管部署的backend是分开的，K8s操作独立成单一职责小服务，统计独立成usage-portal，每个服务一个领域。第二，多租户隔离是产品级的——每订阅一Pod加独立SQLite，不是PPT里的规划，是跑在生产上的。第三，安全信道设计讲究——云端到实例和实例到云端两条通道，密钥互相不知道，最小授权。"</p>
+    <p><strong>三个不足·面试原话（主动说，配前提和方向）：</strong></p>
+    <p class="interview-quote">"第一，Java侧技术栈老了——Java 8加Spring Boot 2.7，2.7去年11月已经停止维护，安全补丁都没了。这是存量包袱不是团队水平问题，我的重构方案是小服务先行升Java 21。第二，服务间全同步RestTemplate——没有熔断、没有链路追踪，一条链穿四个服务，任一环节抖动全链失败，这是我最想改的地方。第三，HMAC回调没有防重放——签名没带时间戳和nonce，标准解法我知道，是排期没排上的已知债。"</p>
+    <p><strong>防追加追问的两个"不足中的不足"：</strong></p>
+    <p class="interview-quote">"如果再问工程规范：生产库用ddl-auto:update建表——Spring的开发便利工具用在生产，没有迁移历史和回滚能力，好在tenant-backend已经用了Flyway，方向是全量推广。如果再问测试：上游OpenClaw有完整单测，但Java侧各服务测试薄弱，跨服务集成测试缺失——这也是为什么我们出过跨三个仓库修单位对齐的事故。"</p>
+  </div>
+  <div class="interview-tip">💡 面试官问不足，最差的回答是"没什么不足"或临时瞎编。这五个不足全是源码里核实过的真实短板，每条都配"前提（为什么当时这样）+方向（怎么改）"——主动暴露=判断力，被戳穿=减分。</div>
+</div>
+
+<!-- ==================== 六、技术新旧 ==================== -->
+<h3>六、技术新旧评估（被问"你们技术栈新吗"） <span class="difficulty">⭐⭐</span></h3>
+
+<div class="interview-q">
+  <div class="question">6.1 新旧打分表（2026-11视角）+ 一句话定调</div>
   <div class="interview-answer">
     <table>
-      <tr><th>技术</th><th>项目用</th><th>业界现状(2026-11)</th><th>评价</th></tr>
-      <tr><td>Java版本</td><td><strong>Java 8</strong> (backend等)</td><td>Java 21 LTS为主流，25已出</td><td><span style="color:#d32f2f"><strong>落后，最大短板</strong></span>（落后2个LTS）</td></tr>
-      <tr><td>Spring Boot</td><td><strong>2.7.18</strong></td><td>3.x主流(3.4+)，2.7已于2025-11 EOL</td><td><span style="color:#d32f2f"><strong>已EOL，落后</strong></span></td></tr>
-      <tr><td>Spring Cloud Gateway</td><td>在用</td><td>仍是Spring系网关主流选型</td><td><span style="color:#2e7d32"><strong>主流</strong></span></td></tr>
-      <tr><td>ORM</td><td>Spring Data JPA + ddl-auto</td><td>JPA仍主流，但ddl-auto生产不用</td><td><span style="color:#ff6f00"><strong>框架主流，用法不规范</strong></span></td></tr>
-      <tr><td>网关限流</td><td>Redis窗口+优先级队列</td><td>主流方案（Redis+Lua/Sentinel）</td><td><span style="color:#2e7d32"><strong>主流</strong></span></td></tr>
-      <tr><td>K8s+Helm</td><td>全服务</td><td>绝对主流</td><td><span style="color:#2e7d32"><strong>主流</strong></span></td></tr>
-      <tr><td>前端</td><td>Vue3+Vite / <strong>Next.js 15.1+shadcn/ui</strong></td><td>Vue3主流；Next.js 15是2026年新版本</td><td><span style="color:#2e7d32"><strong>新</strong></span>（admin-tenant-web相当新）</td></tr>
-      <tr><td>智能体运行时</td><td><strong>OpenClaw 2026.6.8 OEM</strong> / Node 22+ / TS</td><td>OpenClaw是2026年最活跃的开源助理项目之一</td><td><span style="color:#2e7d32"><strong>非常新</strong></span>（OEM分支紧跟上游）</td></tr>
-      <tr><td>Agent记忆</td><td>compaction压缩 + LanceDB向量记忆</td><td>compaction是2026年Agent产品标配思路；LanceDB是新锐向量库</td><td><span style="color:#2e7d32"><strong>前沿</strong></span></td></tr>
-      <tr><td>插件生态</td><td>152插件/30+渠道/40+Provider</td><td>MCP协议兼容的工具生态</td><td><span style="color:#2e7d32"><strong>前沿</strong></span></td></tr>
-      <tr><td>服务间通信</td><td>RestTemplate同步HTTP</td><td>OpenFeign/gRPC为主流</td><td><span style="color:#ff6f00"><strong>能用但老旧</strong></span></td></tr>
-      <tr><td>消息队列</td><td>（计量补偿用定时任务）</td><td>Kafka/Pulsar做事件驱动为主流</td><td><span style="color:#ff6f00"><strong>缺位</strong></span></td></tr>
+      <tr><th>技术</th><th>项目用</th><th>评价</th></tr>
+      <tr><td>智能体运行时</td><td>OpenClaw 2026.6.8 OEM · Node 22+ · TS</td><td style="color:#2e7d32"><strong>非常新</strong>——2026年最活跃开源助理项目</td></tr>
+      <tr><td>Agent记忆</td><td>compaction压缩 + LanceDB向量记忆</td><td style="color:#2e7d32"><strong>前沿</strong>——2026年Agent产品标配思路</td></tr>
+      <tr><td>插件生态</td><td>152插件/30+渠道/40+Provider</td><td style="color:#2e7d32"><strong>前沿</strong></td></tr>
+      <tr><td>租户前端</td><td>Next.js 15 + shadcn/ui</td><td style="color:#2e7d32"><strong>新</strong></td></tr>
+      <tr><td>网关/部署</td><td>Spring Cloud Gateway + K8s/Helm</td><td style="color:#2e7d32"><strong>主流</strong></td></tr>
+      <tr><td>Java版本</td><td>Java 8</td><td style="color:#d32f2f"><strong>落后2个LTS</strong></td></tr>
+      <tr><td>Spring Boot</td><td>2.7.18</td><td style="color:#d32f2f"><strong>已EOL(2025-11)</strong></td></tr>
+      <tr><td>服务间通信</td><td>RestTemplate同步</td><td style="color:#ff6f00"><strong>能用但老旧</strong></td></tr>
+      <tr><td>ORM用法</td><td>JPA+ddl-auto:update</td><td style="color:#ff6f00"><strong>框架主流，用法不规范</strong></td></tr>
     </table>
-    <p><strong>一句话总结（面试表述）：</strong>"这个项目是<strong>新旧混合体</strong>——智能体运行时侧（OpenClaw OEM/Node22/LanceDB/插件化）是2026年第一梯队，前端也不旧（Next.js 15）；但Java服务侧是历史包袱区（Java 8 + Boot 2.7 EOL + RestTemplate），属于'业务跑得欢、技术欠着账'。我在里面做的事之一就是认清这个差距并知道怎么还（Java 21/Boot 3/Feign+Resilience4j/Flyway），这比'我们技术栈很新'的吹嘘更有面试价值。"</p>
+    <p><strong>一句话定调·面试原话：</strong></p>
+    <p class="interview-quote">"这是个新旧混合体——智能体运行时侧是2026年第一梯队，OpenClaw、LanceDB、compaction这些都很新；Java服务侧是历史包袱区，Java 8加已经EOL的Boot 2.7。我在里面的价值之一就是认清差距并知道怎么还账——Java 21、Boot 3、Feign加Resilience4j、Flyway，路径都想好了。"</p>
   </div>
-  <div class="interview-tip">💡 这张表帮你应对两种极端追问：被问"你们技术栈新吗"→坦承Java侧旧+说明原因（业务连续性/迁移成本）+给出演进路径；被问"你对新技术了解吗"→指向OpenClaw/LanceDB/compaction/Next.js15这些新鲜的点。新旧混合是大多数真实公司的常态，坦诚+有判断最加分。</div>
+  <div class="interview-tip">💡 新旧混合是绝大多数公司的真实状态。坦诚+有还账路径，比"我们技术栈很新"的吹嘘可信十倍。红色两行（Java 8/Boot 2.7 EOL）是必须主动说的，别等面试官问。</div>
 </div>
 
-<div class="interview-q">
-  <div class="question">5.2 和mall-ai技术栈对比（同一张嘴讲两个项目，版本不能打架）</div>
-  <div class="interview-answer">
-    <table>
-      <tr><th>维度</th><th>mall-ai（个人主导）</th><th>AntClaw（公司项目）</th></tr>
-      <tr><td>Java</td><td>21（虚拟线程友好）</td><td>8（存量包袱）</td></tr>
-      <tr><td>Spring Boot</td><td>3.x + WebFlux响应式</td><td>2.7.18 + MVC阻塞式</td></tr>
-      <tr><td>限流</td><td>单机滑动窗口(10/分钟+100QPS)</td><td>Redis分布式多级(窗口+优先级排队+并发)</td></tr>
-      <tr><td>表结构管理</td><td>ddl-auto（个人项目可接受）</td><td>ddl-auto为主+局部Flyway（欠账）</td></tr>
-      <tr><td>Agent引擎</td><td>手写ReAct可控循环</td><td>OpenClaw OEM产品级运行时</td></tr>
-    </table>
-    <p><strong>面试口径：</strong>"mall-ai是我个人从0到1的项目，直接上了Java 21+Boot 3最新栈；AntClaw是公司存量演进的项目，Java侧还停在8/2.7——这个对比恰好说明我对新旧栈<strong>都能干活</strong>，也知道各自该往哪演进。"（千万别说反了，或者表现出'公司项目很low'的态度——存量项目的技术债是业务连续性的代价，不是团队水平问题。）</p>
-  </div>
-  <div class="interview-tip">💡 面试官可能拿"你mall-ai用Java21，公司项目怎么才Java8"做压力测试。标准答案：技术选型服务于业务语境——绿地项目选新栈，存量项目演进要算迁移成本和风险，"知道什么时候该新、什么时候该稳"才是工程判断力。</div>
-</div>
+<!-- ==================== 七、速记总卡 ==================== -->
+<h3>七、速记总卡（面试前5分钟，只看这一节） <span class="difficulty">⭐⭐⭐</span></h3>
 
-<!-- ==================== 总结 ==================== -->
-<div class="note">
-  <h3>本章速记卡（面试前5分钟看这个）</h3>
+<div class="review-card">
+  <h3>AntClaw 速记卡</h3>
+  <p><strong>一句话：</strong>算能的LLM开放平台+智能体产品线，12子项目（7后端/4前端/1运行时），主库175表，我负责平台链路设计+OpenClaw OEM改造</p>
+  <p><strong>业务三块：</strong>LLM开放平台（买Token调模型）/ 智能体产品（OpenClaw OEM托管+订阅）/ 管理运营体系（三端+账单）</p>
+  <p><strong>四条链：</strong></p>
   <ul>
-    <li><strong>一句话：</strong>SophGo的LLM开放平台+智能体产品线，12子项目/4+1库/主库175表，我负责平台链路设计+OpenClaw OEM改造</li>
-    <li><strong>四条链：</strong>订阅生命周期(sophclaw卖→backend部署扣费→k8s落容器→实例反向注册) / 定时提醒(双向HMAC) / 网关数据面(鉴权→Redis限流→优先级排队→记量) / OEM改造(sophnet/yagent/cron-reminder/admin-http-rpc四插件)</li>
-    <li><strong>关键数字：</strong>152插件 · 30+渠道 · 40+Provider · 每订阅一Pod+独立SQLite+子域名 · 网关10秒burst窗口 · 月结+休眠巡检</li>
-    <li><strong>三大优点：</strong>托管物理隔离 / 计费架构闭环 / 二开边界感（插件不侵入核心）</li>
-    <li><strong>三大不足（主动说）：</strong>Java8/Boot2.7已EOL / RestTemplate无熔断无追踪 / HMAC无防重放</li>
-    <li><strong>新旧定调：</strong>运行时侧2026第一梯队(OpenClaw/LanceDB/compaction/Next15)，Java侧欠账但有还账方案(Java21/Boot3/Feign+R4j/Flyway)</li>
-    <li><strong>双项目叙事：</strong>mall-ai=从0到1深度(ReAct/质检)，AntClaw=平台广度(多租户/计费/微服务/开源二开)，互补不重复</li>
+    <li>①订阅生命周期：sophclaw校验余额→backend写订阅表→k8s-backend落Pod（服务池预热）→下发Token→子域名生效→月结巡检</li>
+    <li>②定时提醒：云端config.patch下发→实例到点HMAC签名回调→验签→推IM（双向互信，<span style="color:#d32f2f">无防重放是已知债</span>）</li>
+    <li>③网关数据面：鉴权→Redis三级（10秒token窗口限流/模型×组织优先级排队/并发控制）→记量→小时聚合出账单</li>
+    <li>④OEM改造九字诀：核心不硬改、能力靠插件、状态靠约定（sophnet/yagent/cron-reminder/admin-http-rpc四插件）</li>
   </ul>
+  <p><strong>数字卡：</strong>12项目 · 175表 · 97表 · 4+1库 · 152插件 · 30+渠道 · 40+Provider · 13调用边 · Node22/Java8/Boot2.7 · Next15</p>
+  <p><strong>三优：</strong>职责切分干净 / 多租户物理隔离产品级 / 双向安全信道最小授权</p>
+  <p><strong>三缺（主动说）：</strong>Java8+Boot2.7已EOL / RestTemplate无熔断无追踪 / HMAC无防重放</p>
+  <p><strong>金句：</strong>"框架和产品是两个赛道" · "场景决定选型" · "务实而非先进" · "一个截断一个压缩" · "顺着架构改，不对抗架构" · "知道什么时候该新、什么时候该稳"</p>
+  <p><strong>双项目叙事：</strong>mall-ai=深度（从0到1/ReAct/质检闭环），AntClaw=广度（多租户/计费/微服务/开源二开），互补不重复</p>
+  <p><strong>三个翻车点：</strong>数字说错 / 装作有质检（实际没有，被问就说"质检是mall-ai的强项，AntClaw靠上游生态，这正好是两个项目互补点"）/ 说公司技术栈low</p>
+</div>
+
+<div class="interview-q">
+  <div class="question">7.1 自测清单（合上资料，逐条复述，说不出来的回去重看）</div>
+  <div class="interview-answer">
+    <ul>
+      <li>□ 30秒电梯稿能脱口而出（业务三块→规模→我的位置）</li>
+      <li>□ 订阅生命周期五个步骤顺序不说错（校验→建订阅→部署→下发Token→Ingress）</li>
+      <li>□ 四个插件名字+各自作用（sophnet计费/yagent渠道/cron-reminder回调/admin-http-rpc配置）</li>
+      <li>□ 追问"重放攻击"能主动承认+给正解（时间戳+nonce+窗口校验）</li>
+      <li>□ 追问"为什么每订阅一Pod"能答trade-off+演进三阶段</li>
+      <li>□ mall-ai和AntClaw的限流对比（单机LRU vs Redis多级，差两个量级）</li>
+      <li>□ 记忆对比（一个截断一个压缩）</li>
+      <li>□ 三优三缺各30秒说完</li>
+      <li>□ "公司项目Java 8"压力题不慌（存量演进要算账）</li>
+      <li>□ 全部数字和数字卡一致（175/97/152/30+/40+/13）</li>
+    </ul>
+  </div>
+  <div class="interview-tip">💡 自测标准：以上10条能连续复述8条以上，这章就算过了。全部达标的标志是——别人随便戳一个数字或一个环节，你30秒内讲清来龙去脉。</div>
 </div>
 
 <!-- ==================== 章节导航 ==================== -->

@@ -551,3 +551,15 @@ body.sidebar-collapsed .sidebar-toggle {
   color: var(--warning);
   margin-bottom: 4px;
 }
+
+/* ===== 第19章: 面试口语原话引用块 ===== */
+.interview-quote {
+  background: #f5f8fc;
+  border-left: 3px solid #1565c0;
+  padding: 10px 14px;
+  border-radius: 0 6px 6px 0;
+  margin: 8px 0;
+  font-size: 14px;
+  line-height: 1.8;
+  color: #1a1a1a;
+}
