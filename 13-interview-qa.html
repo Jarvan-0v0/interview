@@ -552,7 +552,7 @@
 <div class="interview-q">
   <div class="question">42. 如果重新做你会怎么改进？</div>
   <div class="interview-answer">
-    <p>几个方向的改进（与项目演进路线一致）：① <strong>检索</strong>：引入Hybrid Search（向量+BM25+RRF融合），弥补纯向量检索在专有名词/订单号精确匹配上的弱项；② <strong>MCP</strong>：加自动重连（指数退避），当前断线只做disabled降级；③ <strong>成本</strong>：Token级限流，当前只限请求次数；④ <strong>流式</strong>：探索流式双模式——支持原生tool_calls的模型（如DeepSeek）走流式，Qwen走缓冲，兼顾正确性与打字机体验；⑤ <strong>模型治理</strong>：抽象ModelRouter统一管理Qwen/DeepSeek的选择、降级与计费。</p>
+    <p>几个方向的改进（与项目演进路线一致）：① <strong>检索</strong>：引入Hybrid Search（向量+BM25+RRF融合），弥补纯向量检索在错误码/矿机型号等精确术语匹配上的弱项；② <strong>MCP</strong>：加自动重连（指数退避），当前断线只做disabled降级；③ <strong>成本</strong>：Token级限流，当前只限请求次数；④ <strong>流式</strong>：探索流式双模式——支持原生tool_calls的模型（如DeepSeek）走流式，Qwen走缓冲，兼顾正确性与打字机体验；⑤ <strong>模型治理</strong>：抽象ModelRouter统一管理Qwen/DeepSeek的选择、降级与计费。</p>
     <p>核心反思是"从实际约束出发做技术决策"——Qwen tool calling不稳定就手写ReAct，而不是硬上AiServices碰运气；纯向量检索对精确匹配弱就规划BM25融合，而不是一口吃成胖子。</p>
   </div>
   <div class="interview-tip">改进建议要具体可落地，不要说"用更好的模型"这种废话。展示"反思→改进"的能力比完美方案更打动面试官。</div>

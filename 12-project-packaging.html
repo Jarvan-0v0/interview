@@ -613,7 +613,7 @@ String skillSop = SkillPromptBuilder.build(hitSkills);  <span class="cmt">// 无
 <div class="interview-q">
 <div class="question">Q12：如果重新做你会怎么改进？</div>
 <div class="interview-answer">
-<p>1）引入Hybrid Search（向量+BM25），当前只有纯向量检索+Rerank，专有名词/订单号精确匹配弱；2）MCP加自动重连（指数退避重试），当前断线只有disabled降级；3）Token级限流，当前只限请求次数；4）流式输出优化，当前全缓冲牺牲了打字机效果，可以探索更精细的流式推送；5）如果模型支持原生function calling（如换DeepSeek），可以回归AiServices方式减少手写维护成本。</p>
+<p>1）引入Hybrid Search（向量+BM25），当前只有纯向量检索+Rerank，错误码/矿机型号等精确术语匹配弱；2）MCP加自动重连（指数退避重试），当前断线只有disabled降级；3）Token级限流，当前只限请求次数；4）流式输出优化，当前全缓冲牺牲了打字机效果，可以探索更精细的流式推送；5）如果模型支持原生function calling（如换DeepSeek），可以回归AiServices方式减少手写维护成本。</p>
 </div>
 <div class="interview-tip">每条改进都要说"当前是什么→缺什么→怎么改"。提"换模型可以回归AiServices"展示你不是为了手写而手写。</div>
 </div>
@@ -751,7 +751,7 @@ Token优化70-80%，响应速度提升2-3倍。</pre>
 
 <table class="compare-table">
 <tr><th>优化方向</th><th>现状</th><th>目标</th><th>方案</th></tr>
-<tr><td><strong>混合检索</strong></td><td>纯Milvus向量检索，专有名词/订单号精确匹配弱</td><td>向量语义+BM25全文双路检索</td><td>引入Elasticsearch做BM25检索，与Milvus结果做RRF融合排序</td></tr>
+<tr><td><strong>混合检索</strong></td><td>纯Milvus向量检索，错误码/矿机型号等精确术语匹配弱</td><td>向量语义+BM25全文双路检索</td><td>引入Elasticsearch做BM25检索，与Milvus结果做RRF融合排序</td></tr>
 <tr><td><strong>MCP自动重连</strong></td><td>断线只返回disabled()降级，无重连</td><td>自动感知断线并指数退避重连</td><td>定时心跳检测+1s→2s→4s→max30s指数退避，重连成功后重新tools/list</td></tr>
 <tr><td><strong>Token级限流</strong></td><td>只限请求次数（10次/分钟），不限Token量</td><td>按Token消耗量做用户级限流</td><td>Redis滑动窗口记录每用户Token消耗，超阈值返回429</td></tr>
 <tr><td><strong>流式双模式</strong></td><td>全缓冲解析，统一牺牲打字机效果</td><td>原生tool_calls模型走流式，不支持的走缓冲</td><td>根据模型能力自动选择模式：Qwen走缓冲，DeepSeek走流式</td></tr>
