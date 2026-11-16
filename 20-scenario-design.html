@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>20 - 大厂场景设计题 | Java转AI Agent面试宝典</title>
+<link rel="stylesheet" href="style.css?v=20260809">
+</head>
+<body>
+<aside class="sidebar" id="sidebar">
+  <h1 class="sidebar-title">Java → AI Agent 面试宝典</h1>
+  <nav class="chapter-nav" id="chapterNav">
+    <a href="index.html"><span class="num">00</span>首页 · 使用指南</a>
+    <a href="01-java-foundation.html"><span class="num">01</span>Java基础强化</a>
+    <a href="02-middleware.html"><span class="num">02</span>中间件与分布式</a>
+    <a href="03-llm-foundation.html"><span class="num">03</span>大模型基础</a>
+    <a href="04-prompt-engineering.html"><span class="num">04</span>Prompt工程</a>
+    <a href="05-langchain4j.html"><span class="num">05</span>LangChain4j实战</a>
+    <a href="06-agent-core.html"><span class="num">06</span>Agent核心原理</a>
+    <a href="07-rag.html"><span class="num">07</span>RAG与知识库</a>
+    <a href="08-vector-db.html"><span class="num">08</span>向量数据库</a>
+    <a href="09-agent-quality.html"><span class="num">09</span>Agent评估与质量</a>
+    <a href="10-agent-patterns.html"><span class="num">10</span>Agent设计模式</a>
+    <a href="11-agent-tools.html"><span class="num">11</span>Agent工具生态</a>
+    <a href="12-project-packaging.html"><span class="num">12</span>项目包装实战</a>
+    <a href="13-interview-qa.html"><span class="num">13</span>面试问答集锦</a>
+    <a href="14-sse-streaming.html"><span class="num">14</span>SSE流式输出</a>
+    <a href="15-mcp-protocol.html"><span class="num">15</span>MCP协议深度</a>
+    <a href="16-spring-ai.html"><span class="num">16</span>Spring AI实战</a>
+    <a href="17-agent-security.html"><span class="num">17</span>Agent安全</a>
+    <a href="18-enterprise-interview-qa.html"><span class="num">18</span>企业级项目面试题</a>
+    <a href="19-antclaw-project.html"><span class="num">19</span>项目经验：AntClaw平台</a>
+    <a href="20-scenario-design.html" class="active"><span class="num">20</span>大厂场景设计题</a>
+  </nav>
+  <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+</aside>
+
+<main class="content">
+<header class="chapter-header">
+  <div class="chapter-num">Chapter 20</div>
+  <h1>大厂场景设计题 <span class="tag tag-hot">进阶</span></h1>
+  <p class="one-liner">25道京东级Agent平台面试真题：防幻觉工程、上下文压缩安全、多Agent分层设计、本体化、支付诊断系统、大促架构——每题给立场、给框架、给追问预案。</p>
+</header>
+
+<div class="diagram">
+<svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+  <rect x="10" y="60" width="170" height="80" rx="8" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="95" y="95" text-anchor="middle" font-size="13" fill="#1565c0" font-weight="bold">开场与项目</text>
+  <text x="95" y="118" text-anchor="middle" font-size="11" fill="#555">Q1-Q2</text>
+  <rect x="200" y="60" width="170" height="80" rx="8" fill="#e3f2fd" stroke="#1565c0"/>
+  <text x="285" y="88" text-anchor="middle" font-size="13" fill="#1565c0" font-weight="bold">幻觉防线</text>
+  <text x="285" y="108" text-anchor="middle" font-size="11" fill="#555">Q3-Q8 工具准确性</text>
+  <text x="285" y="124" text-anchor="middle" font-size="11" fill="#555">校验规则 语义校验</text>
+  <rect x="390" y="60" width="170" height="80" rx="8" fill="#fff3e0" stroke="#e65100"/>
+  <text x="475" y="88" text-anchor="middle" font-size="13" fill="#e65100" font-weight="bold">上下文与压缩</text>
+  <text x="475" y="108" text-anchor="middle" font-size="11" fill="#555">Q9-Q12 多轮触发</text>
+  <text x="475" y="124" text-anchor="middle" font-size="11" fill="#d32f2f">压缩语义失真★</text>
+  <rect x="580" y="60" width="170" height="80" rx="8" fill="#e8f5e9" stroke="#2e7d32"/>
+  <text x="665" y="88" text-anchor="middle" font-size="13" fill="#2e7d32" font-weight="bold">支付诊断系统设计</text>
+  <text x="665" y="108" text-anchor="middle" font-size="11" fill="#555">Q13-Q20 单/多Agent</text>
+  <text x="665" y="124" text-anchor="middle" font-size="11" fill="#555">分层 权限 模块定位</text>
+  <rect x="295" y="180" width="170" height="80" rx="8" fill="#f3e5f5" stroke="#6a1b9a"/>
+  <text x="380" y="208" text-anchor="middle" font-size="13" fill="#6a1b9a" font-weight="bold">本体化</text>
+  <text x="380" y="228" text-anchor="middle" font-size="11" fill="#555">Q21-Q23 组成/与图谱关系</text>
+  <rect x="485" y="180" width="170" height="80" rx="8" fill="#ffebee" stroke="#c62828"/>
+  <text x="570" y="208" text-anchor="middle" font-size="13" fill="#c62828" font-weight="bold">大促架构</text>
+  <text x="570" y="228" text-anchor="middle" font-size="11" fill="#555">Q24-Q25 降级判断</text>
+  <line x1="180" y1="100" x2="200" y2="100" stroke="#999" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="370" y1="100" x2="390" y2="100" stroke="#999" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="560" y1="100" x2="580" y2="100" stroke="#999" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="665" y1="140" x2="665" y2="200" stroke="#999" stroke-width="2"/>
+  <line x1="665" y1="200" x2="655" y2="200" stroke="#999" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="465" y1="200" x2="485" y2="200" stroke="#999" stroke-width="2" marker-end="url(#arr)"/>
+  <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#999"/></marker></defs>
+  <text x="380" y="30" text-anchor="middle" font-size="14" fill="#1a1a1a" font-weight="bold">25题知识地图：六大主题，从项目深挖到平台架构设计</text>
+  <text x="380" y="290" text-anchor="middle" font-size="11" fill="#888">★=全书新覆盖的高阶题：压缩语义失真是区分"用过Agent"和"设计过Agent"的分水岭</text>
+</svg>
+<div class="caption">六大主题分布——Q1-Q8靠宝典既有知识可答，Q12-Q25是本章新增的核心增量</div>
+</div>
+
+<div class="tip-box">
+<strong>本章使用说明：</strong>每题按「立场→框架→口语原话→追问预案」组织。<span class="kw">立场</span>=先亮观点再论证（面试官要判断力不是百科）；<span class="kw">框架</span>=分点结构（3点以内）；<span class="kw">口语原话</span>=可直接背的第一人称表述；<span class="kw">追问预案</span>=面试官最可能的下一刀。带<span class="tag tag-hot">全书新增</span>标记的题在宝典其他章节没有答案，是本部分的核心增量。
+</div>
+
+<h3>一、开场与项目切入（Q1-Q2）</h3>
+
+<div class="interview-q">
+  <div class="question">Q1：简单做一下自我介绍。</div>
+  <div class="interview-answer">
+    <p><strong>框架（1分钟版，五段）</strong>：身份定位→Java存量→AI增量→双项目背书→为什么 fit 这个岗位。</p>
+    <div class="interview-quote">"面试官好，我是4年Java后端出身的AI Agent开发。前几年在企业级后端做高并发、微服务和中间件，2025年开始专注Agent方向，从0到1做过两个项目：一个是Java技术栈的矿池智能客服——手写ReAct循环、RAG知识库、MCP工具接入、LLM质检门禁，从需求到上线一个人扛；另一个是OpenClaw OEM改造的智能体平台，152个插件、30+IM渠道、40+模型接入，我负责平台侧的网关限流、优先级队列和插件开发。我的特点是既懂Agent的LLM侧，又有后端工程化的底子——事务、限流、降级这些能力正好是Agent平台落地最缺的。"</div>
+    <p><strong>要点</strong>：①别说"熟悉XX技术"清单流，说"做过什么、扛过什么结果"；②"双项目"一句带过，等追问；③最后一句必须回答"为什么fit"——这是面试官听自我介绍的唯一目的。</p>
+  </div>
+  <div class="interview-tip">自我介绍是导演题：你抛出的每个词都是给面试官的钩子。只抛你有深度储备的词（ReAct、质检门禁、优先级队列），别抛接不住的（微服务内核、K8s源码）。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q2：公司的Agent整体架构是什么？你具体负责哪一块？</div>
+  <div class="interview-answer">
+    <p><strong>框架</strong>：先画全景（分层），再落到自己的一块（深挖），最后留钩子（等追问）。</p>
+    <p>用 mall-ai 的架构就能答，套"平台化"叙事：</p>
+    <div class="interview-quote">"整体分四层：接入层（SSE流式+限流+鉴权）、编排层（统一ReAct Agent，自主决定调工具还是检索知识库）、能力层（29个业务工具+MCP远程工具+RAG知识库+Skill热插拔）、治理层（QualityGate质检门禁+RAG全链路评估+链路追踪）。我负责编排层和治理层的核心设计——手写ReAct循环是因为当时Qwen的tool calling不稳定，用Prompt约定格式+解析实现了Thought/Action/Observation闭环；治理层的5维度质检和<0.6重答机制也是我设计的。"</div>
+    <p><strong>追问预案</strong>："为什么手写ReAct不用框架？"→答langchain4j 1.x的AiServices依赖原生function calling，Qwen兼容端点不稳定（工具不触发/格式漂移），手写可控可调试（宝典12章有完整答案）。</p>
+  </div>
+  <div class="interview-tip">这题和Q1一样是"导演题"：全景层说你参与过的，别报你只听说过的模块——下一问就会扎进去。</div>
+</div>
+
+
+<h3>二、幻觉防线：工具调用与校验（Q3-Q8）</h3>
+
+<div class="interview-q">
+  <div class="question">Q3：系统依赖很多外部数据和工具调用，怎么保证Tool Calling的准确性？</div>
+  <div class="interview-answer">
+    <p><strong>立场</strong>：准确性不是单点保证的，是"选得对+调得成+错得可见"三层叠加。</p>
+    <p><strong>三层框架</strong>：</p>
+    <p>①<strong>选得对（入口）</strong>：工具描述是第一道关——name一句话说清用途，参数带类型+示例+约束（如"orderId: string, 平台订单号，形如PO20260807001"），工具描述里写清"什么时候用我/什么时候别用我"。工具数量控制在合理规模（我们29个本地+若干远程），太多时用分组/Skill按需注入，避免模型选择空间爆炸。</p>
+    <p>②<strong>调得成（执行）</strong>：参数Schema强校验（JSON Schema，不合法直接返回结构化错误让模型重试，不透传下游）；工具结果结构化返回（code+message+data），成功失败都有机器可读的信号。</p>
+    <p>③<strong>错得可见（闭环）</strong>：每次调用全量记录traceId+入参出参，质检门禁对"工具结果 vs 答案内容"做一致性抽查——模型有没有用错数、编数据，事后可审计。</p>
+    <div class="interview-quote">"我们踩过的坑：模型偶尔会把knowledgeBase工具当搜索框用，拿自然语言问题当关键词传参。解法是在工具描述里写反例——'本工具接收业务主键，不接收自然语言问题，知识类问题请用searchKnowledgeBase'。工具描述本质上是在给模型写API文档，文档质量决定调用质量。"</div>
+  </div>
+  <div class="interview-tip">高分点：把"工具描述=给模型写的API文档"这个类比说出来，把Java后端的接口文档经验迁移过来，这是差异化优势。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q4：如果工具调用失败，模型开始编造结果，怎么处理？</div>
+  <div class="interview-answer">
+    <p><strong>立场</strong>：编造的根源是模型"必须给个答案"的倾向——所以治理要两头做：让它失败得体面，让它编不出来。</p>
+    <p><strong>四道防线</strong>：</p>
+    <p>①<strong>失败信息回灌</strong>：工具失败时不抛异常终止，而是把结构化错误（错误码+人类可读原因+建议动作）作为Observation回给模型，让它在下一轮Thought里决定重试还是换工具还是坦白失败。prompt里明确写："工具返回失败时，如实的告诉用户失败原因，禁止编造数据"。</p>
+    <p>②<strong>轮次与重试上限</strong>：maxRounds=3、单工具重试≤3，防止"失败→重试→再失败"死循环里模型开始自己圆。</p>
+    <p>③<strong>输出锚定</strong>：质检门禁校验答案里的关键数值/字段是否在工具返回中出现——答案里出现工具没返回过的数字，直接判幻觉，触发重答或拒答。</p>
+    <p>④<strong>兜底人设</strong>：宁可说"查询失败，建议您稍后重试或转人工"，不给出貌似合理的假数据。这在客服场景是产品原则，不只是技术原则。</p>
+  </div>
+  <div class="interview-tip">追问预案："怎么在prompt里让模型不编造？"——别说"加一句提示就行"，要答"提示词+轮次上限+输出锚定三层，因为纯提示词是概率性防御，工程兜底才是确定性防御"（呼应17章纵深防御）。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q5：你们整体上怎么做防幻觉？</div>
+  <div class="interview-answer">
+    <p><strong>框架（答自己项目的真实链路，不背百科）</strong>：</p>
+    <p>①<strong>源头</strong>：RAG先行——事实类问题强制先检索知识库，答案基于检索片段生成（grounding），低相似度（<阈值）直接走拒答/转人工，不硬答。</p>
+    <p>②<strong>过程</strong>：工具结果结构化回灌，答案数值必须来自工具或检索片段，prompt明令禁止补数。</p>
+    <p>③<strong>出口</strong>：LLM-as-Judge质检门禁——5维度评分（准确性/完整性/有用性/简洁性/安全性），<0.6基于知识库重答一次，纠错通过SSE correction事件透明地推给用户。</p>
+    <p>④<strong>离线</strong>：RAG全链路评估每小时自动跑（Hit Rate/MRR/NDCG/忠实度/相关性），忠实度就是专门的幻觉指标——基于黄金数据集回归。</p>
+    <div class="interview-quote">"防幻觉我们不是靠某一个技巧，是一条链：检索兜源头、锚定控过程、质检守出口、离线评估做回归。单一手段都是概率性的，链条的价值是每层拦一部分，漏网率乘法下降。"</div>
+  </div>
+  <div class="interview-tip">这题最容易答成技巧罗列（temperature调低/加prompt）。区分度在"链路思维"和"有指标有闭环"——这正是mall-ai项目最值得展开的部分。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q6：系统里实际有多少条校验规则？能举例吗？ <span class="tag tag-hot">全书新增</span></div>
+  <div class="interview-answer">
+    <p><strong>立场</strong>：报数字不如报结构——"多少条"背后的信息量是"规则怎么组织的"。</p>
+    <div class="interview-quote">"校验规则我们分三层组织，总共几十条：①<strong>格式层</strong>（确定性，代码实现）——必填字段非空、金额正数、日期格式、枚举值合法性，这部分是硬规则，约20条；②<strong>业务层</strong>（确定性，代码实现）——比如退款金额不能超过实付金额、状态机不允许跳转，约10条；③<strong>语义层</strong>（概率性，LLM-Judge实现）——5维度评分规则+事实一致性校验（答案数值是否能在工具结果/知识片段中找到出处）。"</div>
+    <p><strong>要点</strong>：格式/业务层规则用代码写死（确定性、零成本、可测试）；语义层用LLM判（覆盖长尾、但概率性）。两层互补，别全押LLM。</p>
+    <p><strong>追问预案</strong>"规则怎么维护？"→规则配置化+版本化，新规则上线先影子模式跑（只记录不拦截），观察误杀率再生效。</p>
+  </div>
+  <div class="interview-tip">没有真实数字就报"几十条+分层结构"，绝不含糊报一个精确假数字——追问两条就穿帮。结构化诚实 &gt; 精确编造。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q7：JSON格式符合Schema，但内容判断错了，怎么发现？ <span class="tag tag-hot">全书新增</span></div>
+  <div class="interview-answer">
+    <p><strong>立场</strong>：这是"格式对≠语义对"的经典问题——Schema校验是语法层，语法层对语义层错误天然失明。</p>
+    <p><strong>三个发现机制</strong>：</p>
+    <p>①<strong>交叉验证</strong>：关键判断字段（如"是否符合退款条件"）不让模型一次定终身——用第二次独立调用（不同模型或不同prompt视角）复核，两次不一致的进入人工队列。成本只花在关键判断上。</p>
+    <p>②<strong>规则复核</strong>：语义判断的结果往往能映射回确定性规则——模型判"可以退款"，就用代码校验"金额/时限/状态"是否真的满足退款规则。模型判断给方向，代码规则做终审。</p>
+    <p>③<strong>抽检回流</strong>：线上按比例抽样人工标注，标注结果进黄金集，反哺LLM-Judge的prompt和离线评估集——发现能力本身也要迭代。</p>
+    <div class="interview-quote">"我们的原则是：模型负责理解模糊性，代码负责确定性终审。凡是能落成规则的判断，绝不让模型说了算——LLM判断只用来扩大覆盖面，不用来当最后裁判。"</div>
+  </div>
+  <div class="interview-tip">这题的满分姿态是把"语义校验成本高"讲清楚：交叉验证和人工抽检都贵，所以只对关键判断字段上强度——体现成本意识。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q8：除了数据抽取和规则校验，还有哪些防幻觉手段？</div>
+  <div class="interview-answer">
+    <p><strong>框架（按生成链路从前到后补全）</strong>：</p>
+    <p>①<strong>检索侧</strong>：Rerank精排提高上下文质量（喂得对，答得才对）；检索空/低分时拒答而不是硬编；引用溯源（答案标注"来源：知识库片段2"，可点开核对）。</p>
+    <p>②<strong>生成侧</strong>：低temperature（0.2-0.3）压缩随机性；结构化输出约束（JSON Schema/字段白名单）；prompt里显式划分"已知信息/禁止事项"。</p>
+    <p>③<strong>出口侧</strong>：LLM-as-Judge质检（忠实度维度专判"答案是否超出了上下文支持范围"）；敏感字段输出过滤；数值一致性锚定。</p>
+    <p>④<strong>产品侧</strong>：不确定就转人工的产品机制；答案附置信度提示；用户点踩直接进badcase池。</p>
+  </div>
+  <div class="interview-tip">答完补一句总结："防幻觉没有银弹，本质是把幻觉从'生成默认'治理成'生成例外'——每一层把概率往下压一档。"展示的是治理观不是技巧观。</div>
+</div>
+
+<h3>三、上下文管理与压缩安全（Q9-Q12）</h3>
+
+<div class="interview-q">
+  <div class="question">Q9：这个流程是多轮交互的ReAct，还是围绕单个简历的一次性任务？什么时候触发？</div>
+  <div class="interview-answer">
+    <p><strong>答法（对齐自己项目）</strong>：以 mall-ai 为例——是<strong>单次请求内的多轮ReAct</strong>（Thought→Action→Observation循环，maxRounds=3），不是跨请求的长任务；也不是纯一次性流水线，因为轮数由模型按观察结果自主决定。</p>
+    <p><strong>触发时机</strong>：用户消息进来→缓存/转人工快速拦截→进入ReAct循环→产出Final Answer→质检门禁→（可能重答一次）→返回。整个生命周期在一次SSE请求内闭环，90秒单轮超时。</p>
+    <p><strong>什么场景该换长任务</strong>：如果任务步骤多、耗时长、需要人工介入（如简历筛选要HR复核），就该用异步任务+状态机+检查点持久化（跑挂了能续跑），此时ReAct只作为每个步骤内部的执行引擎。</p>
+    <div class="interview-quote">"判断标准是'一次对话能不能闭环'：客服问答能，所以单请求ReAct；长链路任务不能，所以拆异步任务，ReAct降级为步骤内引擎。"</div>
+  </div>
+  <div class="interview-tip">追问预案："长任务的状态怎么持久化？"→检查点表+幂等设计，参考10章的检查点持久化内容。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q10：项目上下文大概有多大？遇到输入或输出过长时怎么处理？</div>
+  <div class="interview-answer">
+    <p><strong>答自己项目的真实数字</strong>：系统提示词（含注入的Skill SOP）约2-4K token，对话历史用MessageWindow管理（max-messages=12条截断），知识库检索注入4个片段约2K token，工具结果单条控制在1K内——单请求总上下文稳定在8-12K，远低于模型窗口上限，这是刻意设计（留余量+控成本+防注意力稀释）。</p>
+    <p><strong>过长的三板斧</strong>：①<strong>截断</strong>（Window策略，最便宜，丢旧保新）；②<strong>摘要</strong>（旧对话LLM压缩成摘要注入，保信息但每次多一笔摘要成本）；③<strong>外置检索</strong>（历史入库，按需检索注入——把上下文当缓存用，不当仓库用）。</p>
+    <p><strong>输出过长</strong>：maxTokens硬限制（流式2000/阻塞4096）+ prompt要求"先结论后展开"+超限截断的UI兜底提示。</p>
+  </div>
+  <div class="interview-tip">高分点：说"上下文小是设计出来的不是巧合"——上下文塞满=注意力稀释=质量下降+成本上升，这个反直觉观点是加分的。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q11：脱离项目，你对Agent的上下文管理有哪些了解？</div>
+  <div class="interview-answer">
+    <p><strong>框架（四层，从容器到策略）</strong>：</p>
+    <p>①<strong>物理层</strong>：上下文窗口是硬预算（128K-1M），一切管理都是预算分配——系统提示词/历史/检索内容/工具结果四类抢占同一预算。</p>
+    <p>②<strong>记忆分层</strong>：短期（窗口内，截断/摘要管理）+长期（外置向量库/记忆库，检索注入）。与RAG的区分：RAG检索知识库，长期记忆检索的是该用户的历史交互。</p>
+    <p>③<strong>写入策略</strong>：什么值得进上下文——相关性强（检索分数）、信息密度高（摘要优先）、时效新（近期优先）。Claude Code的"自动决定哪些文件进上下文"就是典型实现。</p>
+    <p>④<strong>压缩策略</strong>：阈值触发（Token占比/条数）、分段压缩（旧的压，最近N轮原文保留）、结构化压缩（保留事实/决策/未决事项三类信息，丢弃寒暄和过程）。</p>
+  </div>
+  <div class="interview-tip">这题是Q12（压缩语义失真）的铺垫——答的时候主动留钩子："不过压缩有个 rarely 被讨论的安全问题……"，主动引到下一题，展示认知纵深。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q12：如果压缩把"不能修改生产配置"变成了"修改生产配置"，并写入长期记忆，怎么发现和避免？ <span class="tag tag-hot">全书新增</span> <span class="tag tag-hot">分水岭题</span></div>
+  <div class="interview-answer">
+    <p><strong>立场</strong>：这是上下文压缩最危险的失败模式——<strong>语义反转</strong>。否定词在摘要时丢失，约束变成许可，且被持久化后污染所有后续会话。它揭示一个本质：压缩是<strong>有损的有损的有损</strong>传输，而安全约束恰恰藏在"不、禁止、必须先"这些最容易被压掉的细节里。</p>
+    <p><strong>避免（写入前拦截）</strong>：</p>
+    <p>①<strong>约束原文保护</strong>：安全约束类内容（禁止/必须/权限边界）不走摘要压缩，以原文形式固定保留——这类信息本来就该用规则引擎存，不该用自然语言摘要存。压缩算法对它们是"只读"的。</p>
+    <p>②<strong>结构化压缩</strong>：摘要时强制输出结构（事实/决策/约束/未决事项四栏），约束栏要求逐条列出且带原文引用，禁止改写——把"自由发挥的总结"变成"受模板约束的摘录"。</p>
+    <p>③<strong>冲突检测</strong>：写入长期记忆前做一致性校验——新记忆与已有记忆在相同实体/主题上语义矛盾时（可用NLI模型或规则：同主题下情感/极性反转），拒绝覆盖并转人工。</p>
+    <p><strong>发现（写入后审计）</strong>：</p>
+    <p>④<strong>关键决策回溯</strong>：Agent执行高危操作前（改配置/删数据/外发），回查支撑该操作的记忆条目——要求给出处，出处是摘要而非原文的，降级为需要人工确认。</p>
+    <p>⑤<strong>记忆审计日志</strong>：长期记忆每次写入记录（来源会话/压缩方式/原文对照），可回放 diff，语义反转事后可溯。</p>
+    <p>⑥<strong>定期一致性巡检</strong>：对记忆库跑规则扫描（如"修改生产配置"这种高危许可类断言全量复核），发现与源文档矛盾的条目告警。</p>
+    <div class="interview-quote">"我的观点是：安全约束压根不该依赖自然语言记忆传递。压缩摘要管'聊了什么'，约束走确定性存储（规则/权限系统），两套机制物理隔离——让压缩出错的代价从'安全事故'降级为'答非所问'。"</div>
+  </div>
+  <div class="interview-tip">这题全书只在20章有。答出"物理隔离"这个观点基本就是候选人里的top档——它把一道LLM题答成了架构题，正好打你的Java后端优势。</div>
+</div>
+
+
+<h3>四、支付失败诊断Agent系统设计（Q13-Q20） <span class="tag tag-hot">全书新增</span></h3>
+
+<div class="tip-box">Q13-Q20是一套连贯的系统设计连环问——面试官在同一个场景上层层加码。核心策略：<strong>每层都先给设计原则再给实现</strong>，且保持前后一致（前面说的分层，后面追问时不能出现第三种分层）。</div>
+
+<div class="interview-q">
+  <div class="question">Q13：设计一个支付失败诊断Agent：输入自然语言或订单信息，输出失败原因和证据，你会怎么做？</div>
+  <div class="interview-answer">
+    <p><strong>先反问澄清（展示产品思维）</strong>：用户是谁（客服坐席/用户自助/内部运营）？诊断结论给谁看（决定输出形态）？QPS量级？错误类型是集中（TOP-N错误码）还是长尾？</p>
+    <p><strong>五步设计</strong>：</p>
+    <p>①<strong>信息收集</strong>：解析输入——自然语言抽取订单号/用户ID（NER+Schema填充），缺失关键信息时反问补全；工具调用拉取订单全貌（订单状态、支付流水、风控结果、渠道返回码）。</p>
+    <p>②<strong>知识准备</strong>：支付域诊断知识库——错误码字典（渠道码→语义→处置建议）、故障案例库（历史case的症状→根因→解法）、系统拓扑（链路依赖图：收银台→收单→渠道→银行）。</p>
+    <p>③<strong>诊断推理</strong>：ReAct循环——按链路位置逐跳排查（先查订单状态机卡点→查支付流水有无→查渠道返回码→查风控拦截），每步拿证据；错误码能直接定位的走快速路径（查字典即出结论），长尾问题走案例库相似检索+LLM推理。</p>
+    <p>④<strong>证据链组装</strong>：结论必须带证据——每个判断引用具体数据（"流水单P123显示银行返回'余额不足'"），结论→证据→数据三层可追溯，不允许无证据结论。</p>
+    <p>⑤<strong>输出与行动</strong>：结构化结论（原因分类+置信度+证据列表+建议动作），高置信自动给出处置（重新发起/换渠道/引导用户），低置信转人工并附已收集的证据包（让人工不用重查一遍）。</p>
+    <div class="interview-quote">"这个设计的灵魂是'证据链'：诊断Agent的价值不在于说出原因，而在于每个原因都有数据背书——支付场景说错一次原因的代价远高于说'我需要更多信息'。"</div>
+  </div>
+  <div class="interview-tip">系统设计题的开局动作就是澄清边界——直接开写的候选人会被认为没做过真实系统。澄清2-3个问题就够，多了显得没主见。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q14：这个场景应该用单Agent，还是Multi-Agent？为什么？</div>
+  <div class="interview-answer">
+    <p><strong>立场</strong>：先单Agent起步，遇到三个信号再拆Multi——<strong>工具数量爆炸、子领域知识隔离、团队并行开发</strong>。</p>
+    <p><strong>为什么先单</strong>：支付失败诊断的主流程是线性的（收集→排查→结论），错误码字典+链路排查工具可控在20个以内，单Agent+ReAct完全hold住。Multi-Agent引入的通信开销、状态同步、错误传播复杂度，在流程没有真正并行/隔离需求前是纯负债。</p>
+    <p><strong>什么时候拆</strong>：①排查分支差异大——银行卡失败排查（渠道码/协议/限额）和账户体系排查（余额/花呗/风控）需要的知识和工具集完全不同，各自膨胀后单Agent的上下文和工具选择精度都会下降；②各子领域由不同团队维护，需要独立迭代发布；③某些子Agent需要特殊隔离（风控数据权限）。</p>
+    <p><strong>演进路径</strong>：单Agent（验证价值）→ 按支付子域拆Executor（银行卡/余额/花呗各自专项）→ 加Supervisor统一入口和汇总。架构跟着组织走、跟着复杂度走，不预设。</p>
+  </div>
+  <div class="interview-tip">这题的坑是无脑吹Multi-Agent。答"先单后拆+给出拆分信号"，展示的是架构判断力——13章Q17（协作模式选择）的思路在这里直接复用。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q15：具体怎么分层？Supervisor、Planner、Executor分别做什么？</div>
+  <div class="interview-answer">
+    <p><strong>三层职责（一次说死，后面追问不变卦）</strong>：</p>
+    <p>①<strong>Supervisor（调度层）</strong>：不碰业务细节。职责：会话管理（多轮上下文）、任务分发（这个诊断该找哪个Executor）、结果汇总（多个Executor的结论合并+冲突消解）、兜底（Executor全失败时的降级/转人工）。它是个路由器+主持人，不是决策者。</p>
+    <p>②<strong>Planner（规划层）</strong>：把自然语言问题翻译成排查计划。职责：理解故障描述→生成诊断步骤序列（先查A再查B，因为B依赖A的结果）→动态调整（步骤1的证据改变步骤2的计划）。产出是结构化的plan（步骤+依赖+预期证据），不是执行结果。</p>
+    <p>③<strong>Executor（执行层）</strong>：领域专家。职责：执行具体排查动作（调工具/查数据/比对规则）、产出带证据的子结论、上报异常。每个Executor只装本领域的工具和知识（银行卡Executor不装花呗的工具）。</p>
+    <div class="interview-quote">"一句话区分：Planner决定'查什么顺序'，Executor负责'查出结果'，Supervisor负责'谁上、结果怎么合'。三层各自可独立测试、独立替换——这是分层的真正收益，不是为了好看。"</div>
+    <p><strong>简化变体</strong>：若不单独设Planner，规划职责并入Supervisor的prompt——三层是逻辑分工，物理上可以两进程。面试时主动说这个变体，避免被认为只会教科书架构。</p>
+  </div>
+  <div class="interview-tip">追问预案："Planner的计划错了怎么办？"→Executor执行时发现前置假设不成立，上报Supervisor触发重规划——计划是可修订的草案不是死指令。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q16：支付涉及收银台、收单、交易、银行卡、余额、花呗等系统，各系统的业务排查能力放在哪里？ <span class="tag tag-hot">全书新增</span></div>
+  <div class="interview-answer">
+    <p><strong>立场</strong>：排查能力跟着数据权威走——<strong>谁拥有这个域的数据，排查能力就建在谁那里</strong>，平台只做编排和汇总。</p>
+    <p><strong>两层放置</strong>：</p>
+    <p>①<strong>子域Executor内（本地排查能力）</strong>：每个子系统的排查工具、错误码字典、领域规则装在自己的Executor里。银行卡Executor知道渠道码怎么解读、限额规则怎么查；余额Executor知道账户冻结原因怎么查。原因：数据在人家手里（接口/表/缓存），别人建的能力永远是二手的、滞后的；且领域知识更新快（渠道新增错误码），本地维护响应最快。</p>
+    <p>②<strong>平台层（公共能力）</strong>：跨域的东西不重复建——订单流水查询（全链路公共数据）、链路拓扑（哪个系统依赖谁）、错误码全局字典（跨域翻译）、诊断结论沉淀（案例库全平台共享）。</p>
+    <p><strong>判据</strong>：能力放哪，看三问——数据在谁手里（权威性）、更新频率谁最清楚（时效性）、是否跨域复用（通用性）。前两问指向子域，第三问指向平台。</p>
+  </div>
+  <div class="interview-tip">这题实际在考"能力下沉 vs 平台收口"的架构观——和数据分层Ownership一个逻辑，用Java微服务的服务边界划分经验来类比，正是Java后端转Agent的差异化优势。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q17：这套方案到底是Workflow，还是ReAct？</div>
+  <div class="interview-answer">
+    <p><strong>立场</strong>：混合——<strong>骨架是Workflow，血肉是ReAct</strong>。这不是和稀泥，是支付场景的必然选择。</p>
+    <p><strong>骨架Workflow的部分</strong>：主流程是确定的——收集信息→定位链路位置→诊断→出证据链→输出，这些步骤的顺序、超时、降级路径必须确定（支付场景不允许Agent自由发挥流程，审计和SLA都要求确定性）。快速路径（错误码直查字典）就是标准的确定性分支。</p>
+    <p><strong>血肉ReAct的部分</strong>：单步内的排查动作是开放的——长尾故障没有现成字典条目，需要在Executor内自主决定"先查什么再查什么、查到异常要不要深挖"，这是ReAct的自主推理。轮次上限+工具白名单约束住它的自由度。</p>
+    <div class="interview-quote">"判断标准：流程级的不确定性用Workflow管（步骤可枚举、顺序可依赖），单步内的问题空间开放用ReAct管（查法不可枚举）。支付诊断恰好两者都有——所以是Workflow骨架+ReAct引擎的混合架构。"</div>
+    <p>呼应13章Q18的判断框架，但这里给出了更进一步的"混合架构"答案——场景题比知识题答得更具体。</p>
+  </div>
+  <div class="interview-tip">追问预案："混合架构怎么防止ReAct部分失控？"→Executor级工具白名单+轮次上限+每步产出必须落回plan的槽位，越界动作直接拒绝。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q18：权限怎么设计？既包括使用者的权限，也包括Agent内部各层的权限。 <span class="tag tag-hot">全书新增</span></div>
+  <div class="interview-answer">
+    <p><strong>立场</strong>：两套权限体系，正交设计——使用者权限管"谁能问什么"，Agent内部权限管"每一层能做什么"。</p>
+    <p><strong>使用者侧（RBAC）</strong>：客服坐席/运营/用户自助看到的能力不同——坐席能查全量订单+触发退款建议，用户自助只能查自己的订单；数据权限落到字段级（坐席看脱敏手机号，风控岗看全量）。实现上Agent网关层拦截，身份透传到工具调用——工具拿到的永远是"当前用户身份+其权限范围"，不是Agent的系统身份。防止Agent变成越权跳板（平行于17章"Agent不该有超用户权限"原则）。</p>
+    <p><strong>Agent内部（逐层递减）</strong>：</p>
+    <p>①Supervisor：只有调度权限——能选Executor、能汇总，不能直接碰业务数据接口；</p>
+    <p>②Planner：只有只读元数据权限——能看错误码字典、链路拓扑，不能查订单明细（计划不需要明细，最小权限）；</p>
+    <p>③Executor：领域内读写权限——银行卡Executor只能调银行卡域的工具，且敏感动作（改状态/退款）需要二次确认（人工在环）或携带用户侧授权。</p>
+    <div class="interview-quote">"设计原则一句话：每层只拿完成本层职责所需的最小权限，且身份永远跟着'发起请求的真实用户'走。Agent是权限的执行者，不是权限的授予者。"</div>
+    <p><strong>审计</strong>：每层调用全量审计日志（谁/哪层/调了什么/为什么——带traceId串联），出问题可回放到层。</p>
+  </div>
+  <div class="interview-tip">这题把17章的工具最小权限扩展到了"分层权限递减"——新增点在于Supervisor/Planner/Executor各自的权限边界，这是多Agent场景才有的设计问题。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q19：一个子领域本身也很复杂，怎么构建它的排查能力？需要哪些东西才能真正查出问题？ <span class="tag tag-hot">全书新增</span></div>
+  <div class="interview-answer">
+    <p><strong>立场</strong>：排查能力 = 数据 + 知识 + 动作 + 兜底，四样缺一不可——只有LLM没有数据的"排查"是编故事。</p>
+    <p><strong>四要素（以银行卡子域为例）</strong>：</p>
+    <p>①<strong>数据接入</strong>：能查到原始证据——交易流水、渠道返回报文、卡状态、限额配置。没有数据接口的排查能力是空中楼阁，接入是第一优先级（往往也是最难协调的，要提前和域内团队谈好接口SLA）。</p>
+    <p>②<strong>领域知识结构化</strong>：错误码字典（码→含义→责任方→处置）、决策树（常见故障的排查路径）、业务规则（限额/时效/协议约束）。知识必须结构化落库而不是塞prompt——可维护、可版本化、可灰度。</p>
+    <p>③<strong>动作工具</strong>：只读工具（查流水/查配置）+ 受控写工具（重发/换渠道，需二次确认）。工具粒度按"排查动作"设计而不是按"数据库表"设计——工具语义和业务语义对齐，模型才用得对。</p>
+    <p>④<strong>兜底与反馈</strong>：查不出时的逃生通道（转人工+证据包交接）；每次人工诊断的结果回流案例库——排查能力是养出来的，不是一次性建成的。</p>
+    <div class="interview-quote">"衡量一个子域排查能力是否达标，就一条：新出现的典型故障，从'Agent查不出'到'Agent能查并给出处置'，需要几天？四要素越全，这个周期越短。"</div>
+  </div>
+  <div class="interview-tip"Q19和Q16的区别：Q16问"放哪"（架构位置），Q19问"怎么建"（建设方法论）。别答混。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q20：再具体一点：子Agent怎么判断故障落在哪个模块？</div>
+  <div class="interview-answer">
+    <p><strong>立场</strong>：模块定位不做自由推理，做<strong>逐跳收敛</strong>——支付链路是有拓扑的，故障定位本质是在拓扑上走查。</p>
+    <p><strong>三级定位法</strong>：</p>
+    <p>①<strong>状态机卡点（最快）</strong>：订单/支付单有状态机——状态停在"待支付"是用户侧没发起，停在"处理中"是渠道侧没回调，停在"失败"看失败码。先看状态机，一半问题直接定位。</p>
+    <p>②<strong>链路逐跳（结构性）</strong>：沿拓扑查证据的存在性——用户发起没有（收银台日志）→支付单创建没有（交易系统）→渠道请求发出没有（收单系统）→渠道返回什么（渠道码）→银行侧结果（卡组织/银行反馈）。数据断在哪一跳，故障就在哪个模块——每一跳只回答"我收到并处理了吗"，责任边界清晰。</p>
+    <p>③<strong>字典+案例兜底（长尾）</strong>：跨模块的疑难故障（如超时但实际成功的不一致状态），查全局错误码字典和相似案例库，LLM做证据汇总推理——这是唯一用"推理"定位的场景，且结论仍要证据支撑。</p>
+    <div class="interview-quote">"设计取向：能用数据定位的不用知识，能用知识定位的不用推理。LLM推理是最后手段——推理越少，结论越可信，这就是支付诊断和闲聊Agent最大的区别。"</div>
+  </div>
+  <div class="interview-tip">追问预案："链路拓扑哪来的？"→平台层维护的链路配置（服务依赖图），新系统接入时注册——这也是Q16说的平台公共能力。</div>
+</div>
+
+
+<h3>五、本体化（Q21-Q23） <span class="tag tag-hot">全书新增</span></h3>
+
+<div class="interview-q">
+  <div class="question">Q21：怎么理解本体化？公司的本体化工作具体怎么构建？</div>
+  <div class="interview-answer">
+    <p><strong>一句话理解</strong>：本体（Ontology）是对一个领域的<strong>概念及其关系的正式规范说明</strong>——把"这个业务里有哪些东西、每样东西有什么属性、它们之间什么关系、遵守什么约束"用统一语言定义清楚。本体化就是把这个定义工程化的过程。</p>
+    <p><strong>为什么Agent平台需要本体</strong>：没有本体，每个Agent各说各话——A系统的"商户"和B系统的"商家"是不是一回事？跨系统排查时对不上口径。本体是让多个Agent/多个工具/多个知识库<strong>说同一种语言</strong>的基础设施。</p>
+    <p><strong>构建路径（四步）</strong>：</p>
+    <p>①<strong>概念抽取</strong>：从核心业务流程出发（不是从文档出发）——支付域先圈定核心概念：商户/订单/支付单/渠道/卡/风控事件。来源是业务专家访谈+核心表结构+关键流程图，人肉梳理为主，LLM辅助从文档批量提取候选概念。</p>
+    <p>②<strong>关系与约束定义</strong>：概念间关系（订单"属于"商户、支付单"经过"渠道、卡"属于"用户）+ 属性（每个概念的标识、状态、金额）+ 约束（一个支付单只属于一个订单；金额守恒：支付单金额=分账之和）。</p>
+    <p>③<strong>表示与存储</strong>：轻量场景用结构化Schema（JSON-LD/Protobuf定义+注册中心），重场景上图谱存储（Neo4j/Nebula）。关键是<strong>本体注册中心</strong>：概念有唯一ID、有版本、有owner，新概念要审核——防止本体腐化。</p>
+    <p>④<strong>消费与演进</strong>：本体落地成三样东西被Agent消费——工具接口的统一字段语义（跨工具口径一致）、知识库的结构化抽取模板（LLM抽取时按本体槽位填）、子Agent间通信的共享词汇表。演进靠治理：概念变更走评审，版本兼容旧数据。</p>
+    <div class="interview-quote">"本体化的本质是'先统一语言，再建智能'——多个Agent协作的扩展性问题，一半是概念口径问题。没有本体，Multi-Agent规模越大，鸡同鸭讲越多。"</div>
+  </div>
+  <div class="interview-tip">没做过本体化就诚实说"没落地过，但理解它的定位"——然后答上面①④。假装做过会被追问"你们的本体注册中心怎么设计的"直接穿帮。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q22：脱离业务，本体的核心组成是什么？</div>
+  <div class="interview-answer">
+    <p><strong>四要素（背这套，标准答案）</strong>：</p>
+    <p>①<strong>类（Class/概念）</strong>：领域的实体类型——订单、商户、渠道。是分类体系，不是实例。</p>
+    <p>②<strong>属性（Property/槽位）</strong>：每个类的特征——订单有金额/状态/时间。属性有数据类型和定义域值域约束。</p>
+    <p>③<strong>关系（Relation）</strong>：类与类之间的语义连接——订单"支付于"渠道、商户"开通"花呗。关系是有方向、有语义的，区别于普通外键（外键只讲关联，关系讲语义：包含/归属/引发）。</p>
+    <p>④<strong>公理/约束（Axiom）</strong>：领域的硬规则——支付单金额必须等于分账之和；一个商户同一时间只能有一个生效的费率版本。公理是本体区别于普通数据模型的灵魂：它让"推理"成为可能（检测矛盾、推导隐含事实）。</p>
+    <p>实例（Instance）不属于本体本身——本体是Schema层的，实例是数据层的（这正是Q23本体vs图谱的分界线）。</p>
+  </div>
+  <div class="interview-tip">用Java类比秒懂：类=Java的class，属性=field，关系=有语义方向的关联（@ManyToOne+业务含义），公理=bean validation约束+不变式。面试时甩这个类比，后端面试官秒懂。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q23：本体与知识图谱是什么关系？</div>
+  <div class="interview-answer">
+    <p><strong>立场</strong>：<strong>本体是Schema层，知识图谱是数据层</strong>——本体定义"有哪些概念、什么结构"，图谱按这个定义把实例数据填进去。类比：本体=数据库的表结构（DDL），图谱=表里的数据（DML）。</p>
+    <p><strong>三层展开</strong>：</p>
+    <p>①<strong>本体 ≠ 图谱</strong>：本体不存实例数据（"订单"这个概念及它的属性约束），图谱存实例和实例间关系（"订单PO123支付于渠道C001"）。没有本体指导的图谱是"图数据库里的一堆点边"，概念口径靠猜。</p>
+    <p>②<strong>本体指导图谱构建</strong>：LLM从文档抽取实体关系时，本体是抽取的目标模板（只能抽本体里定义的概念和关系）——约束抽取边界、保证跨文档口径一致、抽取结果可校验（抽出了本体外的概念→报错或触发本体评审）。</p>
+    <p>③<strong>图谱反哺本体演进</strong>：图谱里高频出现但本体没覆盖的模式（比如"预授权"这类新关系），触发本体扩展评审——Schema和数据在迭代中互相校准。</p>
+    <p><strong>和Agent的连接</strong>：GraphRAG链路里，本体决定"抽什么"，图谱决定"查什么"，两者合起来决定Multi-Agent间"怎么说"——这就闭环回Q21的本体化价值。</p>
+  </div>
+  <div class="interview-tip">一句话记忆：本体是"语言的语法"，图谱是"用这门语言说出的话"。语法先于且独立于具体的句子存在。</div>
+</div>
+
+<h3>六、大促架构与降级判断（Q24-Q25）</h3>
+
+<div class="interview-q">
+  <div class="question">Q24：双十一等大促流量到来时，核心支付系统需要哪些能力或架构？</div>
+  <div class="interview-answer">
+    <p><strong>框架（四层，从流量到数据）</strong>：</p>
+    <p>①<strong>流量侧</strong>：多级限流（网关层令牌桶→业务层按用户/商户维度滑动窗口）+ 队列削峰（非即时诉求的请求进MQ排队异步处理）+ 优先级调度（支付核心请求 &gt; 查询类 &gt; 对账类，大促时低优先级服务主动让路）。</p>
+    <p>②<strong>架构侧</strong>：单元化部署（set化——按用户维度切分流量到独立单元，单元内闭环，故障爆炸半径控制在一个单元）+ 无状态水平扩容 + 热点账户处理（大商户/爆款商品的账户热点，用缓存聚合+异步记账+分桶打散）。</p>
+    <p>③<strong>依赖治理</strong>：强弱依赖梳理（支付主链路的强依赖降到最少；积分/营销/通知等弱依赖全部可降级）+ 依赖隔离（每个下游独立连接池/线程池，一个下游挂不拖全家）+ 预案演练（大促前全链路压测+预案演练，每个预案有触发条件和执行人）。</p>
+    <p>④<strong>数据侧</strong>：读写分离+缓存前置（订单查询走缓存，核心写链路不碰重查询）+ 消息幂等（重试风暴下不重复扣款）+ 对账补偿（大促后T+1对账兜底一致性）。</p>
+    <p><strong>和Agent的连接（面试官真正的意图）</strong>：如果这题出现在Agent面试里，落点应该是——<strong>Agent平台大促时怎么办</strong>：LLM调用是贵且慢的外部依赖，大促期间Agent要主动收缩（非核心Agent降级到FAQ/关闭、LLM调用加排队和预算熔断、缓存命中率拉升、转人工阈值放宽）。把我现在项目的限流/并发/降级设计套上去讲。</p>
+  </div>
+  <div class="interview-tip">先答支付系统通用架构（显示你懂大厂语境），再主动拉回Agent视角（显示你懂这场面试要什么）——两段都要，别只答一头。</div>
+</div>
+
+<div class="interview-q">
+  <div class="question">Q25：支付链路里哪些能力可以降级？你说要关闭某些银行卡选项，这样合适吗？</div>
+  <div class="interview-answer">
+    <p><strong>立场</strong>：降级排序的总原则——<strong>降体验不降可用，降辅助不降主干</strong>。关闭银行卡选项（砍支付方式）是最后一档，不是常规手段。</p>
+    <p><strong>可降级阶梯（从先到后）</strong>：</p>
+    <p>①<strong>最先降：非核心辅助能力</strong>——支付结果通知（改异步批量/延迟推送）、优惠券实时核销（改异步补核销）、积分抵扣（大促高峰直接关闭入口，交易后补）、账单实时查询（改缓存+容忍延迟）。</p>
+    <p>②<strong>其次降：一致性强度</strong>——余额展示从强一致改最终一致（容忍秒级延迟）；对账从准实时改T+1。</p>
+    <p>③<strong>然后：支付方式的部分收缩</strong>——某个渠道故障率飙升时，优先"引导"而不是"关闭"（排序下调+提示"该渠道繁忙，建议使用XX"）；真到必须关闭（渠道瘫痪且无兜底），只关故障渠道，且必须给出替代支付方式的强引导。</p>
+    <p>④<strong>绝不降：支付核心链路</strong>——支付创建、扣款、成功回调的确定性。宁可排队等，不给用户"付了但不知道成没成"的不确定状态（这比失败伤害大得多）。</p>
+    <div class="interview-quote">"直接关闭银行卡选项的问题在于：它把'系统压力'转嫁成了'用户付不了款'——对用户来说等于支付不可用。正确的姿势是逐级降辅助能力，把资源留给主干；真要收缩支付方式，也只关故障渠道并强引导替代，绝不无差别砍选项。"</div>
+  </div>
+  <div class="interview-tip">这题考的是业务判断不是技术——面试官在测你"会不会为了技术指标伤害业务"。答"合适"而不给前提，直接出局；答"不合适，然后给阶梯方案"才是满分。</div>
+</div>
+
+<div class="tip-box">
+<strong>本章复盘（25题串起来看）</strong>：这套连环问的实际考察路线是——你能不能把Agent从"demo玩具"讲到"生产系统"：Q3-Q8考幻觉治理的工程闭环，Q9-Q12考上下文的预算观和压缩安全性，Q13-Q20考系统设计的分层与边界感，Q21-Q23考概念基建的理解深度，Q24-Q25考业务判断力。每题的<strong>立场先行</strong>（先给观点再展开）是和背书选手拉开差距的关键。
+</div>
+
+<nav class="chapter-nav bottom">
+  <a href="19-antclaw-project.html" class="prev">← 项目经验：AntClaw平台</a>
+  <a href="index.html" class="next">返回首页 →</a>
+</nav>
+
+<footer>
+  <p>Java → AI Agent 面试宝典 · Chapter 20 大厂场景设计题 · 持续更新</p>
+</footer>
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var toggle = document.getElementById('sidebarToggle');
+  var sidebar = document.getElementById('sidebar');
+  if (toggle) {
+    toggle.addEventListener('click', function() {
+      sidebar.classList.toggle('open');
+    });
+  }
+});
+</script>
+</body>
+</html>
