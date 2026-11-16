@@ -341,7 +341,7 @@
         <text x="355" y="100" text-anchor="middle" font-size="12" fill="#555">词频权重打分</text>
         <text x="355" y="135" text-anchor="middle" font-size="12" fill="#2e7d32">✓ 精确词强召回</text>
         <text x="355" y="158" text-anchor="middle" font-size="12" fill="#d32f2f">✗ 不懂同义/语义</text>
-        <text x="355" y="185" text-anchor="middle" font-size="12" fill="#555">查"订单号SO20260807"精准</text>
+        <text x="355" y="185" text-anchor="middle" font-size="12" fill="#555">查"错误码E-2043"精准</text>
         <text x="355" y="210" text-anchor="middle" font-size="12" fill="#999" font-style="italic">精确匹配场景</text>
 
         <!-- 混合 -->
@@ -595,10 +595,10 @@ String answer = assistant.chat(<span class="str">"你们的退货政策是什么
     <div class="interview-q">
       <div class="question">Q3：向量检索和关键词检索有什么区别？</div>
       <div class="interview-answer">
-        <p>向量检索基于<strong>语义相似</strong>，问题和文档各自编码成向量算余弦距离，能识别同义词（"退款"召回"退货"）但精确词召回弱。关键词检索（BM25）基于<strong>词频权重</strong>，精确匹配强（查订单号SO20260807001精准）但不懂语义。</p>
-        <p>生产上通常用<strong>混合检索</strong>——两路并行召回再用RRF融合，兼顾语义和精确。客服场景里订单号查询靠关键词、政策类问题靠向量，混合最稳。</p>
+        <p>向量检索基于<strong>语义相似</strong>，问题和文档各自编码成向量算余弦距离，能识别同义词（"退款"召回"退货"、"钱什么时候到"召回"打款周期"）但精确词召回弱。关键词检索（BM25）基于<strong>词频权重</strong>，精确匹配强（错误码E-2043、矿机型号S21 Hydro这类精确术语一查一个准）但不懂语义。</p>
+        <p>生产上通常用<strong>混合检索</strong>——两路并行召回再用RRF融合，兼顾语义和精确。客服场景里错误码/型号/术语靠关键词精准命中，政策类问题靠向量（用户口语和文档措辞不一致时仍能召回），混合最稳。</p>
       </div>
-      <div class="interview-tip">举一个"订单号用关键词、退货政策用向量"的具体例子，立刻把抽象概念落地。</div>
+      <div class="interview-tip">举一个"错误码用关键词、退费政策用向量"的具体例子，立刻把抽象概念落地。注意：用户订单/账号等业务数据走业务工具查询，不在知识库里——别说"订单号检索"，懂行的面试官会追问。</div>
     </div>
 
     <div class="interview-q">
